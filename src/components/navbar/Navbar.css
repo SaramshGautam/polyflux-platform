@@ -1,0 +1,128 @@
+/* Navbar layout */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: rgb(52, 58, 64);
+  color: white;
+  z-index: 1000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px; /* Adjust navbar height */
+}
+/* Add this to your main content or container class to avoid overlap */
+body {
+  padding-top: 60px; /* Adjust this value to the height of your navbar */
+}
+
+/* Or if you're using a wrapper div */
+.content-wrapper {
+  padding-top: 60px; /* Add padding to the content */
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-right: 20px;
+  cursor: pointer;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 20px;
+}
+
+.navbar-links a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  transition: color 0.3s ease;
+}
+
+.navbar-links a:hover {
+  color: #f1f1f1; /* Light hover color */
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Dropdown toggle */
+.nav-item.dropdown .nav-link.dropdown-toggle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+/* Profile icon */
+.bi-person {
+  font-size: 24px;
+  color: white;
+}
+
+/* Profile dropdown menu (Bootstrap style) */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background-color: #000000; /* Ash background for dropdown */
+  border-radius: 5px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+}
+
+.dropdown-menu .dropdown-item {
+  color: white;
+  font-size: 1rem;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-menu .dropdown-item i {
+  font-size: 18px;
+}
+
+.dropdown-menu .dropdown-item:hover {
+  background-color: #030303; /* Slightly lighter ash color */
+}
+
+/* Show the dropdown when active */
+.dropdown-menu.show {
+  display: block;
+}
+
+/* Improved logout button styled like the 'Add Classroom' button */
+.dropdown-menu .dropdown-item {
+  font-weight: 600;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-menu {
+  background-color: rgb(52,58,64,255);/* Slate Blue */
+}
+
+.dropdown-menu .dropdown-item:hover {
+  background-color: rgb(52,58,64,255); /* Darker Slate Blue */
+}
+
+
+/* Use the btn-dark for the logout button */
+.dropdown-menu .btn-sm {
+  font-size: 0.875rem; /* Smaller size */
+  padding: 5px 10px; /* Adjust the padding to make it smaller */
+  width: auto; /* Ensure the button doesn't stretch */
+}

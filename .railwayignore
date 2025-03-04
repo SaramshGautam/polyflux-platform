@@ -1,0 +1,12 @@
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+frontend/
+collaborad/
+venv
+.nixpacks
+.railway
+__pycache__
+.env
+firebase-key.json

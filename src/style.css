@@ -1,0 +1,1063 @@
+body {
+    background-color: #f8f9fa !important; /* Use a slightly off-white background */
+    padding: 0 20px;
+}
+
+  .classrooms-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .panelContainerWrapper {
+    position: fixed;
+    right: 10px;
+    z-index: 1000;
+  }
+  
+  .panelContainer {
+    right: 10px;
+    width: 250px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-family: Arial, sans-serif;
+    color: #333;
+    padding: 20px;
+    padding-bottom: 35px;
+  }
+  
+  .toggle-collapse-button, .toggle-expand-button {
+    position: absolute;
+    font-size: 12px;
+    cursor: pointer;
+    background-color: transparent;
+    border-radius: 5px;
+    border: none;
+  }
+  
+  .toggle-expand-button {
+    right: 10px;
+    top: 10px;
+  }
+  
+  .toggle-collapse-button {
+    bottom: 10px;
+    left: 10px;
+  }
+  
+  .toggle-collapse-button:hover,
+  .toggle-expand-button:hover {
+    color: #999;
+  }
+  
+  .toggle-expand-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: max-content;
+    height: 40px;
+    padding: 8px 12px;
+    background-color: #eee;
+    border-bottom-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    gap: 8px;
+  }
+  
+  .panel-label {
+    font-size: 12px;
+    color: #333333;
+  }
+  
+  .toggleButtonContainer {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  
+  .toggle-button {
+    flex: 1;
+    padding: 8px;
+    background-color: #f0f0f0;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    margin: 0 2px;
+  }
+  
+  .active-button {
+    flex: 1;
+    padding: 8px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    margin: 0 2px;
+  }
+  
+.submenu {
+    position: relative;
+    display: none; /* Hidden by default */
+    background-color: #aaa;
+    border: 1px solid #f4ee9b;
+    padding: 0px;
+    z-index: 10;
+  }
+  
+  .menu-item-react:hover .submenu {
+    display: block; /* Show on hover */
+  }
+  
+  .submenu-item {
+    display: flex;
+    align-items: center;
+    padding: 5px;
+    cursor: pointer;
+  }
+  
+  .submenu-item:hover {
+    background-color: #e0f7fa;
+  }
+  
+  .submenu-item TldrawUiMenuItem {
+    margin-right: 5px;
+  }
+  
+  #unassigned-students-section {
+    display: inline-block;
+    width: 45%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-right: 10px;
+  }
+  
+  #teams-container {
+    display: inline-block;
+    width: 45%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .team-list {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .team-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .team-actions {
+    display: flex;
+    gap: 10px; /* Adds space between buttons */
+}
+
+  
+  .student-box {
+    background-color: #f9f9f9;
+    padding: 5px;
+    border-radius: 5px;
+    display: inline-block;
+  }
+  
+  .student-item {
+    margin-bottom: 10px;
+    cursor: move;
+  }
+  
+  .no-students {
+    font-style: italic;
+    color: gray;
+  }
+
+  /* --------------------Manage Team Page-------------------- */
+
+  .manage-teams-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
+  }
+
+  .manage-teams-wrapper h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  
+  /* Main container layout for Unassigned Students and Teams */
+  .manage-teams-container {
+    display: flex;
+    flex-wrap: wrap; 
+    width: 100%;
+    height: 70vh;
+    margin-top: 20px;
+    gap: 20px;
+  }
+  
+  /* Unassigned Students section */
+  .manage-unassigned-students {
+    flex: 0 0 25%; 
+    max-width: 350px; 
+    height: 100%;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #f8f9fa; /* Light gray background */
+    border: 1px solid #ccc; /* Subtle border */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); /* Light shadow */
+}
+
+/* Optional: Style the title inside the box */
+.manage-unassigned-students h4 {
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Ensure student list looks good inside the box */
+.manage-student-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.manage-student-item {
+    background: #ffffff; /* White background */
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 5px;
+    cursor: grab;
+    box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.manage-student-item:hover {
+    background: #e9ecef;
+}
+
+  
+  .manage-student-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .manage-student-item {
+    display: flex;
+    justify-content: space-between; /* Aligns name to the left and button to the right */
+    align-items: center; /* Vertically aligns items */
+    padding: 8px;
+    margin: 5px 0;
+    background: #ffffff; /* Lighter Ash */
+    border-radius: 5px;
+}
+
+/* Ensure the X button does not shrink */
+.manage-student-item button {
+    flex-shrink: 0; /* Prevents it from shrinking */
+    background: transparent;
+    border: none;
+    color: #dc3545;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.manage-student-item button:hover {
+    color: #b21f2d; /* Darker red on hover */
+}
+
+  
+  .manage-no-students {
+    text-align: center;
+    font-style: italic;
+    color: #6c757d;
+  }
+  
+  /* Teams container */
+  /* Change Teams Container Background to Ash */
+.manage-teams-list {
+    flex: 1 1 60%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    background-color: #ffffff; /* Light Ash */
+  }
+  
+  /* Change Individual Team List Background to Ash */
+  .manage-team-list {
+    flex: 0 0 45%;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid #ffffff; /* Slightly darker ash border */
+    border-radius: 8px;
+    background-color: #f3efef; /* Medium Ash */
+    box-sizing: border-box;
+  }
+  
+  /* Update Team Headers to Ash Theme */
+  .manage-team-list h4 {
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #555; /* Darker Ash for contrast */
+  }
+  
+  /* Update Student List Background Inside Teams */
+  .manage-team-list .manage-student-item {
+    padding: 8px;
+    margin: 5px 0;
+    background: #ffffff; /* Lighter Ash */
+    border-radius: 5px;
+  }
+  .manage-team-list .manage-student-item button {
+    float: right;
+  }
+  .team-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .delete-team-btn {
+    margin-left: auto;
+    padding: 0.25rem 0.5rem;
+    border-radius: 50%;
+    background-color: #dc3545; 
+    color: white;
+  }
+
+
+  /* Change the background of the list group */
+.list-group {
+    background-color: #d6d6d6; /* Light Ash */
+    border-radius: 5px;
+  }
+  
+  /* Remove default borders and make it blend with the ash background */
+  .list-group-flush .list-group-item {
+    background-color: #ffffff; /* Medium Ash */
+    border-bottom: 1px solid #bbb; /* Slightly darker border for separation */
+    color: #333; /* Dark text for better readability */
+  }
+  
+  /* Ensure hover effect remains subtle */
+  .list-group-item:hover {
+    background-color: #c4c4c4; /* Slightly darker ash */
+    transition: background-color 0.2s ease-in-out;
+  }
+  
+  /* Style the card header inside the list */
+  .card-header {
+    background-color: #b8b8b8 !important; /* Darker Ash for contrast */
+    color: #333 !important; /* Darker text */
+  }
+  /* Edit Button - Dark Ash */
+.btn-edit {
+    background-color: #5a5a5a; /* Dark Ash */
+    color: white;
+    border: 1px solid #444; /* Slightly darker border */
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+  }
+  
+  /* Hover Effect - Slightly Darker Ash */
+  .btn-edit:hover {
+    background-color: #494949; /* Darker Ash */
+    border-color: #3a3a3a;
+    
+  }
+  
+  /* Click (Active) Effect - Remove Blue Border */
+  .btn-edit:active {
+    background-color: #3a3a3a !important; /* Even Darker Ash */
+    border-color: #2a2a2a !important;
+    transform: scale(0.98); /* Slight press effect */
+    outline: none !important; /* Remove default focus */
+    box-shadow: none !important; /* Remove blue outline */
+    color: white;
+  }
+  
+  /* Remove blue focus outline after clicking */
+  .btn-edit:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    color: white;
+  }
+  
+  
+  /* --------Flash message styles---------- */
+
+  /* Error message */
+  .alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+
+  .mb-3 {
+    margin-bottom: 15px;
+  }
+  
+  /* Button group */
+  .d-flex {
+    gap: 15px;
+  }
+
+  .bi {
+    font-size: 1.1rem;
+    margin-right: 5px;
+  }
+   
+
+  /* alerts */
+  .fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+  }
+  
+  .alert-wrapper {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1050;
+    max-width: 300px;
+  }
+  
+  .alert {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #7aa584; 
+    color: white;
+  }
+  
+  .alert.error {
+    background-color: #dc3545;
+  }
+  
+  .alert .btn-close {
+    font-size: 0.6rem;
+    padding: 0.2rem;
+    margin: -0.2rem;
+    border: none;
+    box-shadow: none;
+    color: #6c757d;
+  }
+  
+  .alert .btn-close:hover {
+    color: #495057;
+  }
+      /* --------Login Page---------- */
+      
+      .googlebutton {
+        max-width: 320px;
+        display: flex;
+        padding: 0.5rem 1.4rem;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        font-weight: 700;
+        text-align: center;
+        text-transform: uppercase;
+        align-items: center;
+        justify-content: center; /* Ensures text & icon are centered */
+        border-radius: 0.5rem;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        gap: 0.75rem;
+        color: rgb(65, 63, 63);
+        background-color: #fff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      
+      .googlebutton svg {
+        height: 24px;
+      }
+      
+      .googlebutton:hover {
+        transform: scale(1.02);
+      }
+      
+  
+    /* --------Home / Dashboard---------- */
+  .semester-section {
+    margin-bottom: 10px; 
+    text-align: left;
+  }
+  
+  
+  .card-wrapper {
+    flex: 0 0 350px; 
+  }
+  
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px; 
+    justify-content: flex-start;
+  }
+  
+    .col-md-4 {
+    display: flex;
+    margin-bottom: 0; 
+  }
+  
+  .classroom-card {
+    cursor: pointer;
+    border: 1px solid #cdd2e7;
+    border-radius: 10px;
+    background-color: #f0f4f8;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%; 
+    height: 150px;
+    overflow: hidden;
+    text-align: left;
+  }
+  
+  .classroom-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 4px 12px rgba(12, 10, 10, 0.1);
+  }
+  
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .card-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .card-text {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  
+  .classrooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; 
+  }
+  
+  .center-title {
+    text-align: center;
+  }
+
+  .dashboard-title {
+    text-align: center;
+    width: 100%;
+}
+
+.assigned-classrooms {
+    text-align: left;
+    width: 100%;
+}
+
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+.student-dashboard-container {
+  margin: 0 !important;
+  padding: 0;
+}
+
+  /* --------Team Pages---------- */
+
+  .team-container {
+    width: 100%;
+    max-width: 800px; /* Adjust as needed */
+    padding: 20px;
+    margin-left: 0; /* Aligns to the left */
+}
+
+  
+  /* --------Form Pages---------- */
+  /* Input fields */
+  .form-control {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    transition: border-color 0.2s ease;
+  }
+  
+  .form-control:focus {
+    border-color: #66afe9;
+    outline: none;
+  }
+  
+  /* Labels */
+  .form-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  /* Form Container */
+  .form-container {
+    max-width: 500px; /* Reduce width */
+    width: 85%; /* Responsive */
+    margin: 0 auto;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Form Title */
+  .form-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #415b8b;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  
+  /* Form Controls */
+  .form-control {
+    font-size: 14px; 
+    padding: 8px;
+    border: 1px solid #b0b0b0;
+    border-radius: 5px;
+    transition: border 0.2s ease-in-out;
+  }
+  
+  .form-control:focus {
+    border-color: #4173b8;
+    outline: none;
+  }
+  
+  /* Reduce width for inputs */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* --------Classroom Page---------- */
+  .classroom-page {
+    text-align: center;
+    position: relative;
+}
+  /* Classroom Title */
+  .classroom-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #415b8b;
+    margin-bottom: 20px;
+  }
+
+  /* Projects Grid */
+  .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    justify-content: center;
+    margin-top: 15px;
+  }
+  
+  /* Project Card */
+  .project-card {
+    background: white;
+    border: 1px solid #cdd2e7;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .project-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Project Content Styling */
+  .project-content {
+    padding: 20px;
+  }
+  
+  /* Project Title */
+  .project-title {
+    font-size: 26px;
+    font-weight: bold;
+    color: #415b8b;
+    margin-bottom: 15px;
+  }
+  
+  /* Teams Header */
+  .teams-header {
+    font-size: 20px;
+    font-weight: bold;
+    color: #343a40;
+    margin-top: 20px;
+  }
+  
+  /* Team List */
+  .teams-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  /* Individual Team Item */
+  .team-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  
+  /* Team Name */
+  .team-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #415b8b;
+  }
+  
+  /* Team Links */
+  .team-link {
+    text-decoration: none;
+    color: #007bff;
+    font-size: 14px;
+  }
+  
+  .team-link:hover {
+    text-decoration: underline;
+  }
+ 
+  .project-card {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .project-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  .project-description,
+  .project-due-date {
+    font-size: 14px;
+    color: #6c757d;
+  }
+  
+  .project-card h5 {
+    font-size: 18px;
+    color: #495057;
+  }
+
+  /* --------Project Page---------- */
+  .project-container {
+    padding: 20px; /* Adds padding around the content */
+    max-width: 80%; /* Ensures it doesn't stretch too wide */
+    margin: 0 auto; /* Centers it in the page */
+}
+
+  /* --------Manage Students Page---------- */
+  .card.border-dark {
+    max-width: 500px; 
+    width: 100%;
+    margin-left: 0;
+    padding: 0; 
+  }
+  .card .list-group-item {
+    font-size: 13px;
+    padding: 4px 10px; 
+    margin-bottom: 3px; 
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    height: 45px; 
+    width: 100%;
+    max-width: 500px;
+  }
+  
+  .card .list-group {
+    width: 100%;
+    max-width: 500px;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0; 
+    overflow: hidden;
+  }
+  
+  .list-group-item .student-info {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  /* Hover effect for list items */
+  .list-group-item:hover {
+    background-color: rgba(0, 0, 0, 0.03); 
+    transform: translateY(-2px); 
+  }
+  
+  /* Loading State */
+  .bi-hourglass-split {
+    animation: spin 1s infinite linear;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+ 
+  .mt-2 {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+/* --------Buttons---------- */
+
+  /* General Button Styling */
+.btn {
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  /* Action Buttons (Primary Buttons) */
+  .action-btn {
+    display: inline-block;
+    outline: 0;
+    cursor: pointer;
+    text-align: center;
+    border: 0;
+    padding: 7px 16px;
+    min-height: 36px;
+    min-width: 36px;
+    color: #ffffff;
+    background-color: rgb(52, 58, 64);
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 14px;
+    box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 0px 0px, rgba(0, 0, 0, 0.2) 0px -1px 0px 0px inset;
+  }
+  
+  .action-btn:hover {
+    background-color: rgb(31, 33, 35);
+    color: white;
+  }
+
+  .action-btn:active {
+    background-color: rgb(20, 22, 24); /* Slightly darker */
+    color: white; /* Keep text color unchanged */
+}
+
+/* Back Button Click Effect */
+.back-btn:active {
+    background-color: rgb(40, 40, 41); /* Slightly darker */
+    color: white; /* Keep text color unchanged */
+}
+  
+  /* Back Buttons (Secondary Buttons) */
+  .back-btn {
+    display: inline-block;
+    outline: 0;
+    cursor: pointer;
+    text-align: center;
+    border: 0;
+    padding: 7px 16px;
+    min-height: 36px;
+    min-width: 36px;
+    color: #ffffff;
+    background-color: rgb(134, 136, 138);
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 14px;
+    box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 0px 0px, rgba(0, 0, 0, 0.2) 0px -1px 0px 0px inset;
+  }
+  
+  .back-btn:hover {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 8%);
+    background-color: rgb(57, 57, 58);
+    color: #ffffff;
+  }
+  
+  /* Disabled Button */
+  .btn:disabled {
+    background-color: #b0b0b0;
+    cursor: not-allowed;
+  }
+  
+  /* Delete Button */
+  .delete-btn {
+    background: #dc3545;
+    color: white;
+    padding: 10px 15px;
+    font-size: 14px;
+    border-radius: 5px;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .delete-btn:hover {
+    background: #c82333;
+  }
+
+  .delete-btn:active {
+    background: #b21f2d; /* Slightly darker red */
+    color: white; /* Keep text color unchanged */
+}
+  /* Align button group to the left */
+.button-group {
+    display: flex;
+    justify-content: flex-start; /* Aligns buttons to the left */
+    gap: 10px; /* Adds spacing between buttons */
+    margin-bottom: 15px; /* Adds spacing below the buttons */
+}
+
+/* Ensure buttons don't turn white on click, only get slightly darker */
+.action-btn:active {
+    background-color: rgb(20, 22, 24); /* Slightly darker */
+    color: white; /* Keep text color unchanged */
+}
+
+.back-btn:active {
+    background-color: rgb(40, 40, 41); /* Slightly darker */
+    color: white; /* Keep text color unchanged */
+}
+
+.delete-btn:active {
+    background: #b21f2d; /* Slightly darker red */
+    color: white; /* Keep text color unchanged */
+}
+button, .btn, .action-btn, .back-btn, .delete-btn {
+    -webkit-tap-highlight-color: transparent; /* Prevents default click effect */
+    user-select: none; /* Prevents text selection on click */
+}
+
+.action-btn:focus, .back-btn:focus, .delete-btn:focus {
+    background-color: inherit !important; /* Keep the same background color */
+    outline: none !important; /* Remove focus outline */
+    box-shadow: none !important; /* Prevent unwanted styling */
+}
+.action-btn:active {
+    background-color: rgb(20, 22, 24) !important; /* Darker shade */
+    color: white !important;
+}
+
+.back-btn:active {
+    background-color: rgb(40, 40, 41) !important;
+    color: white !important;
+}
+
+.delete-btn:active {
+    background: #b21f2d !important;
+    color: white !important;
+}
+
+.spinner-border {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .row {
+    margin-bottom: 10px;
+  }
+
+  .back-btn {
+    display: block;
+    text-align: left;
+    width: fit-content; /* Ensures the button does not stretch */
+}
+
+/* View Team Button */
+.btn-view {
+    background-color: rgb(52, 58, 64); /* Dark gray */
+    color: white;
+    padding: 7px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none; /* Removes underline for links */
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-view:hover {
+    background-color: rgb(31, 33, 35);
+    color: white;
+}
+
+.btn-view:active {
+    background-color: rgb(20, 22, 24);
+    color: white;
+}
+
+/* Whiteboard Button */
+.btn-whiteboard {
+    background-color: #5f666f; /* Blue color */
+    color: white;
+    padding: 7px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-whiteboard:hover {
+    background-color: #3b434b; /* Darker blue */
+    color: white;
+}
+
+.btn-whiteboard:active {
+    background-color: #393e44; /* Even darker blue */
+    color: white;
+}
