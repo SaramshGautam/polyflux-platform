@@ -35,7 +35,8 @@ const LoginPage = () => {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       const userEmail = user.email;
-      const userName = user.displayName; // Get the user's display name
+      const userName = user.displayName;
+      const photoURL = user.photoURL;
 
       // Fetch role & LSUID from Firestore
       const userDoc = await getDoc(doc(db, "users", userEmail));
@@ -52,6 +53,7 @@ const LoginPage = () => {
       // Store user data in localStorage
       localStorage.setItem("role", role);
       localStorage.setItem("userEmail", userEmail);
+      localStorage.setItem("photoURL", photoURL);
       if (LSUID) {
         localStorage.setItem("LSUID", LSUID);
       }

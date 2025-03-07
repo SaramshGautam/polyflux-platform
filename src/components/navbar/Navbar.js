@@ -6,7 +6,8 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const role = localStorage.getItem("role"); // Get role from localStorage
+  const role = localStorage.getItem("role");
+  const photoURL = localStorage.getItem("photoURL");
   const homeRoute =
     role === "teacher"
       ? "/teachers-home"
@@ -20,6 +21,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("role");
+    localStorage.removeItem("photoURL");
     navigate("/"); // Redirect to login page
   };
 
@@ -38,8 +40,9 @@ const Navbar = () => {
     <div className="navbar">
       <div className="navbar-left">
         {/* Logo and links */}
+        <img src="/logo.png" alt="App logo" style={{width: "20px"}}
         <div className="navbar-title" onClick={() => navigate(homeRoute)}>
-          collaBOARD
+          PolyFlux
         </div>
         <div className="navbar-links">
           <a href="#about">About</a>
@@ -50,7 +53,26 @@ const Navbar = () => {
         {/* Dropdown for logout */}
         <ul className="nav-item dropdown">
           <li className="nav-link dropdown-toggle" onClick={handleProfileClick}>
-            <i className="bi bi-person" style={{ fontSize: "24px", color: "white" }}></i>
+            {photoURL ? (
+              <img
+                src={photoURL}
+                alt="Profile"
+                className="profile-picture"
+                style={{
+                  width: "35px",
+                  height: "35px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  cursor: "pointer",
+                  border: "2px solid white",
+                }}
+              />
+            ) : (
+              <i
+                className="bi bi-person"
+                style={{ fontSize: "24px", color: "white" }}
+              ></i>
+            )}
           </li>
           {/* Dropdown Menu */}
           <ul className={`dropdown-menu ${isProfileOpen ? "show" : ""}`}>
