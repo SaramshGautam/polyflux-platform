@@ -78,7 +78,7 @@ const LoginPage = () => {
       style={{ backgroundColor: "#f0f0f0" }}
     >
       <div className="login-container p-4 bg-white rounded shadow text-center">
-        <h2 className="text-center mb-4">PolyFlux</h2>
+        <h2 className="text-center mb-4">PolyFlux: Creativity Support</h2>
 
         {/* Local flash messages (if any) */}
         {message && (
