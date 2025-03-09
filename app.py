@@ -31,7 +31,8 @@ if firebase_key_base64:
 # cred = credentials.Certificate(firebase_key)
 # firebase_admin.initialize_app(cred)
 # CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
+# CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
+CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://colla-board.vercel.app"]}})
 
 db = firestore.client()
 
@@ -50,7 +51,11 @@ def is_authenticated():
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    allowed_origins = ["http://localhost:3000", "https://colla-board.vercel.app"]
+    origin = request.headers.get("Origin")
+
+    if origin in allowed_origins:
+        response.headers.add('Access-Control-Allow-Origin', origin)
     response.headers.add('Access-Control-Allow-Credentials', 'true')  
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
