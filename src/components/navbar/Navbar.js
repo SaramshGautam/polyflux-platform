@@ -40,7 +40,11 @@ const Navbar = () => {
     <div className="navbar">
       <div className="navbar-left">
         {/* Logo and links */}
-        <img src="/logo.png" alt="App logo" style={{ width: "20px" }} />
+        <img
+          src="/logo.png"
+          alt="App logo"
+          style={{ width: "20px", marginRight: "7px" }}
+        />
         <div className="navbar-title" onClick={() => navigate(homeRoute)}>
           PolyFlux
         </div>
