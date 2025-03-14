@@ -30,7 +30,10 @@ const AddStudent = () => {
 
     try {
       // Make sure the URL is correctly formed
-      // await axios.post(`http://localhost:5000/api/classroom/${className}/add_student`, studentData);
+      // await axios.post(
+      //   `http://localhost:5000/api/classroom/${className}/add_student`,
+      //   studentData
+      // );
       await axios.post(
         `https://flask-app-jqwkqdscaq-uc.a.run.app/api/classroom/${className}/add_student`,
         studentData

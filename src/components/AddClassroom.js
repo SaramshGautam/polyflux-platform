@@ -50,13 +50,20 @@ const AddClassroom = () => {
 
     try {
       setIsSubmitting(true);
+      // const response = await axios.post(
+      //   "http://localhost:5000/addclassroom",
+      //   formData,
+      //   {
       const response = await axios.post(
-        // "http://localhost:5000/addclassroom",
         "https://flask-app-jqwkqdscaq-uc.a.run.app/addclassroom",
         formData,
         {
           withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Accept: "application/json",
+            "Access-Control-Allow-Origin": "https://colla-board.vercel.app",
+          },
         }
       );
       setIsSubmitting(false);

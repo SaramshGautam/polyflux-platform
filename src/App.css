@@ -50,7 +50,6 @@
   font-weight: 600;
 }
 
-
 .commentsTitle {
   padding: 0px;
   margin: 0px;
@@ -338,4 +337,38 @@
 .tlui-style-panel {
   position: relative;
   top: 72%;
+}
+
+.toggle-collapse-button {
+  background: url("https://cdn.tldraw.com/3.10.1/icons/icon/0_merged.svg#chevrons-ne")
+    center 100% / contain no-repeat;
+  border: none;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease-in-out;
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+}
+
+.toggle-collapse-button.collapsed {
+  transform: rotate(180deg);
+}
+
+.toggle-expand-button {
+  background: url("https://cdn.tldraw.com/3.10.1/icons/icon/0_merged.svg#chevrons-ne")
+    center / contain no-repeat;
+  border: none;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 18px;
+  margin-left: 10px;
+  transition: transform 0.3s ease-in-out;
+  position: relative;
+}
+
+.toggle-expand-button.collapsed {
+  transform: rotate(180deg);
 }

@@ -32,7 +32,10 @@ const AddProject = () => {
     formData.append("userEmail", userEmail);
 
     try {
-      // const response = await axios.post(`http://localhost:5000/api/add_project/${className}`, formData, {
+      // const response = await axios.post(
+      //   `http://localhost:5000/api/add_project/${className}`,
+      //   formData,
+      //   {
       const response = await axios.post(
         `https://flask-app-jqwkqdscaq-uc.a.run.app/api/add_project/${className}`,
         formData,
@@ -40,6 +43,8 @@ const AddProject = () => {
           headers: {
             "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${role}:${userEmail}`,
+            Accept: "application/json",
+            "Access-Control-Allow-Origin": "https://colla-board.vercel.app/",
           },
         }
       );

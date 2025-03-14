@@ -308,8 +308,8 @@ const App = () => {
 };
 
 const CollaborativeWhiteboard = () => {
-  const { className, projectName, teamName } = useParams(); // Get params from URL
-  const roomId = `collaBoard-${className}-${projectName}-${teamName}`; // Create unique roomId based on class, project, and team
+  const { className, projectName, teamName } = useParams();
+  const roomId = `collaBoard-${className}-${projectName}-${teamName}`;
   const store = useSyncDemo({ roomId }); // Use the unique roomId
 
   const [shapeReactions, setShapeReactions] = useState({});
@@ -445,6 +445,7 @@ const CollaborativeWhiteboard = () => {
             <ContextToolbarComponent
               {...props}
               selectedShape={selectedShape}
+              setShapeReactions={setShapeReactions}
               shapeReactions={shapeReactions}
               commentCounts={commentCounts}
               onReactionClick={handleReactionClick}

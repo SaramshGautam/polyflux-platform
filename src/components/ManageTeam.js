@@ -84,7 +84,7 @@ const ManageTeams = () => {
       students: team.students.map((student) => student.email),
     }));
 
-    // fetch('http://localhost:5000/save-teams', {
+    // fetch("http://localhost:5000/save-teams", {
     fetch("https://flask-app-jqwkqdscaq-uc.a.run.app/save-teams", {
       method: "POST",
       headers: {

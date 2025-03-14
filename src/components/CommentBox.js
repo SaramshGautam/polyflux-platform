@@ -1,20 +1,125 @@
-import React, { useEffect, useRef, useState } from "react";
+// import React, { useEffect, useRef, useState } from "react";
+// import { getAuth } from "firebase/auth";
+
+// export default function CommentBox({
+//   selectedShape,
+//   // addCommentIcon,
+//   addComment,
+//   showCommentBox,
+//   onClose,
+//   logAction,
+// }) {
+//   const auth = getAuth();
+//   const user = auth.currentUser;
+
+//   const [commentData, setCommentData] = useState({
+//     userId: user ? user.displayName || "Anonymous" : "Anonymous",
+//     timestamp: new Date().toLocaleString(),
+//     text: "",
+//   });
+
+//   const commentInputRef = useRef(null);
+
+//   useEffect(() => {
+//     if (showCommentBox && commentInputRef.current) {
+//       commentInputRef.current.focus();
+//     }
+//   }, [showCommentBox]);
+
+//   const handleCommentSubmit = (e) => {
+//     e.preventDefault();
+
+//     if (!selectedShape) return;
+
+//     addComment(selectedShape.id, commentData);
+
+//     // Clear comment data and close comment box
+//     setCommentData({ ...commentData, text: "" });
+
+//     // addCommentIcon(selectedShape.id);
+//     logAction({ userId: commentData.userId, action: "added a comment" });
+//     onClose();
+//   };
+
+//   const handleClear = () => {
+//     setCommentData({ ...commentData, text: "" });
+//   };
+
+//   if (!showCommentBox) return null;
+
+//   return (
+//     <div className="commentBox">
+//       <button onClick={onClose} className="closeButton">
+//         ×
+//       </button>
+
+//       <h4 className="commentBoxTitle">Add Comment</h4>
+//       <form onSubmit={handleCommentSubmit}>
+//         <label className="label">
+//           User ID:
+//           <input
+//             type="text"
+//             value={commentData.userId}
+//             onChange={(e) =>
+//               setCommentData({ ...commentData, userId: e.target.value })
+//             }
+//             className="input"
+//           />
+//         </label>
+//         <label className="label">
+//           Time:
+//           <input
+//             type="text"
+//             value={commentData.timestamp}
+//             readOnly
+//             className="input"
+//           />
+//         </label>
+//         <label className="label">
+//           Comment:
+//           <textarea
+//             ref={commentInputRef}
+//             value={commentData.text}
+//             onChange={(e) =>
+//               setCommentData({ ...commentData, text: e.target.value })
+//             }
+//             className="textarea"
+//             onKeyDown={(e) => {
+//               if (e.key === "Enter" && !e.shiftKey) {
+//                 handleCommentSubmit(e); // Submit on Enter
+//               }
+//             }}
+//           />
+//         </label>
+//         <button type="submit" className="button">
+//           Submit
+//         </button>
+//         <button type="button" onClick={handleClear} className="clearButton">
+//           Clear
+//         </button>
+//       </form>
+//     </div>
+//   );
+// }
+
+import React, { useState, useEffect, useRef } from "react";
+import { getAuth } from "firebase/auth";
+import { AddCommentToShape } from "../utils/firestoreHelpers";
+import { useParams } from "react-router-dom";
+import { Timestamp } from "firebase/firestore";
 
 export default function CommentBox({
   selectedShape,
-  // addCommentIcon,
   addComment,
   showCommentBox,
   onClose,
   logAction,
 }) {
-  const [commentData, setCommentData] = useState({
-    userId: "User123",
-    timestamp: new Date().toLocaleString(),
-    text: "",
-  });
-
+  const auth = getAuth();
+  const user = auth.currentUser;
   const commentInputRef = useRef(null);
+  const [commentText, setCommentText] = useState("");
+  const { className, projectName, teamName } = useParams();
 
   useEffect(() => {
     if (showCommentBox && commentInputRef.current) {
@@ -22,23 +127,37 @@ export default function CommentBox({
     }
   }, [showCommentBox]);
 
-  const handleCommentSubmit = (e) => {
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedShape || !commentText.trim()) return;
 
-    if (!selectedShape) return;
+    if (!user) {
+      console.error("User not logged in!");
+      return;
+    }
+
+    const commentData = {
+      userId: user.displayName || "Anonymous",
+      Timestamp: new Date().toLocaleString(),
+      text: commentText,
+    };
 
     addComment(selectedShape.id, commentData);
 
-    // Clear comment data and close comment box
-    setCommentData({ ...commentData, text: "" });
+    await AddCommentToShape(
+      selectedShape.id,
+      commentText,
+      {
+        className,
+        projectName,
+        teamName,
+      },
+      user
+    );
 
-    // addCommentIcon(selectedShape.id);
-    logAction({ userId: commentData.userId, action: "added a comment" });
+    setCommentText(""); // Clear input after submission
+    logAction({ userId: user.displayName, action: "added a comment" });
     onClose();
-  };
-
-  const handleClear = () => {
-    setCommentData({ ...commentData, text: "" });
   };
 
   if (!showCommentBox) return null;
@@ -48,25 +167,13 @@ export default function CommentBox({
       <button onClick={onClose} className="closeButton">
         ×
       </button>
-
       <h4 className="commentBoxTitle">Add Comment</h4>
       <form onSubmit={handleCommentSubmit}>
         <label className="label">
           User ID:
           <input
             type="text"
-            value={commentData.userId}
-            onChange={(e) =>
-              setCommentData({ ...commentData, userId: e.target.value })
-            }
-            className="input"
-          />
-        </label>
-        <label className="label">
-          Time:
-          <input
-            type="text"
-            value={commentData.timestamp}
+            value={user ? user.displayName : "Anonymous"}
             readOnly
             className="input"
           />
@@ -75,23 +182,16 @@ export default function CommentBox({
           Comment:
           <textarea
             ref={commentInputRef}
-            value={commentData.text}
-            onChange={(e) =>
-              setCommentData({ ...commentData, text: e.target.value })
-            }
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
             className="textarea"
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                handleCommentSubmit(e); // Submit on Enter
-              }
+              if (e.key === "Enter" && !e.shiftKey) handleCommentSubmit(e);
             }}
           />
         </label>
         <button type="submit" className="button">
           Submit
-        </button>
-        <button type="button" onClick={handleClear} className="clearButton">
-          Clear
         </button>
       </form>
     </div>
