@@ -68,7 +68,7 @@ export async function registerShape(newShape, userContext) {
     return;
   }
 
-  const { id: shapeID, type: shapeType } = newShape;
+  const { id: shapeID, type: shapeType, x, y, props } = newShape;
   const { className, projectName, teamName, userId } = userContext;
 
   if (
@@ -95,6 +95,8 @@ export async function registerShape(newShape, userContext) {
     const shapeDoc = {
       shapeId: shapeID,
       shapeType,
+      position: { x, y },
+      // text: props?.text.content,
       teamName: teamName,
       createdAt: serverTimestamp(),
       createdBy: userId,

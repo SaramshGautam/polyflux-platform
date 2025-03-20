@@ -41,6 +41,17 @@ export default function CustomContextMenu({
   useEffect(() => {
     if (!editor || !className || !projectName || !teamName) return;
 
+    //Logs the shape starting position
+    let startPosition = {};
+
+    const handleShapeMoveStart = () => {
+      const shape = editor.getActiveShape();
+      if (shape) {
+        startPosition = shape.getCenter();
+      }
+      console.log(`Shape Position: ${startPosition}`);
+    };
+
     const userId = auth.currentUser ? auth.currentUser.displayName : "anon";
     const userContext = { className, projectName, teamName, userId };
 
@@ -57,6 +68,13 @@ export default function CustomContextMenu({
         return;
       }
 
+      // const position = editor.getShape(newShape.id)?.getCenter();
+
+      // const startPosition = { x: newShape.x, y: newShape.y };
+      const text = newShape.props?.text || "";
+      console.log(`Shape Text ${text}`);
+
+      // console.log(`Shape Position: ${JSON.stringify(startPosition)}`);
       console.log("Adding shape log:", newShape.id);
 
       await registerShape(newShape, userContext);
