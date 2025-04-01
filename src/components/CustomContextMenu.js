@@ -49,7 +49,7 @@ export default function CustomContextMenu({
       if (shape) {
         startPosition = shape.getCenter();
       }
-      console.log(`Shape Position: ${startPosition}`);
+      // console.log(`Shape Position: ${startPosition}`);
     };
 
     const userId = auth.currentUser ? auth.currentUser.displayName : "anon";
@@ -68,14 +68,9 @@ export default function CustomContextMenu({
         return;
       }
 
-      // const position = editor.getShape(newShape.id)?.getCenter();
-
-      // const startPosition = { x: newShape.x, y: newShape.y };
       const text = newShape.props?.text || "";
-      console.log(`Shape Text ${text}`);
-
-      // console.log(`Shape Position: ${JSON.stringify(startPosition)}`);
-      console.log("Adding shape log:", newShape.id);
+      // console.log(`Shape Text ${text}`);
+      // console.log("Adding shape log:", newShape.id);
 
       await registerShape(newShape, userContext);
 
@@ -95,7 +90,6 @@ export default function CustomContextMenu({
         console.error("Missing shape ID!");
         return;
       }
-      // console.log(`--- shape to be deleted --- ${deletedShapeID.id}`);
 
       if (!className || !projectName || !teamName) {
         console.error(
@@ -116,7 +110,7 @@ export default function CustomContextMenu({
       setActionHistory((prev) => [
         {
           userId: auth.currentUser ? auth.currentUser.displayName : "anon",
-          action: `deleted the shape`,
+          action: `deleted`,
           shapeId: deletedShapeID.id,
           timestamp: new Date().toLocaleString(),
         },
@@ -141,36 +135,13 @@ export default function CustomContextMenu({
 
   useEffect(() => {
     const updateSelectedShape = (shape) => {
-      // const selectedIds = editor.getSelectedShapeIds();
-
-      // if (selectedIds.length === 0) {
       if (!shape) {
-        console.log("No shape selected.");
+        // console.log("No shape selected.");
         setSelectedShape(null);
       } else {
-        // const shapeId = selectedIds[0];
-        // const shape = editor.getShape(shapeId);
         if (shape) {
-          console.log("Selected shape:", shape);
+          // console.log("Selected shape:", shape);
           setSelectedShape(shape);
-
-          // Update tooltip position
-          const selectionRotatedPageBounds =
-            editor.getSelectionRotatedPageBounds();
-          if (selectionRotatedPageBounds) {
-            // const centerX =
-            //   selectionRotatedPageBounds.minX +
-            //   selectionRotatedPageBounds.width / 2;
-            // const centerY = selectionRotatedPageBounds.minY;
-            // const viewportPosition = editor.pageToViewport({
-            //   x: centerX,
-            //   y: centerY,
-            // });
-            // setTooltipPosition({
-            //   x: viewportPosition.x,
-            //   y: viewportPosition.y - 42, // Position above the selection
-            // });
-          }
         }
       }
     };
@@ -188,7 +159,7 @@ export default function CustomContextMenu({
           editor.screenToPage({ x: event.clientX, y: event.clientY })
         )
       ) {
-        console.log("User clicked outside. Deselecting shape.");
+        // console.log("User clicked outside. Deselecting shape.");
         // setSelectedShape(null);
       }
     };
@@ -214,7 +185,7 @@ export default function CustomContextMenu({
       setSelectedShape(shape);
       editor.select(shape.id);
 
-      console.log("Shape ID:", shape.id);
+      // console.log("Shape ID:", shape.id);
     }
   };
 

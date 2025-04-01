@@ -35,7 +35,7 @@ export default function HistoryPanel({ actionHistory = [] }) {
             return (
               <li key={index} className="historyItem">
                 <strong>{action.userId || "Unknown User"}</strong>{" "}
-                {action.action}
+                {action.action} {action.shapeId}
                 <div className="timestamp">{formattedTimestamp}</div>
               </li>
             );

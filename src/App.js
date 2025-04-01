@@ -48,75 +48,7 @@ import CustomContextMenu from "./components/CustomContextMenu";
 import Navbar from "./components/navbar/Navbar";
 import ContextToolbarComponent from "./components/ContextToolbarComponent";
 import CustomActionsMenu from "./components/CustomActionsMenu";
-// import CircleWithArrowsIcon from "./icons/CircleWithArrowsIcon";
-// import { CollectionTool } from "./utils/CollectionTool";
-// import { GroupTool } from "./utils/GroupTool";
-// import { EllipseTool } from "./utils/EllipseTool";
-// const customTools = [GroupTool, EllipseTool];
-// const customTools = [EllipseTool, CollectionTool];
 
-// const uiOverrides = {
-//   tools(editor, tools) {
-//     tools["collection"] = {
-//       id: "collection",
-//       icon: CircleWithArrowsIcon,
-//       label: "Collection Tool",
-//       kbd: "c",
-//       onSelect: () => {
-//         editor.setCurrentTool("collection");
-//       },
-//     };
-//     return tools;
-//   },
-// };
-
-// Firebase configuration
-
-{
-  /* const CustomToolbar = (props) => {
-  const tools = useTools();
-  // const isCollectionToolSelected = useIsToolSelected(tools["collection"]);
-
-  return (
-    <DefaultToolbar {...props}>
-      {/* Group Tool */
-}
-{
-  /* <TldrawUiMenuItem {...tools["group"]} isSelected={isGroupToolSelected} /> */
-}
-
-{
-  /* Collection Tool with Custom Icon */
-}
-{
-  /* <button
-        onClick={() => tools["collection"].onSelect()}
-        style={{
-          background: isCollectionToolSelected ? "#e6f7ff" : "transparent", // Highlight when selected
-          border: isCollectionToolSelected ? "2px solid #1890ff" : "none", // Add border when selected
-          padding: "8px",
-          borderRadius: "4px", // Match the default button style
-          cursor: "pointer",
-        }}
-        title="Collection Tool"
-      >
-        <CircleWithArrowsIcon
-          style={{
-            fill: isCollectionToolSelected ? "#1890ff" : "none", // Change icon color when selected
-            stroke: isCollectionToolSelected ? "#1890ff" : "black",
-          }}
-        />{" "}
-      </button>
-      <DefaultToolbarContent />
-    </DefaultToolbar>
-  );
-}; */
-}
-
-// Initialize Firebase
-// const app = initializeApp(firebaseConfig);
-// const auth = getAuth(app);
-// const provider = new GoogleAuthProvider();
 const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -333,7 +265,7 @@ const CollaborativeWhiteboard = () => {
       const q = query(historyRef, orderBy("timestamp", "desc"));
       const querySnapshot = await getDocs(q);
       const historyLogs = querySnapshot.docs.map((doc) => doc.data());
-      console.log(historyLogs[0].message);
+      console.log("History Logs ---- \n", historyLogs);
 
       setActionHistory(historyLogs);
     } catch (error) {
@@ -356,41 +288,6 @@ const CollaborativeWhiteboard = () => {
     Toolbar: DefaultToolbar,
     // Toolbar: CustomToolbar,
     ActionsMenu: CustomActionsMenu,
-  };
-
-  const handleReactionClick = (reactionData) => {
-    console.log("Received reactionData in App.js:", reactionData);
-    const { shapeId, userId, reactionType, timestamp } = reactionData;
-
-    setShapeReactions((prevReactions) => {
-      const currentReactions = prevReactions[shapeId] || {
-        like: 0,
-        dislike: 0,
-        surprised: 0,
-        confused: 0,
-      };
-
-      return {
-        ...prevReactions,
-        [shapeId]: {
-          ...currentReactions,
-          [reactionType]:
-            currentReactions[reactionType] > 0
-              ? currentReactions[reactionType] - 1
-              : currentReactions[reactionType] + 1,
-        },
-      };
-    });
-
-    setActionHistory((prev) => [
-      ...prev,
-      {
-        userId: userId,
-        action: `${reactionType}`,
-        shapeId,
-        timestamp,
-      },
-    ]);
   };
 
   const addComment = (shapeId, commentData) => {
@@ -448,9 +345,10 @@ const CollaborativeWhiteboard = () => {
               setShapeReactions={setShapeReactions}
               shapeReactions={shapeReactions}
               commentCounts={commentCounts}
-              onReactionClick={handleReactionClick}
+              // onReactionClick={handleReactionClick}
               addComment={addComment}
               setActionHistory={setActionHistory}
+              fetchActionHistory={fetchActionHistory}
             />
           ),
           // Toolbar: CustomToolbar,

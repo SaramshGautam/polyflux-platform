@@ -107,13 +107,16 @@ import { getAuth } from "firebase/auth";
 import { AddCommentToShape } from "../utils/firestoreHelpers";
 import { useParams } from "react-router-dom";
 import { Timestamp } from "firebase/firestore";
+import { logAction } from "../utils/registershapes";
 
 export default function CommentBox({
   selectedShape,
   addComment,
   showCommentBox,
   onClose,
-  logAction,
+  setActionHistory,
+  fetchActionHistory,
+  // logAction,
 }) {
   const auth = getAuth();
   const user = auth.currentUser;
@@ -126,6 +129,13 @@ export default function CommentBox({
       commentInputRef.current.focus();
     }
   }, [showCommentBox]);
+
+  const userContext = {
+    className,
+    projectName,
+    teamName,
+    userId: user.displayName,
+  };
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
@@ -156,7 +166,20 @@ export default function CommentBox({
     );
 
     setCommentText(""); // Clear input after submission
-    logAction({ userId: user.displayName, action: "added a comment" });
+    // logAction({ userId: user.displayName, action: "added a comment" });
+    await logAction(
+      {
+        className,
+        projectName,
+        teamName,
+      },
+      "added a comment",
+      user.displayName,
+      selectedShape.id
+    );
+
+    fetchActionHistory({ className, projectName, teamName }, setActionHistory);
+
     onClose();
   };
 

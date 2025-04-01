@@ -24,17 +24,40 @@ import { db } from "../firebaseConfig";
  * @returns {Promise<void>} A promise that resolves when the shape is successfully stored.
  */
 
-async function logAction(userContext, logMessage, userId, shapeId) {
-  if (!userContext || !logMessage || !userId) {
-    console.log("Missing user context or log message.");
+export async function logAction(
+  userContext,
+  logMessage,
+  userId,
+  shapeId,
+  onLogged = () => {}
+) {
+  if (!userContext) {
+    console.error("❌ Missing userContext");
+  }
+  if (!userId) {
+    console.error("❌ Missing userId");
+  }
+  if (!logMessage) {
+    console.error("❌ Missing logMessage");
+  }
+  if (!shapeId) {
+    console.error("❌ Missing shapeId");
+  }
+
+  if (!userContext || !userId || !logMessage || !shapeId) {
+    console.error("❌ Aborting logAction due to missing parameters.");
     return;
   }
 
   const { className, projectName, teamName } = userContext;
-  // console.log(`${className} ${projectName} ${teamName}`);
+  console.log(
+    `className = ${className} projectName = ${projectName} teamName= ${teamName}`
+  );
 
-  const historyID = `${userId}_${shapeId}`;
-  console.log(historyID);
+  const cleanAction = logMessage.replace(/\s+/g, "_").toLowerCase();
+
+  const historyID = `${userId}_${cleanAction}_${shapeId}_${Date.now()}`;
+  console.log("History Id === ", historyID);
 
   try {
     const historyRef = doc(
@@ -44,7 +67,6 @@ async function logAction(userContext, logMessage, userId, shapeId) {
 
     const historyDoc = {
       action: logMessage,
-      // timestamp: new Date().toLocaleString(),
       timestamp: serverTimestamp(),
       userId: userId,
       shapeId: shapeId,
@@ -56,7 +78,9 @@ async function logAction(userContext, logMessage, userId, shapeId) {
 
     await setDoc(historyRef, historyDoc);
 
-    console.log(`✅ Log added: ${logMessage} )`);
+    console.log(`✅ Log added: ${logMessage}`);
+
+    onLogged();
   } catch (error) {
     console.error(`Error adding log: ${error.message}`);
   }
@@ -96,16 +120,15 @@ export async function registerShape(newShape, userContext) {
       shapeId: shapeID,
       shapeType,
       position: { x, y },
-      // text: props?.text.content,
       teamName: teamName,
       createdAt: serverTimestamp(),
       createdBy: userId,
       comments: [],
       reactions: {
-        like: 0,
-        dislike: 0,
-        surprised: 0,
-        confused: 0,
+        like: [],
+        dislike: [],
+        surprised: [],
+        confused: [],
       },
     };
 
@@ -113,12 +136,7 @@ export async function registerShape(newShape, userContext) {
     await setDoc(shapeRef, shapeDoc);
     console.log(`✅ Shape ${shapeID} successfully added to Firestore!`);
 
-    await logAction(
-      userContext,
-      `${userId} added a ${shapeType}.`,
-      userId,
-      shapeID
-    );
+    await logAction(userContext, `added`, userId, newShape.id);
   } catch (error) {
     console.error("❌ Error adding shape to Firestore:", error);
   }
@@ -152,12 +170,7 @@ export async function deleteShape(shapeID, userContext) {
     // Delete document
     await deleteDoc(shapeRef);
     console.log(`🗑️ Shape ${shapeID} successfully deleted from Firestore.`);
-    await logAction(
-      userContext,
-      `${userId} deleted a ${shapeID}`,
-      userId,
-      shapeID
-    );
+    await logAction(userContext, `deleted`, userId, shapeID);
   } catch (error) {
     console.error("❌ Error deleting shape from Firestore:", error);
   }

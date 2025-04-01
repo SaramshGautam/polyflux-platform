@@ -1,119 +1,3 @@
-// import React from "react";
-// import { TldrawUiIcon, track, useEditor } from "tldraw";
-// import "tldraw/tldraw.css";
-
-// const REACTIONS = [
-//   { value: "Like", icon: "check-circle" },
-//   { value: "Dislike", icon: "cross-circle" },
-//   { value: "Surprised", icon: "warning-triangle" },
-//   { value: "Confused", icon: "question-mark-circle" },
-// ];
-
-// const ContextToolbarComponent = track(
-//   ({ selectedShape, shapeReactions, commentCounts, onReactionClick }) => {
-//     const editor = useEditor();
-//     const tooltipWidth = 200;
-
-//     // Get the bounding box of the selected shapes in canvas (page) coordinates, accounting for rotation.
-//     const selectionRotatedPageBounds = editor.getSelectionRotatedPageBounds();
-//     if (!selectionRotatedPageBounds || !selectedShape) return null;
-
-//     //Calculating the center of the selected bounds
-//     const centerX =
-//       selectionRotatedPageBounds.minX + selectionRotatedPageBounds.width / 2;
-//     const centerY = selectionRotatedPageBounds.minY;
-
-//     const viewportCenter = editor.pageToViewport({ x: centerX, y: centerY });
-
-//     const selectedId = selectedShape.id;
-//     const selectedShapeReactions = shapeReactions[selectedId] || {};
-//     const selectedShapeCommentCount = commentCounts[selectedId] || 0;
-
-//     console.log("Selected shape comment count:", selectedShapeCommentCount);
-
-//     return (
-//       <div
-//         style={{
-//           position: "absolute",
-//           pointerEvents: "all",
-//           top: viewportCenter.y - 42,
-//           left: viewportCenter.x - tooltipWidth / 2,
-//           display: "flex",
-//           justifyContent: "center",
-//           alignItems: "center",
-//           zIndex: 10,
-//         }}
-//       >
-//         <div
-//           style={{
-//             borderRadius: 8,
-//             display: "flex",
-//             alignItems: "center",
-//             boxShadow: "0 0 0 1px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.1)",
-//             background: "var(--color-panel)",
-//             padding: "5px",
-//           }}
-//         >
-//           {/* Comment Section */}
-//           <div
-//             style={{
-//               display: "flex",
-//               alignItems: "center",
-//               gap: "5px",
-//             }}
-//           >
-//             <TldrawUiIcon icon="tool-note" />
-//             <span style={{ fontSize: "12px" }}>
-//               {selectedShapeCommentCount}
-//             </span>
-//           </div>
-
-//           {/* Vertical Separator */}
-//           <div
-//             style={{
-//               width: "1px",
-//               height: "20px",
-//               backgroundColor: "rgba(0, 0, 0, 0.3)",
-//               margin: "0 5px", // Adjust spacing around the separator
-//             }}
-//           ></div>
-
-//           {/* Reactions Section */}
-//           <div style={{ display: "flex", gap: "10px" }}>
-//             {REACTIONS.map(({ value, icon }) => (
-//               <div
-//                 key={value}
-//                 style={{
-//                   display: "flex",
-//                   alignItems: "center",
-//                   gap: "3px",
-//                   cursor: "pointer",
-//                   background:
-//                     selectedShapeReactions[value] > 0 ? "#d3f9d8" : "#f9f9f9",
-//                   borderBottom:
-//                     selectedShapeReactions[value] > 0
-//                       ? "2px solid #34a853"
-//                       : "0px solid #ccc", // Highlight border
-//                   padding: "1px",
-//                   borderRadius: "4px",
-//                 }}
-//                 onClick={() => onReactionClick(selectedId, value)}
-//               >
-//                 <TldrawUiIcon icon={icon} />
-//                 <span style={{ fontSize: "12px" }}>
-//                   {selectedShapeReactions[value] || 0}
-//                 </span>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-//     );
-//   }
-// );
-
-// export default ContextToolbarComponent;
-
 import React, { useState, useEffect } from "react";
 import { TldrawUiIcon, track, useEditor } from "tldraw";
 import "tldraw/tldraw.css";
@@ -128,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { app, db, auth, googleProvider, storage } from "../firebaseConfig";
 import { useParams } from "react-router-dom";
+import { logAction } from "../utils/registershapes";
 
 const REACTIONS = [
   { value: "like", icon: "check-circle" },
@@ -139,13 +24,12 @@ const REACTIONS = [
 const ContextToolbarComponent = track(
   ({
     selectedShape,
-    shapeReactions,
-    setShapeReactions,
     commentCounts,
     onReactionClick,
     addComment,
     setSelectedShape,
     setActionHistory,
+    fetchActionHistory,
   }) => {
     const editor = useEditor();
     const tooltipWidth = 250;
@@ -159,10 +43,12 @@ const ContextToolbarComponent = track(
     const [showCommentBox, setShowCommentBox] = useState(false);
     const [hoveredReaction, setHoveredReaction] = useState(null);
     const [commentCount, setCommentCount] = useState(0);
+    const [shapeReactions, setShapeReactions] = useState({});
 
     useEffect(() => {
       if (selectedShape) {
         fetchCommentCount(selectedShape.id);
+        fetchReactions(selectedShape.id);
       }
     }, [selectedShape]);
 
@@ -195,6 +81,23 @@ const ContextToolbarComponent = track(
       setShowCommentBox(false); // Hide the CommentBox
     };
 
+    const fetchReactions = async (shapeId) => {
+      const shapeRef = doc(
+        db,
+        `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
+      );
+      try {
+        const snap = await getDoc(shapeRef);
+        const data = snap.data();
+        setShapeReactions((prev) => ({
+          ...prev,
+          [shapeId]: data.reactions || {},
+        }));
+      } catch (err) {
+        console.error("Failed to fetch Reactions", err);
+      }
+    };
+
     // Get the bounding box of the selected shapes in canvas (page) coordinates
     const selectionRotatedPageBounds = editor.getSelectionRotatedPageBounds();
     if (!selectionRotatedPageBounds || !selectedShape) return null;
@@ -205,12 +108,11 @@ const ContextToolbarComponent = track(
     const centerY = selectionRotatedPageBounds.minY - 10;
     const viewportCenter = editor.pageToViewport({ x: centerX, y: centerY });
 
-    const selectedId = selectedShape.id;
-    const selectedShapeReactions = shapeReactions[selectedId] || {};
-    // const selectedShapeCommentCount = commentCounts[selectedId] || 0;
+    // const selectedId = selectedShape.id;
+    const selectedShapeReactions = shapeReactions[selectedShape.id] || {};
 
     const handleReactionClick = async (reactionType) => {
-      if (!user) {
+      if (!user || !selectedShape) {
         console.error("User not logged in.");
         return;
       }
@@ -224,19 +126,17 @@ const ContextToolbarComponent = track(
       // };
 
       // console.log("Logging reaction data:", reactionData);
-
+      const shapeId = selectedShape.id;
       const userName = user.displayName || "Anonymous";
       const shapeRef = doc(
         db,
-        `/classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${selectedId}`
+        `/classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
       );
 
-      // Fetch current reactions from state
-      const currentReactions = shapeReactions[selectedId] || {};
-      const currentReactionUsers = currentReactions[reactionType] || [];
+      const usersReacted = shapeReactions[shapeId]?.[reactionType] || [];
 
       // Determine if the user already reacted
-      const hasReacted = currentReactionUsers.includes(userName);
+      const hasReacted = usersReacted.includes(userName);
 
       try {
         if (hasReacted) {
@@ -248,13 +148,22 @@ const ContextToolbarComponent = track(
           // Update state
           setShapeReactions((prevReactions) => ({
             ...prevReactions,
-            [selectedId]: {
-              ...prevReactions[selectedId],
-              [reactionType]: currentReactionUsers.filter(
-                (u) => u !== userName
-              ),
+            [shapeId]: {
+              ...prevReactions[shapeId],
+              [reactionType]: usersReacted.filter((u) => u !== userName),
             },
           }));
+
+          await logAction(
+            { className, projectName, teamName },
+            `removed ${reactionType}`,
+            userName,
+            shapeId
+          );
+          fetchActionHistory(
+            { className, projectName, teamName },
+            setActionHistory
+          );
         } else {
           // User is adding a reaction
           await updateDoc(shapeRef, {
@@ -264,38 +173,30 @@ const ContextToolbarComponent = track(
           // Update state
           setShapeReactions((prevReactions) => ({
             ...prevReactions,
-            [selectedId]: {
-              ...prevReactions[selectedId],
+            [shapeId]: {
+              ...prevReactions[shapeId],
               // [reactionType]: [...currentReactionUsers, userName],
               [reactionType]: [
-                ...(prevReactions[selectedId]?.[reactionType] || []),
+                ...(prevReactions[shapeId]?.[reactionType] || []),
                 userName,
               ],
             },
           }));
+
+          await logAction(
+            { className, projectName, teamName },
+            `reacted with ${reactionType}`,
+            userName,
+            shapeId
+          );
+          fetchActionHistory(
+            { className, projectName, teamName },
+            setActionHistory
+          );
         }
       } catch (error) {
         console.error("Error updating reactions in Firestore:", error);
       }
-
-      // Pass reactionData to App.js through onReactionClick
-      // onReactionClick(reactionData);
-      onReactionClick({
-        shapeId: selectedId,
-        userId: userName,
-        reactionType,
-        timestamp: new Date().toLocaleString(),
-      });
-    };
-
-    const logAction = (action) => {
-      console.log("Test");
-      // console.log("Initiated by ----", userId);
-      console.log("Action ---- ", action);
-      setActionHistory((prev) => [
-        { ...action, timestamp: new Date().toLocaleString() },
-        ...prev,
-      ]);
     };
 
     return (
@@ -354,6 +255,10 @@ const ContextToolbarComponent = track(
               const reactionCount = Array.isArray(usersReacted)
                 ? usersReacted.length
                 : 0;
+
+              console.log(
+                `User Reacted and reaction count === ${usersReacted} and ${reactionCount} `
+              );
               return (
                 <div
                   key={value}
@@ -416,7 +321,9 @@ const ContextToolbarComponent = track(
             addComment={addComment}
             showCommentBox={showCommentBox}
             onClose={handleCloseCommentBox}
-            logAction={logAction}
+            setActionHistory={setActionHistory}
+            fetchActionHistory={fetchActionHistory}
+            // logAction={logAction}
           />
         )}
       </div>
