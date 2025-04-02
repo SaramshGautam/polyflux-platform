@@ -19,7 +19,7 @@ PolyFlux is a collaborative brainstorming and idea-sharing platform designed to 
 - **Frontend:** React.js (Vite)
 - **Backend:** Python, Flask
 - **Database:** Firebase
-- **Deployment:** Firebase / Vercel 
+- **Deployment:** Firebase / Vercel
 - **Visualization:** D3.js, Recharts
 
 ---
@@ -34,13 +34,15 @@ cd polyflux
 ```
 
 Setup Frontend
-``` bash
+
+```bash
 cd client
 npm install
 npm run dev
 ```
 
 2. Setup Backend
+
 ```bash
 cd server
 python -m venv venv
