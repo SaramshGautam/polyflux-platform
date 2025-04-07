@@ -6,6 +6,7 @@ import {
   useEditor,
 } from "tldraw";
 // import { nanoid } from "nanoid";
+import "tldraw/tldraw.css";
 import "../App.css";
 import HistoryCommentPanel from "./HistoryCommentPanel";
 import ToggleExpandButton from "./ToggleExpandButton";

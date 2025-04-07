@@ -6,6 +6,11 @@
   padding: 20px; /* Adds some spacing */
 }
 
+kbd.tlui-kbd {
+  background-color: white !important;
+  color: black !important;
+}
+
 /* .comment-icon-container {
   position: relative;
   display: inline-block;
