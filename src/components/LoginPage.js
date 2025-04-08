@@ -77,7 +77,12 @@ const LoginPage = () => {
   return (
     <div
       className="d-flex justify-content-center align-items-center min-vh-100"
-      style={{ backgroundColor: "#f0f0f0" }}
+      // style={{ backgroundColor: "#f0f0f0" }}
+      style={{
+        backgroundImage: 'url("/body-bg3.png")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
     >
       <div className="login-container p-4 bg-white rounded shadow text-center">
         <img
