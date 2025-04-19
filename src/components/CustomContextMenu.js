@@ -35,7 +35,7 @@ export default function CustomContextMenu({
   const [showCommentBox, setShowCommentBox] = useState(false);
   // const [comments, setComments] = useState({});
   // const [actionHistory, setActionHistory] = useState([]);
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const { className, projectName, teamName } = useParams();
 

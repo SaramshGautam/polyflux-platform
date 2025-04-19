@@ -12,9 +12,9 @@ const HistoryCommentPanel = ({
 }) => {
   const [isViewingHistory, setIsViewingHistory] = useState(true);
 
-  useEffect(() => {
-    setIsViewingHistory(!selectedShape); // Show comments if a shape is selected, otherwise show history
-  }, [selectedShape]);
+  // useEffect(() => {
+  //   setIsViewingHistory(!selectedShape); // Show comments if a shape is selected, otherwise show history
+  // }, [selectedShape]);
 
   return (
     <div className="panelContainer">
