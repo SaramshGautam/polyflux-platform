@@ -62,7 +62,7 @@ const AddClassroom = () => {
           headers: {
             "Content-Type": "multipart/form-data",
             Accept: "application/json",
-            "Access-Control-Allow-Origin": "https://colla-board.vercel.app",
+            // "Access-Control-Allow-Origin": "https://colla-board.vercel.app",
           },
         }
       );
