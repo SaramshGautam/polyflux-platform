@@ -42,7 +42,7 @@ const AddProject = () => {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${role}:${userEmail}`,
+            // Authorization: `Bearer ${role}:${userEmail}`,
             Accept: "application/json",
             // "Access-Control-Allow-Origin": "https://colla-board.vercel.app/",
           },
