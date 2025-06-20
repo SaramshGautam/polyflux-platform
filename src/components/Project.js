@@ -7,9 +7,10 @@ import {
   collection,
   getDocs,
 } from "firebase/firestore";
+import "./Project.css";
 
 const Project = () => {
-  const { className, projectName } = useParams();
+  const { className, projectName, teamName } = useParams();
   const [projectDetails, setProjectDetails] = useState({});
   const [teams, setTeams] = useState([]);
   const [studentTeamAssigned, setStudentTeamAssigned] = useState(null);
@@ -117,6 +118,10 @@ const Project = () => {
     });
   };
 
+  console.log(
+    `Image source: https://firebasestorage.googleapis.com/v0/b/<your-project-id>.appspot.com/o/previews%2F${className}%2F${projectName}%2F${teamName}.png?alt=media`
+  );
+
   return (
     <div className="classroom-page">
       <header>
@@ -188,13 +193,34 @@ const Project = () => {
                 </p>
               )
             ) : (
-              teams.map((team) => (
-                <div key={team.name} className="card team-card">
-                  <div className="card-body">
+              teams.map((team) => {
+                const previewUrl = localStorage.getItem(
+                  `preview-${className}-${projectName}-${team.name}`
+                );
+                return (
+                  <div key={team.name} className="card team-card">
+                    <div className="whiteboard-preview">
+                      <img
+                        src={previewUrl || "/default-preview.png"}
+                        alt={`${team.name}-preview`}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/default-preview.png";
+                        }}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          borderRadius: "10px 10px 0 0",
+                        }}
+                      />
+                    </div>
+
+                    {/* <div className="card-body">
                     <h5 className="card-title">
                       <i className="bi bi-people-fill me-2"></i> {team.name}
                     </h5>
-                    <div className="d-flex justify-content-around">
+                    <div className="d-flex justify-content-around card-footer">
                       <Link
                         to={`/classroom/${className}/project/${projectName}/team/${team.name}`}
                         className="btn btn-view"
@@ -206,11 +232,31 @@ const Project = () => {
                         onClick={() => handleWhiteboardClick(team.name)}
                       >
                         <i className="bi bi-tv"></i> Whiteboard
-                      </button>
+                      </button> */}
+                    <div className="card-body">
+                      <h5 className="card-title">
+                        <i className="bi bi-people-fill me-2"></i> {team.name}
+                      </h5>
+                      {/* <div className="d-flex justify-content-around"> */}
+                      <div className="d-flex justify-content-around card-footer">
+                        <Link
+                          to={`/classroom/${className}/project/${projectName}/team/${team.name}`}
+                          className="btn btn-view"
+                        >
+                          View Team
+                        </Link>
+                        <button
+                          className="btn btn-whiteboard"
+                          onClick={() => handleWhiteboardClick(team.name)}
+                        >
+                          <i className="bi bi-tv"></i> Whiteboard
+                        </button>
+                      </div>
                     </div>
+                    {/* </div> */}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         ) : (
