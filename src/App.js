@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 
 // Importing pages
 import LoginPage from "./components/LoginPage";
@@ -17,6 +17,9 @@ import EditStudent from "./components/EditStudent";
 import ManageStudent from "./components/ManageStudent";
 import EditClassroom from "./components/EditClassroom";
 import Team from "./components/Team";
+
+import ChatBot from "./components/ChatBot";
+import FinishSignIn from "./components/FinishSignIn";
 import "./style.css";
 
 // import firebaseConfig from "./firebaseConfig";
@@ -33,6 +36,7 @@ import {
   query,
 } from "firebase/firestore";
 import { app, db, auth, googleProvider, storage } from "./firebaseConfig";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   Tldraw,
   DefaultToolbar,
@@ -41,13 +45,15 @@ import {
   useIsToolSelected,
   DefaultToolbarContent,
 } from "tldraw";
-import { useSyncDemo } from "@tldraw/sync";
+// import { useSyncDemo } from "@tldraw/sync";
+import { useSync } from "@tldraw/sync";
 import "tldraw/tldraw.css";
 import "./App.css";
 import CustomContextMenu from "./components/CustomContextMenu";
 import Navbar from "./components/navbar/Navbar";
 import ContextToolbarComponent from "./components/ContextToolbarComponent";
 import CustomActionsMenu from "./components/CustomActionsMenu";
+// import ",/Project.css";
 
 const App = () => {
   const navigate = useNavigate();
@@ -93,6 +99,8 @@ const App = () => {
     <Routes>
       {/* Login Page */}
       <Route path="/" element={<LoginPage onLogin={googleLogin} />} />
+
+      <Route path="/finishSignIn" element={<FinishSignIn />} />
 
       {/* Teacher's Home */}
       <Route
@@ -233,7 +241,13 @@ const App = () => {
       {/* Collaborative Whiteboard */}
       <Route
         path="/whiteboard/:className/:projectName/:teamName"
-        element={<CollaborativeWhiteboard />}
+        // element={<CollaborativeWhiteboard />}
+        element={
+          <>
+            <CollaborativeWhiteboard />
+            <ChatBot />
+          </>
+        }
       />
     </Routes>
   );
@@ -242,7 +256,11 @@ const App = () => {
 const CollaborativeWhiteboard = () => {
   const { className, projectName, teamName } = useParams();
   const roomId = `collaBoard-${className}-${projectName}-${teamName}`;
-  const store = useSyncDemo({ roomId }); // Use the unique roomId
+  // const store = useSyncDemo({ roomId }); // Use the unique roomId
+  const store = useSync({
+    uri: `ws://localhost:5858/connect/${roomId}`,
+    roomId,
+  });
 
   const [shapeReactions, setShapeReactions] = useState({});
   const [selectedShape, setSelectedShape] = useState(null);
@@ -315,10 +333,120 @@ const CollaborativeWhiteboard = () => {
     });
   };
 
+  // const editorRef = useRef(null);
+  // let editorInstance = null;
+  const editorInstance = useRef(null);
+
+  const saveCanvasPreview = async () => {
+    if (!editorInstance.current) return;
+
+    const shapeIds = editorInstance.current.getCurrentPageShapeIds();
+    if (shapeIds.size === 0) return;
+
+    // const blob = await editorInstance.current.getSnapshotAsPng();
+    // if (!blob) {
+    //   console.error("Could not get canvas snapshot");
+    //   return;
+    // }
+
+    // const storageRef = ref(
+    //   storage,
+    //   `previews/${className}/${projectName}/${teamName}.png`
+    // );
+
+    try {
+      const { blob } = await editorInstance.current.toImage([...shapeIds], {
+        format: "png",
+        // bounds,
+        // background: false,
+        padding: 20,
+        // background: false,
+      });
+
+      // Create a download link for the blob
+      const url = URL.createObjectURL(blob);
+      localStorage.setItem(
+        `preview-${className}-${projectName}-${teamName}`,
+        url
+      );
+      // const a = document.createElement("a");
+      // a.href = url;
+      // a.download = `${className}-${projectName}-${teamName}-preview.png`;
+      // document.body.appendChild(a);
+      // a.click();
+      // document.body.removeChild(a);
+      // URL.revokeObjectURL(url);
+
+      // const storageRef = collection(
+      //   db,
+      //   `/classrooms/${className}/Projects/${projectName}/teams/${teamName}/canvasPreview.png`
+      //   // `previews/${className}/${projectName}/${teamName}.png`
+      // );
+      // await uploadBytes(storageRef, blob);
+      // console.log("Canvas preview uploaded successfully.");
+    } catch (error) {
+      console.error("Error uploading preview:", error);
+    }
+  };
+
+  // const saveCanvasPreview = async () => {
+  //   if (!store) return;
+
+  //   const canvas = await store.getCanvas();
+  //   if (!canvas) {
+  //     console.error("No canvas returned from store.");
+  //     return;
+  //   }
+
+  //   // const { className, projectName, teamName } = useParams();
+  //   // const canvasRef = doc(
+  //   //   db,
+  //   //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}`,
+  //   //   "canvasPreview"
+
+  //   const blob = await new Promise((resolve) => canvas.toBlob(resolve));
+  //   const storageRef = ref(
+  //     storage,
+  //     `previews/${className}/${projectName}/${teamName}.png`
+  //   );
+
+  //   try {
+  //     await uploadBytes(storageRef, blob);
+  //     console.log("Canvas preview uploaded successfully.");
+  //   } catch (error) {
+  //     await uploadBytes(storageRef, blob);
+  //     console.log("Canvas preview uploaded successfully.");
+  //   }
+  // };
+  // const handleSave = async () => {
+  //   const canvasData = store.getSnapshot();
+  //   await saveCanvasPreview(canvasData);
+  //   console.log("Canvas saved successfully.");
+  // };
+
+  useEffect(() => {
+    if (editorInstance) {
+      saveCanvasPreview();
+    }
+
+    // Optionally, you can also save on unmount or at specific intervals
+    return () => {
+      saveCanvasPreview();
+    };
+  }, [store]);
+
   return (
     <div className="main-container" style={{ position: "fixed", inset: 0 }}>
       <Navbar />
       <Tldraw
+        onMount={(editor) => {
+          editorInstance.current = editor;
+          if (editorInstance) {
+            saveCanvasPreview(); // Save canvas preview on mount
+          }
+          // editorRef.current = editor; // Store the editor instance
+          // console.log("Editor mounted:", editor);
+        }}
         store={store}
         // tools={customTools}
         // overrides={uiOverrides}
