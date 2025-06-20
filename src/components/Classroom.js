@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
-
+import "./Classroom.css";
 const Classroom = () => {
   const { className } = useParams();
   const navigate = useNavigate();
