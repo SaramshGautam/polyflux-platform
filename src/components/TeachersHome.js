@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+// import "../styles/TeacherDashboard.css";
+import "./TeacherDashboard.css"; // Adjust the path as necessary
 import {
   getFirestore,
   collection,
@@ -184,17 +186,36 @@ const TeacherHome = () => {
                     {semester}
                   </h4>
 
-                  <div className="row">
+                  {/* <div className="row"> */}
+                  <div className="classrooms-grid">
                     {classrooms.groupedClassrooms[semester].map((classroom) => (
                       // <div key={classroom.id} className="card-wrapper">
-                      <div key={classroom.id} className="col-md-4 mb-2">
-                        <div
+                      // <div key={classroom.id} className="col-md-4 mb-2">
+                      <div
+                        key={classroom.id}
+                        className="classroom-card"
+                        onClick={() =>
+                          navigate(`/classroom/${classroom.classID}`)
+                        }
+                      >
+                        <div className="card-title">
+                          <h4>
+                            {classroom.courseID} - {classroom.class_name}
+                          </h4>
+                        </div>
+                        <div className="card-text">
+                          Instructor:{" "}
+                          {teacherNames[classroom.teacherEmail]
+                            ? teacherNames[classroom.teacherEmail]
+                            : classroom.teacherEmail || "Fetching..."}
+                        </div>
+                        {/* <div
                           className="classroom-card"
                           onClick={() =>
                             navigate(`/classroom/${classroom.classID}`)
                           }
-                        >
-                          <div className="card-body">
+                        > */}
+                        {/* <div className="card-body">
                             <h5 className="card-title">
                               {classroom.courseID} - {classroom.class_name}
                             </h5>
@@ -205,14 +226,20 @@ const TeacherHome = () => {
                                 ? teacherNames[classroom.teacherEmail]
                                 : classroom.teacherEmail || "Fetching..."}
                             </p>
-                          </div>
-                        </div>
+                          </div> */}
+                        {/* </div> */}
                       </div>
                     ))}
                     {/* Add Classroom Card at the end of the first semester */}
                     {semesterIndex === 0 && (
                       <div className="card-wrapper">
                         <div
+                          className="classroom-card add-classroom-card"
+                          onClick={() => navigate("/add-classroom")}
+                        >
+                          <h4>⊕ Add Classroom</h4>
+                        </div>
+                        {/* <div
                           className="classroom-card"
                           onClick={() => navigate("/add-classroom")}
                         >
@@ -225,7 +252,7 @@ const TeacherHome = () => {
                               Classroom
                             </h5>
                           </div>
-                        </div>
+                        </div> */}
                       </div>
                     )}
                   </div>
