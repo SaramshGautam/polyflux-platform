@@ -20,6 +20,7 @@ import Team from "./components/Team";
 
 import ChatBot from "./components/ChatBot";
 import FinishSignIn from "./components/FinishSignIn";
+import AddUser from "./utils/AddUser";
 import "./style.css";
 
 // import firebaseConfig from "./firebaseConfig";
@@ -79,10 +80,11 @@ const App = () => {
       );
 
       const data = await response.json();
+      console.log("Login response:", data);
 
       if (data.success) {
         // Handle successful login based on the role
-        if (data.role === "teacher") {
+        if (data.role === "teacher" || data.role === "admin") {
           navigate("/teachers-home");
         } else if (data.role === "student") {
           navigate("/students-home");
@@ -120,6 +122,17 @@ const App = () => {
           <>
             <Navbar />
             <StudentsHome />
+          </>
+        }
+      />
+
+      {/* Add User */}
+      <Route
+        path="/add-user"
+        element={
+          <>
+            <Navbar />
+            <AddUser />
           </>
         }
       />
@@ -255,12 +268,17 @@ const App = () => {
 
 const CollaborativeWhiteboard = () => {
   const { className, projectName, teamName } = useParams();
+  if (!className || !projectName || !teamName) return null;
   const roomId = `collaBoard-${className}-${projectName}-${teamName}`;
   // const store = useSyncDemo({ roomId }); // Use the unique roomId
   const store = useSync({
-    uri: `ws://localhost:5858/connect/${roomId}`,
+    uri: `https://tldraw-sync-server.saramshgautam.workers.dev/connect/${roomId}`,
     roomId,
   });
+  // const store = useSync({
+  //   uri: `ws://localhost:5858/connect/${roomId}`,
+  //   roomId,
+  // });
 
   const [shapeReactions, setShapeReactions] = useState({});
   const [selectedShape, setSelectedShape] = useState(null);
@@ -290,6 +308,13 @@ const CollaborativeWhiteboard = () => {
       console.error("❌ Error fetching history:", error);
     }
   };
+
+  useEffect(() => {
+    console.log("Mounting sync for room:", roomId);
+    return () => {
+      console.log("Unmounting sync for room:", roomId);
+    };
+  }, [roomId]);
 
   // Fetch logs when component mounts
   useEffect(() => {
@@ -343,17 +368,6 @@ const CollaborativeWhiteboard = () => {
     const shapeIds = editorInstance.current.getCurrentPageShapeIds();
     if (shapeIds.size === 0) return;
 
-    // const blob = await editorInstance.current.getSnapshotAsPng();
-    // if (!blob) {
-    //   console.error("Could not get canvas snapshot");
-    //   return;
-    // }
-
-    // const storageRef = ref(
-    //   storage,
-    //   `previews/${className}/${projectName}/${teamName}.png`
-    // );
-
     try {
       const { blob } = await editorInstance.current.toImage([...shapeIds], {
         format: "png",
@@ -369,60 +383,10 @@ const CollaborativeWhiteboard = () => {
         `preview-${className}-${projectName}-${teamName}`,
         url
       );
-      // const a = document.createElement("a");
-      // a.href = url;
-      // a.download = `${className}-${projectName}-${teamName}-preview.png`;
-      // document.body.appendChild(a);
-      // a.click();
-      // document.body.removeChild(a);
-      // URL.revokeObjectURL(url);
-
-      // const storageRef = collection(
-      //   db,
-      //   `/classrooms/${className}/Projects/${projectName}/teams/${teamName}/canvasPreview.png`
-      //   // `previews/${className}/${projectName}/${teamName}.png`
-      // );
-      // await uploadBytes(storageRef, blob);
-      // console.log("Canvas preview uploaded successfully.");
     } catch (error) {
       console.error("Error uploading preview:", error);
     }
   };
-
-  // const saveCanvasPreview = async () => {
-  //   if (!store) return;
-
-  //   const canvas = await store.getCanvas();
-  //   if (!canvas) {
-  //     console.error("No canvas returned from store.");
-  //     return;
-  //   }
-
-  //   // const { className, projectName, teamName } = useParams();
-  //   // const canvasRef = doc(
-  //   //   db,
-  //   //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}`,
-  //   //   "canvasPreview"
-
-  //   const blob = await new Promise((resolve) => canvas.toBlob(resolve));
-  //   const storageRef = ref(
-  //     storage,
-  //     `previews/${className}/${projectName}/${teamName}.png`
-  //   );
-
-  //   try {
-  //     await uploadBytes(storageRef, blob);
-  //     console.log("Canvas preview uploaded successfully.");
-  //   } catch (error) {
-  //     await uploadBytes(storageRef, blob);
-  //     console.log("Canvas preview uploaded successfully.");
-  //   }
-  // };
-  // const handleSave = async () => {
-  //   const canvasData = store.getSnapshot();
-  //   await saveCanvasPreview(canvasData);
-  //   console.log("Canvas saved successfully.");
-  // };
 
   useEffect(() => {
     if (editorInstance) {

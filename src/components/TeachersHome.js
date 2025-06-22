@@ -18,6 +18,7 @@ const TeacherHome = () => {
   });
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState(null);
+  const [userRole, setUserRole] = useState("");
   const [teacherNames, setTeacherNames] = useState({});
   const [flashMessage, setFlashMessage] = useState("");
   const [flashMessageType, setFlashMessageType] = useState("");
@@ -29,8 +30,24 @@ const TeacherHome = () => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserEmail(user.email);
+
+        const fetchUserRole = async () => {
+          try {
+            const userDoc = await getDoc(
+              doc(getFirestore(), "users", user.email)
+            );
+            if (userDoc.exists()) {
+              setUserRole(userDoc.data().role);
+              console.log("🟢 User Role from Firestore:", userDoc.data().role);
+            }
+          } catch (error) {
+            console.error("Error fetching user role:", error);
+          }
+        };
+        fetchUserRole();
       } else {
         setUserEmail(null);
+        setUserRole("teacher");
         setClassrooms({ groupedClassrooms: {}, sortedSemesters: [] });
       }
       setLoading(false);
@@ -177,6 +194,20 @@ const TeacherHome = () => {
               </div>
             </div>
           )}
+
+          {/* {userRole === "admin" && ( */}
+          <div
+            className="admin-button-container"
+            style={{ textAlign: "center", marginBottom: "1rem" }}
+          >
+            <button
+              className="admin-add-user-button"
+              onClick={() => navigate("/add-user")}
+            >
+              ➕ Add User
+            </button>
+          </div>
+          {/* )} */}
 
           <div className="classrooms-list">
             {classrooms.sortedSemesters.length > 0 ? (
