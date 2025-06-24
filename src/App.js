@@ -309,13 +309,6 @@ const CollaborativeWhiteboard = () => {
     }
   };
 
-  useEffect(() => {
-    console.log("Mounting sync for room:", roomId);
-    return () => {
-      console.log("Unmounting sync for room:", roomId);
-    };
-  }, [roomId]);
-
   // Fetch logs when component mounts
   useEffect(() => {
     if (!className || !projectName || !teamName) return;
