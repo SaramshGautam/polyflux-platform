@@ -268,7 +268,7 @@ const App = () => {
 
 const CollaborativeWhiteboard = () => {
   const { className, projectName, teamName } = useParams();
-  if (!className || !projectName || !teamName) return null;
+  // if (!className || !projectName || !teamName) return null;
   // const roomId = `collaBoard-${className}-${projectName}-${teamName}`;
   const roomId =
     className && projectName && teamName
@@ -398,6 +398,8 @@ const CollaborativeWhiteboard = () => {
       console.error("Error uploading preview:", error);
     }
   };
+
+  if (!roomId) return null;
 
   return (
     <div className="main-container" style={{ position: "fixed", inset: 0 }}>
