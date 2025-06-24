@@ -127,6 +127,7 @@ const ContextToolbarComponent = track(
 
       // console.log("Logging reaction data:", reactionData);
       const shapeId = selectedShape.id;
+      const shapeType = selectedShape.type;
       const userName = user.displayName || "Anonymous";
       const shapeRef = doc(
         db,
@@ -158,7 +159,8 @@ const ContextToolbarComponent = track(
             { className, projectName, teamName },
             `removed ${reactionType}`,
             userName,
-            shapeId
+            shapeId,
+            shapeType
           );
           fetchActionHistory(
             { className, projectName, teamName },

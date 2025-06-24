@@ -29,6 +29,7 @@ export async function logAction(
   logMessage,
   userId,
   shapeId,
+  shapeType,
   onLogged = () => {}
 ) {
   if (!userContext) {
@@ -40,19 +41,22 @@ export async function logAction(
   if (!logMessage) {
     console.error("❌ Missing logMessage");
   }
+
   if (!shapeId) {
     console.error("❌ Missing shapeId");
   }
-
-  if (!userContext || !userId || !logMessage || !shapeId) {
+  if (!shapeType) {
+    console.error("❌ Missing shapeType");
+  }
+  if (!userContext || !userId || !logMessage || !shapeId || !shapeType) {
     console.error("❌ Aborting logAction due to missing parameters.");
     return;
   }
 
   const { className, projectName, teamName } = userContext;
-  console.log(
-    `className = ${className} projectName = ${projectName} teamName= ${teamName}`
-  );
+  // console.log(
+  //   `className = ${className} projectName = ${projectName} teamName= ${teamName}`
+  // );
 
   const cleanAction = logMessage.replace(/\s+/g, "_").toLowerCase();
 
@@ -70,6 +74,7 @@ export async function logAction(
       timestamp: serverTimestamp(),
       userId: userId,
       shapeId: shapeId,
+      shapeType: shapeType || "unknown",
     };
 
     console.log(
@@ -136,7 +141,7 @@ export async function registerShape(newShape, userContext) {
     await setDoc(shapeRef, shapeDoc);
     console.log(`✅ Shape ${shapeID} successfully added to Firestore!`);
 
-    await logAction(userContext, `added`, userId, newShape.id);
+    await logAction(userContext, `added `, userId, newShape.id, newShape.type);
   } catch (error) {
     console.error("❌ Error adding shape to Firestore:", error);
   }
@@ -170,7 +175,7 @@ export async function deleteShape(shapeID, userContext) {
     // Delete document
     await deleteDoc(shapeRef);
     console.log(`🗑️ Shape ${shapeID} successfully deleted from Firestore.`);
-    await logAction(userContext, `deleted`, userId, shapeID);
+    await logAction(userContext, `deleted`, userId, shapeID, shapeType);
   } catch (error) {
     console.error("❌ Error deleting shape from Firestore:", error);
   }

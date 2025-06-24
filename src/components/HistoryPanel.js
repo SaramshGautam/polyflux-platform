@@ -11,7 +11,7 @@ export default function HistoryPanel({ actionHistory = [] }) {
       ) : (
         <ul className="historyList">
           {actionHistory.map((action, index) => {
-            console.log(`--- action timestamp --- ${action.timestamp}`);
+            // console.log(`--- action timestamp --- ${action.timestamp}`);
             // Convert timestamp to readable format
             // const formattedTimestamp = action.timestamp?.seconds
             //   ? new Date(action.timestamp.seconds * 1000).toLocaleString()
@@ -35,7 +35,9 @@ export default function HistoryPanel({ actionHistory = [] }) {
             return (
               <li key={index} className="historyItem">
                 <strong>{action.userId || "Unknown User"}</strong>{" "}
-                {action.action} {action.shapeId}
+                {action.action}
+                {action.shapeType}
+                {/* {action.shapeId} */}
                 <div className="timestamp">{formattedTimestamp}</div>
               </li>
             );

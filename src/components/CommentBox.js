@@ -173,9 +173,10 @@ export default function CommentBox({
         projectName,
         teamName,
       },
-      "added a comment",
+      "added a comment in ",
       user.displayName,
-      selectedShape.id
+      selectedShape.id,
+      selectedShape.type || "unknown"
     );
 
     fetchActionHistory({ className, projectName, teamName }, setActionHistory);
