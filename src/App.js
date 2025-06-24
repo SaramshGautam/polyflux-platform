@@ -269,11 +269,18 @@ const App = () => {
 const CollaborativeWhiteboard = () => {
   const { className, projectName, teamName } = useParams();
   if (!className || !projectName || !teamName) return null;
-  const roomId = `collaBoard-${className}-${projectName}-${teamName}`;
+  // const roomId = `collaBoard-${className}-${projectName}-${teamName}`;
+  const roomId =
+    className && projectName && teamName
+      ? `collaBoard-${className}-${projectName}-${teamName}`
+      : null;
   // const store = useSyncDemo({ roomId }); // Use the unique roomId
+
   const store = useSync({
-    uri: `https://tldraw-sync-server.saramshgautam.workers.dev/connect/${roomId}`,
-    roomId,
+    uri: roomId
+      ? `https://tldraw-sync-server.saramshgautam.workers.dev/connect/${roomId}`
+      : "",
+    roomId: roomId || "",
   });
   // const store = useSync({
   //   uri: `ws://localhost:5858/connect/${roomId}`,
@@ -285,6 +292,26 @@ const CollaborativeWhiteboard = () => {
   const [commentCounts, setCommentCounts] = useState({});
   const [comments, setComments] = useState({});
   const [actionHistory, setActionHistory] = useState([]);
+  const editorInstance = useRef(null);
+
+  useEffect(() => {
+    if (editorInstance) {
+      saveCanvasPreview();
+    }
+
+    // Optionally, you can also save on unmount or at specific intervals
+    return () => {
+      saveCanvasPreview();
+    };
+  }, [store]);
+
+  // Fetch logs when component mounts
+  useEffect(() => {
+    if (!roomId || !className || !projectName || !teamName) return;
+
+    const userContext = { className, projectName, teamName };
+    fetchActionHistory(userContext, setActionHistory);
+  }, [className, projectName, teamName]);
 
   const fetchActionHistory = async (userContext, setActionHistory) => {
     if (!userContext) return;
@@ -308,14 +335,6 @@ const CollaborativeWhiteboard = () => {
       console.error("❌ Error fetching history:", error);
     }
   };
-
-  // Fetch logs when component mounts
-  useEffect(() => {
-    if (!className || !projectName || !teamName) return;
-
-    const userContext = { className, projectName, teamName };
-    fetchActionHistory(userContext, setActionHistory);
-  }, [className, projectName, teamName]);
 
   const components = {
     Navbar: Navbar,
@@ -353,7 +372,6 @@ const CollaborativeWhiteboard = () => {
 
   // const editorRef = useRef(null);
   // let editorInstance = null;
-  const editorInstance = useRef(null);
 
   const saveCanvasPreview = async () => {
     if (!editorInstance.current) return;
@@ -380,17 +398,6 @@ const CollaborativeWhiteboard = () => {
       console.error("Error uploading preview:", error);
     }
   };
-
-  useEffect(() => {
-    if (editorInstance) {
-      saveCanvasPreview();
-    }
-
-    // Optionally, you can also save on unmount or at specific intervals
-    return () => {
-      saveCanvasPreview();
-    };
-  }, [store]);
 
   return (
     <div className="main-container" style={{ position: "fixed", inset: 0 }}>
