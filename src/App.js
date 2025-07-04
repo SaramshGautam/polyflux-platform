@@ -17,6 +17,7 @@ import EditStudent from "./components/EditStudent";
 import ManageStudent from "./components/ManageStudent";
 import EditClassroom from "./components/EditClassroom";
 import Team from "./components/Team";
+import InactivityMonitor from "./components/InactivityMonitor";
 
 import ChatBot from "./components/ChatBot";
 import FinishSignIn from "./components/FinishSignIn";
@@ -31,7 +32,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import {
   getFirestore,
   doc,
-  getDocs,
+  getDoc,
   collection,
   orderBy,
   query,
@@ -259,6 +260,19 @@ const App = () => {
           <>
             <CollaborativeWhiteboard />
             <ChatBot />
+            {/* {userRole === "teacher" && ( */}
+            <InactivityMonitor
+              // className={className}
+              // projectName={projectName}
+              // teamName={teamName}
+              // className={useParams().className}
+              // projectName={useParams().projectName}
+              // teamName={useParams().teamName}
+              className="CSC7999"
+              projectName="Mark1"
+              teamName="Team 1"
+            />
+            {/* )} */}
           </>
         }
       />
@@ -292,7 +306,21 @@ const CollaborativeWhiteboard = () => {
   const [commentCounts, setCommentCounts] = useState({});
   const [comments, setComments] = useState({});
   const [actionHistory, setActionHistory] = useState([]);
+  const [userRole, setUserRole] = useState(null);
   const editorInstance = useRef(null);
+
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    // const userRef = doc(db, `users/${currentUser.uid}`);
+    const userRef = doc(db, "users", currentUser.uid);
+    getDoc(userRef).then((docSnap) => {
+      if (docSnap.exists()) {
+        setUserRole(docSnap.data().role);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (editorInstance) {
@@ -316,19 +344,30 @@ const CollaborativeWhiteboard = () => {
   const fetchActionHistory = async (userContext, setActionHistory) => {
     if (!userContext) return;
 
-    console.log(`---- User Context --- ${userContext}`);
+    // console.log(`---- User Context --- ${userContext}`);
 
     const { className, projectName, teamName } = userContext;
+    // const historyRef = collection(
+    //   db,
+    //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/history`
+    // );
+
     const historyRef = collection(
       db,
-      `classrooms/${className}/Projects/${projectName}/teams/${teamName}/history`
+      "classrooms",
+      className,
+      "Projects",
+      projectName,
+      "teams",
+      teamName,
+      "history"
     );
 
     try {
       const q = query(historyRef, orderBy("timestamp", "desc"));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getDoc(q);
       const historyLogs = querySnapshot.docs.map((doc) => doc.data());
-      console.log("History Logs ---- \n", historyLogs);
+      // console.log("History Logs ---- \n", historyLogs);
 
       setActionHistory(historyLogs);
     } catch (error) {
@@ -433,17 +472,27 @@ const CollaborativeWhiteboard = () => {
             />
           ),
           InFrontOfTheCanvas: (props) => (
-            <ContextToolbarComponent
-              {...props}
-              selectedShape={selectedShape}
-              setShapeReactions={setShapeReactions}
-              shapeReactions={shapeReactions}
-              commentCounts={commentCounts}
-              // onReactionClick={handleReactionClick}
-              addComment={addComment}
-              setActionHistory={setActionHistory}
-              fetchActionHistory={fetchActionHistory}
-            />
+            <>
+              <ContextToolbarComponent
+                {...props}
+                userRole={userRole}
+                selectedShape={selectedShape}
+                setShapeReactions={setShapeReactions}
+                shapeReactions={shapeReactions}
+                commentCounts={commentCounts}
+                // onReactionClick={handleReactionClick}
+                addComment={addComment}
+                setActionHistory={setActionHistory}
+                fetchActionHistory={fetchActionHistory}
+              />
+              {/* {userRole === "teacher" && (
+                <InactivityMonitor
+                  className={className}
+                  projectName={projectName}
+                  teamName={teamName}
+                />
+              )} */}
+            </>
           ),
           // Toolbar: CustomToolbar,
           ActionsMenu: (props) => <CustomActionsMenu {...props} />,
