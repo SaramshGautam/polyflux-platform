@@ -151,6 +151,7 @@ export async function registerShape(newShape, userContext) {
  * Deletes a shape from Firestore.
  *
  * @param {string} shapeID - The unique ID of the shape to delete.
+ * @param {string} shapeType - The type of the shape to delete.
  * @param {Object} userContext - The user’s context (classroom, project, team).
  * @param {string} userContext.className - Classroom ID.
  * @param {string} userContext.projectName - Project Name.
@@ -158,7 +159,7 @@ export async function registerShape(newShape, userContext) {
  * @returns {Promise<void>} A promise that resolves when the shape is deleted.
  */
 export async function deleteShape(shapeID, userContext) {
-  if (!shapeID || !userContext) {
+  if (!shapeID || !userContext || !shapeType) {
     console.error("❌ Missing shape ID or user context.");
     return;
   }
