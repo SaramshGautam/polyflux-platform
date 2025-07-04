@@ -55,6 +55,26 @@ const Navbar = () => {
       </div>
       <div className="navbar-right">
         {/* Dropdown for logout */}
+        {/* <button
+          onClick={() => {
+            const panel = document.querySelector(".inactivity-panel");
+            if (panel) {
+              panel.style.display =
+                panel.style.display === "none" ? "block" : "none";
+            }
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "white",
+            fontSize: "20px",
+            cursor: "pointer",
+            marginRight: "10px",
+          }}
+          title="Toggle Inactivity Monitor"
+        >
+          🕒
+        </button> */}
         <ul className="nav-item dropdown">
           <li className="nav-link dropdown-toggle" onClick={handleProfileClick}>
             {photoURL ? (

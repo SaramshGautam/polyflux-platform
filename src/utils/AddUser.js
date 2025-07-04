@@ -22,12 +22,12 @@ const AddUser = () => {
 
     try {
       const usersRef = collection(db, "users");
-      const q = query(
-        usersRef,
-        where("email", ">=", searchEmail),
-        where("email", "<=", searchEmail + "\uf8ff")
-      );
-      const querySnapshot = await getDocs(q);
+      // const q = query(
+      //   usersRef,
+      //   where("email", ">=", searchEmail),
+      //   where("email", "<=", searchEmail + "\uf8ff")
+      // );
+      const querySnapshot = await getDocs(usersRef);
 
       if (querySnapshot.empty) {
         setMessage(`No user found with email: ${searchEmail}`);
@@ -109,7 +109,7 @@ const AddUser = () => {
         <div style={{ marginBottom: "1rem" }}>
           <label>Name:</label>
           <input
-            type="mane"
+            type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required

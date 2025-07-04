@@ -1,0 +1,76 @@
+.dashboard-container {
+  background-color: #1e1e1e;
+  color: #fff;
+  padding: 40px;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+}
+.semester-section {
+  margin-bottom: 40px;
+  height: 300px;
+}
+.semester-section h4 {
+  color: #1a1a1a;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.classrooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1.25rem));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.classroom-card {
+  cursor: pointer;
+  border: 1px solid #1a1a1a;
+  border-radius: 10px;
+  background-color: #f0f0f0;
+  /* transition: transform 0.3s ease; */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.classroom-card:hover {
+  /* transform: translateY(-3px); */
+  background-color: #f9f9f9;
+  /* box-shadow: 0px 4px 12px rgba(12, 10, 10, 0.1); */
+}
+
+.add-classroom-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #888;
+  background-color: #c2c2c2;
+  color: #aaa;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.classroom-card .card-title {
+  color: #696969;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.classroom-card .card-text {
+  color: #6d6d6d;
+  font-size: 0.875rem;
+  margin-top: 8px;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}

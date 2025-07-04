@@ -23,6 +23,7 @@ const REACTIONS = [
 
 const ContextToolbarComponent = track(
   ({
+    userRole,
     selectedShape,
     commentCounts,
     onReactionClick,

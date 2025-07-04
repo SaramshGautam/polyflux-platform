@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import defaultTeamPreview from "../utils/teamA.png";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -142,6 +143,40 @@ const Project = () => {
         </div>
       </section>
 
+      {/* <div style={{ position: "relative", marginRight: "10px" }}>
+        <button
+          onClick={() => {
+            const panel = document.querySelector(".inactivity-panel");
+            if (panel) {
+              panel.style.display =
+                panel.style.display === "none" ? "block" : "none";
+            }
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "white",
+            fontSize: "20px",
+            cursor: "pointer",
+          }}
+          title="Notifications"
+        >
+          <i className="bi bi-bell-fill"></i>
+        </button>
+        <span
+          style={{
+            position: "absolute",
+            top: "0px",
+            right: "0px",
+            width: "16px",
+            height: "16px",
+            backgroundColor: "red",
+            borderRadius: "50%",
+            border: "2px solid white",
+          }}
+        ></span>
+      </div> */}
+
       {role === "teacher" && (
         <div className="button-group mt-3">
           <button className="btn action-btn" onClick={handleEditProjectClick}>
@@ -201,11 +236,11 @@ const Project = () => {
                   <div key={team.name} className="card team-card">
                     <div className="whiteboard-preview">
                       <img
-                        src={previewUrl || "/default-preview.png"}
+                        src={previewUrl || defaultTeamPreview}
                         alt={`${team.name}-preview`}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = "/default-preview.png";
+                          e.target.src = defaultTeamPreview;
                         }}
                         style={{
                           width: "100%",
