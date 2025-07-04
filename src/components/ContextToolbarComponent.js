@@ -190,7 +190,8 @@ const ContextToolbarComponent = track(
             { className, projectName, teamName },
             `reacted with ${reactionType}`,
             userName,
-            shapeId
+            shapeId,
+            shapeType
           );
           fetchActionHistory(
             { className, projectName, teamName },

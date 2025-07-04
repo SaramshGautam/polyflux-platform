@@ -78,7 +78,7 @@ export async function logAction(
     };
 
     console.log(
-      `---history doc --- ${historyDoc.action} --- ${historyDoc.userId} --- ${historyDoc.timestamp}`
+      `---history doc --- ${historyDoc.action} --- ${historyDoc.userId} --- ${historyDoc.shapeType} --- ${historyDoc.timestamp}`
     );
 
     await setDoc(historyRef, historyDoc);
