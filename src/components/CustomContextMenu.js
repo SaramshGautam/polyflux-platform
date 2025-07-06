@@ -4,14 +4,12 @@ import {
   TldrawUiMenuGroup,
   DefaultContextMenuContent,
   useEditor,
+  TextShapeUtil,
 } from "tldraw";
-// import { nanoid } from "nanoid";
 import "tldraw/tldraw.css";
 import "../App.css";
 import HistoryCommentPanel from "./HistoryCommentPanel";
 import ToggleExpandButton from "./ToggleExpandButton";
-
-// import CommentMenu from "./CommentMenu";
 
 import { registerShape, deleteShape } from "../utils/registershapes";
 import { useParams } from "react-router-dom";
@@ -38,6 +36,8 @@ export default function CustomContextMenu({
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const { className, projectName, teamName } = useParams();
+  const [showAIInput, setShowAIInput] = useState(false);
+  const [aiQuery, setAIQuery] = useState("");
 
   useEffect(() => {
     if (!editor || !className || !projectName || !teamName) return;
@@ -68,11 +68,6 @@ export default function CustomContextMenu({
         );
         return;
       }
-
-      const text = newShape.props?.text || "";
-      // console.log(`Shape Text ${text}`);
-      // console.log("Adding shape log:", newShape.id);
-
       await registerShape(newShape, userContext);
 
       setActionHistory((prev) => [
@@ -193,10 +188,57 @@ export default function CustomContextMenu({
   return (
     <div onContextMenu={handleContextMenu}>
       <DefaultContextMenu {...props}>
-        <TldrawUiMenuGroup id="reactions"></TldrawUiMenuGroup>
+        <TldrawUiMenuGroup id="askAI">
+          <button
+            className="tlui-button tlui-button__menu"
+            tabIndex={-2}
+            style={{ backgroundColor: "#306d32", color: "white" }}
+            onClick={() => {
+              if (!selectedShape) {
+                console.log("No shape selected.");
+                window.dispatchEvent(new CustomEvent("trigger-chatbot"));
+                return;
+              }
+              console.log("Selected shape props:", selectedShape.props);
+              let shapeText = "";
+              try {
+                const contentArr = selectedShape?.props?.richText?.content;
+                if (
+                  contentArr &&
+                  Array.isArray(contentArr) &&
+                  contentArr[0]?.content &&
+                  Array.isArray(contentArr[0].content) &&
+                  contentArr[0].content[0]?.text
+                ) {
+                  shapeText = contentArr[0].content[0].text;
+                  console.log("Shape text found:", shapeText);
+                  window.dispatchEvent(
+                    new CustomEvent("trigger-chatbot", {
+                      detail: shapeText,
+                    })
+                  );
+                } else {
+                  console.log("No text found in shape props.");
+                  window.dispatchEvent(new CustomEvent("trigger-chatbot"));
+                }
+              } catch (e) {
+                console.error("Error extracting text from shape props:", e);
+              }
+            }}
+          >
+            <span className="tlui-button__label" draggable="false">
+              Ask AI
+            </span>
+            <kbd className="tlui-kbd">
+              <span>⌘</span>
+              <span>/</span>
+            </kbd>
+          </button>
+        </TldrawUiMenuGroup>
 
         <DefaultContextMenuContent />
       </DefaultContextMenu>
+
       <div className="panelContainerWrapper">
         {!isPanelCollapsed && (
           <HistoryCommentPanel
