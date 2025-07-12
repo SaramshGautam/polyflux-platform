@@ -29,12 +29,11 @@
 
 .team-card {
   background-color: #f0f0f0;
-  border: 1px solid #1a1a1a;
+  border: 2px solid #000000;
   border-radius: 10px;
-  padding: 20px;
   cursor: pointer;
   width: 400px;
-  height: 300px;
+
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -45,22 +44,21 @@
 }
 
 .team-card .card-body {
-  padding: 12px 16px;
+  padding: 10px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .team-card .card-title {
   font-size: 1.2rem;
   font-weight: 600;
   color: #333;
-  margin-bottom: 10px;
 }
 
 .whiteboard-preview {
-  height: 140px;
+  height: 180px;
   background-color: #eee;
   background-size: cover;
   background-position: center;
@@ -70,15 +68,15 @@
 
 .card-footer {
   display: flex;
-  background-color: #eee;
-  justify-content: space-between;
+  background-color: transparent;
   align-items: center;
-  margin-top: 12px;
+  display: flex;
+  justify-content: space-around;
   font-size: 0.85rem;
   color: #0b0b0b;
 }
 
-.btn.btn-view,
+/* .btn.btn-view,
 .btn.btn-whiteboard {
   font-size: 0.9rem;
   font-weight: bold;
@@ -87,4 +85,36 @@
   color: #1a1a1a;
   border: 1px solid #415b8b;
   background-color: transparent;
+} */
+
+/* .btn-view:hover {
+  background-color: rgb(31, 33, 35);
+  color: white;
+}
+
+.btn-view:active {
+  background-color: rgb(20, 22, 24);
+  color: white;
+} */
+
+/* Whiteboard Button */
+.btn-whiteboard {
+  background-color: #5f666f; /* Blue color */
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 5px;
+  width: 45%;
+  height: 45px;
+}
+
+.btn-whiteboard:hover {
+  background-color: #3b434b; /* Darker blue */
+  color: white;
+}
+
+.btn-whiteboard:active {
+  background-color: #393e44; /* Even darker blue */
+  color: white;
 }

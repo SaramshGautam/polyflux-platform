@@ -273,10 +273,10 @@ const Project = () => {
                         <i className="bi bi-people-fill me-2"></i> {team.name}
                       </h5>
                       {/* <div className="d-flex justify-content-around"> */}
-                      <div className="d-flex justify-content-around card-footer">
+                      <div className="card-footer">
                         <Link
                           to={`/classroom/${className}/project/${projectName}/team/${team.name}`}
-                          className="btn btn-view"
+                          className="btn btn-whiteboard"
                         >
                           View Team
                         </Link>
