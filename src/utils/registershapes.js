@@ -125,6 +125,8 @@ export async function registerShape(newShape, userContext) {
       shapeId: shapeID,
       shapeType,
       position: { x, y },
+      text: props?.text || "",
+      color: props?.color || "#000000",
       teamName: teamName,
       createdAt: serverTimestamp(),
       createdBy: userId,
@@ -144,6 +146,51 @@ export async function registerShape(newShape, userContext) {
     await logAction(userContext, `added `, userId, newShape.id, newShape.type);
   } catch (error) {
     console.error("❌ Error adding shape to Firestore:", error);
+  }
+}
+
+export async function updateShape(shape, userContext) {
+  const { className, projectName, teamName, userId } = userContext;
+  const { id: shapeID, type: shapeType, props, x, y } = shape;
+
+  // if (!shapeID || !updatedProps || !userContext) {
+  //   console.error("❌ Missing shape ID, updated properties, or user context.");
+  //   return;
+  // }
+
+  try {
+    const shapeRef = doc(
+      db,
+      `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeID}`
+    );
+
+    const updatePayload = {};
+
+    if (props?.text !== undefined) {
+      updatePayload.text = props.text;
+    }
+    if (props?.color !== undefined) {
+      updatePayload.color = props.color;
+    }
+    // if (props.position) {
+    //   updatePayload.position = props.position;
+    // }
+    if (x !== undefined && y !== undefined) {
+      updatePayload.position = { x, y };
+    }
+    if (Object.keys(updatePayload).length === 0) {
+      console.error("❌ No properties to update.");
+      return;
+    }
+
+    await updateDoc(shapeRef, updatePayload);
+    console.log(
+      `✅ Shape ${shapeID} successfully updated in Firestore with ${updatePayload}.`
+    );
+
+    await logAction(userContext, `updated`, userId, shapeID, shapeType);
+  } catch (error) {
+    console.error("❌ Error updating shape in Firestore:", error);
   }
 }
 
