@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useParams, Link } from "react-router-dom";
+import ChatSidebar from "./components/chatsidebar/ChatSidebar";
+import ChatBot from "./components/ChatBot";
 
 // Importing pages
 import LoginPage from "./components/LoginPage";
@@ -18,8 +20,9 @@ import ManageStudent from "./components/ManageStudent";
 import EditClassroom from "./components/EditClassroom";
 import Team from "./components/Team";
 import InactivityMonitor from "./components/InactivityMonitor";
+import { AudioShapeUtil } from "./shapes/AudioShapeUtil";
+import { MicrophoneTool } from "./tools/MicrophoneTool";
 
-import ChatBot from "./components/ChatBot";
 import FinishSignIn from "./components/FinishSignIn";
 import AddUser from "./utils/AddUser";
 import "./style.css";
@@ -47,6 +50,7 @@ import {
   useIsToolSelected,
   DefaultToolbarContent,
 } from "tldraw";
+import { defaultTools } from "tldraw";
 // import { useSyncDemo } from "@tldraw/sync";
 import { useSync } from "@tldraw/sync";
 import "tldraw/tldraw.css";
@@ -259,7 +263,7 @@ const App = () => {
         element={
           <>
             <CollaborativeWhiteboard />
-            <ChatBot />
+            {/* <ChatBot toggleSidebar={toggleSidebar} /> */}
             {/* {userRole === "teacher" && ( */}
             <InactivityMonitor
               // className={className}
@@ -281,6 +285,9 @@ const App = () => {
 };
 
 const CollaborativeWhiteboard = () => {
+  const customTools = [MicrophoneTool];
+  const customShapeUtils = [AudioShapeUtil];
+
   const { className, projectName, teamName } = useParams();
   // if (!className || !projectName || !teamName) return null;
   // const roomId = `collaBoard-${className}-${projectName}-${teamName}`;
@@ -309,11 +316,15 @@ const CollaborativeWhiteboard = () => {
   const [userRole, setUserRole] = useState(null);
   const editorInstance = useRef(null);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+
   useEffect(() => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
-    // const userRef = doc(db, `users/${currentUser.uid}`);
     const userRef = doc(db, "users", currentUser.uid);
     getDoc(userRef).then((docSnap) => {
       if (docSnap.exists()) {
@@ -326,14 +337,11 @@ const CollaborativeWhiteboard = () => {
     if (editorInstance) {
       saveCanvasPreview();
     }
-
-    // Optionally, you can also save on unmount or at specific intervals
     return () => {
       saveCanvasPreview();
     };
   }, [store]);
 
-  // Fetch logs when component mounts
   useEffect(() => {
     if (!roomId || !className || !projectName || !teamName) return;
 
@@ -412,6 +420,11 @@ const CollaborativeWhiteboard = () => {
   // const editorRef = useRef(null);
   // let editorInstance = null;
 
+  console.log(
+    "shapeUtils registered:",
+    customShapeUtils.map((s) => s.type)
+  );
+
   const saveCanvasPreview = async () => {
     if (!editorInstance.current) return;
 
@@ -440,21 +453,40 @@ const CollaborativeWhiteboard = () => {
 
   if (!roomId) return null;
 
+  const uiOverrides = {
+    tools(editor, tools) {
+      tools.microphone = {
+        id: "microphone",
+        icon: "mic-icon",
+        label: "Record",
+        kbd: "r",
+        onSelect: () => editor.setCurrentTool("microphone"),
+      };
+      return tools;
+    },
+  };
+
   return (
     <div className="main-container" style={{ position: "fixed", inset: 0 }}>
       <Navbar />
+
       <Tldraw
         onMount={(editor) => {
           editorInstance.current = editor;
           if (editorInstance) {
             saveCanvasPreview(); // Save canvas preview on mount
           }
-          // editorRef.current = editor; // Store the editor instance
-          // console.log("Editor mounted:", editor);
         }}
         store={store}
-        // tools={customTools}
-        // overrides={uiOverrides}
+        tools={[...defaultTools, ...customTools]}
+        shapeUtils={customShapeUtils}
+        // shapeUtils={[AudioShapeUtil]}
+        overrides={uiOverrides}
+        assetUrls={{
+          icons: {
+            "mic-icon": "/mic-icon.svg",
+          },
+        }}
         components={{
           ContextMenu: (props) => (
             <CustomContextMenu
@@ -494,9 +526,33 @@ const CollaborativeWhiteboard = () => {
               )} */}
             </>
           ),
-          // Toolbar: CustomToolbar,
+          // Toolbar: DefaultToolbar,
+          Toolbar: (props) => {
+            const tools = useTools();
+            const isMicSelected = useIsToolSelected(tools["microphone"]);
+            return (
+              <DefaultToolbar {...props}>
+                <TldrawUiMenuItem
+                  {...tools["microphone"]}
+                  isSelected={isMicSelected}
+                />
+
+                <DefaultToolbarContent />
+              </DefaultToolbar>
+            );
+          },
           ActionsMenu: (props) => <CustomActionsMenu {...props} />,
         }}
+      />
+      <ChatBot
+        toggleSidebar={toggleSidebar}
+        messages={messages}
+        setMessages={setMessages}
+      />
+      <ChatSidebar
+        messages={messages}
+        isOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
       />
     </div>
   );
