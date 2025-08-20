@@ -42,7 +42,7 @@ const LoginPage = () => {
     }
 
     const actionCodeSettings = {
-      url: "http://localhost:3000/finishSignIn", // Adjust for deployed domain later
+      url: "https://colla-board.vercel.app//finishSignIn", // Adjust for deployed domain later
       handleCodeInApp: true,
     };
 
