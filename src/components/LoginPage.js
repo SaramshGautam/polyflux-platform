@@ -43,7 +43,7 @@ const LoginPage = () => {
 
     const actionCodeSettings = {
       // url: "https://colla-board.vercel.app//finishSignIn", // Adjust for deployed domain later
-      url: "https://polyflux-platform.vercel.app/finishSignIn",
+      url: "https://polyflux-platform.vercel.app//finishSignIn",
       handleCodeInApp: true,
     };
 
