@@ -1,0 +1,11 @@
+Flask==3.0.3
+flask-cors==4.0.1
+firebase-admin==6.5.0
+google-cloud-firestore==2.16.0
+pandas==2.2.2
+openai==1.47.0
+python-dotenv==1.0.1
+sentence-transformers==3.0.1
+scikit-learn==1.5.1
+gunicorn==22.0.0
+numpy<2.0  # if your env has issues with numpy ABI; remove if fine

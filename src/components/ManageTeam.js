@@ -85,7 +85,7 @@ const ManageTeams = () => {
     }));
 
     // fetch("http://localhost:5000/save-teams", {
-    fetch("https://flask-app-jqwkqdscaq-uc.a.run.app/save-teams", {
+    fetch("https://polyflux-server-l7rilyhu2a-uc.a.run.app/save-teams", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

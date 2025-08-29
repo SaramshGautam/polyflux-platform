@@ -32,7 +32,7 @@ if firebase_key_base64:
 # firebase_admin.initialize_app(cred)
 # CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 # CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://colla-board.vercel.app"]}})
+CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://polyflux-platform.vercel.app/"]}})
 
 db = firestore.client()
 

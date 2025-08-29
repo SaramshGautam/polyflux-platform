@@ -37,7 +37,7 @@ const AddProject = () => {
       //   formData,
       //   {
       const response = await axios.post(
-        `https://flask-app-jqwkqdscaq-uc.a.run.app/api/add_project/${className}`,
+        `https://polyflux-server-l7rilyhu2a-uc.a.run.app/api/add_project/${className}`,
         formData,
         {
           headers: {

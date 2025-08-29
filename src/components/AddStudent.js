@@ -35,7 +35,7 @@ const AddStudent = () => {
       //   studentData
       // );
       await axios.post(
-        `https://flask-app-jqwkqdscaq-uc.a.run.app/api/classroom/${className}/add_student`,
+        `https://polyflux-server-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/add_student`,
         studentData
       );
       alert(`Student ${firstName} ${lastName} added successfully!`);
