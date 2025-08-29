@@ -482,11 +482,11 @@ const CollaborativeWhiteboard = () => {
         shapeUtils={customShapeUtils}
         // shapeUtils={[AudioShapeUtil]}
         overrides={uiOverrides}
-        assetUrls={{
-          icons: {
-            "mic-icon": "/mic-icon.svg",
-          },
-        }}
+        // assetUrls={{
+        //   icons: {
+        //     "mic-icon": "/mic-icon.svg",
+        //   },
+        // }}
         components={{
           ContextMenu: (props) => (
             <CustomContextMenu
