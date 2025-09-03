@@ -1,16 +1,3 @@
-// const firebaseConfig = {
-//   apiKey: "AIzaSyCs-xerrIr0KpnCTihTX-GowGDAZbRZFvA",
-//   authDomain: "creative-assistant-j.firebaseapp.com",
-//   databaseURL: "https://creative-assistant-j-default-rtdb.firebaseio.com",
-//   projectId: "creative-assistant-j",
-//   storageBucket: "creative-assistant-j.firebasestorage.app",
-//   messagingSenderId: "414003942125",
-//   appId: "1:414003942125:web:d1400f5fa9358683f832e4",
-//   measurementId: "G-NJWKCE24C4",
-// };
-
-// export default firebaseConfig;
-
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
@@ -21,7 +8,7 @@ const firebaseConfig = {
   authDomain: "creative-assistant-j.firebaseapp.com",
   databaseURL: "https://creative-assistant-j-default-rtdb.firebaseio.com",
   projectId: "creative-assistant-j",
-  storageBucket: "creative-assistant-j.appspot.com",
+  storageBucket: "creative-assistant-j.firebasestorage.app",
   messagingSenderId: "414003942125",
   appId: "1:414003942125:web:d1400f5fa9358683f832e4",
   measurementId: "G-NJWKCE24C4",
