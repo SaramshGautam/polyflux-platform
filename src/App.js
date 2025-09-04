@@ -74,7 +74,7 @@ const App = () => {
       // Send the ID token to the backend for validation
       // const response = await fetch("http://localhost:5000/api/login", {
       const response = await fetch(
-        "https://polyflux-server-l7rilyhu2a-uc.a.run.app/login",
+        "https://flask-app-l7rilyhu2a-uc.a.run.app/login",
         {
           method: "POST",
           headers: {
