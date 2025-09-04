@@ -25,7 +25,7 @@ import {
 const LoginPage = () => {
   const [message, setMessage] = useState(null);
   const navigate = useNavigate();
-  const addMessage = useFlashMessage(); // Get the flash message function from context
+  const addMessage = useFlashMessage();
   const [email, setEmail] = useState("");
   // Add 'login-page' class to the body when the component mounts
   useEffect(() => {
