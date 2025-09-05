@@ -20,8 +20,18 @@ const ManageStudent = () => {
         //   `http://localhost:5000/api/classroom/${classID}/manage_students`
         // );
         const response = await axios.get(
-          `https://polyflux-server-l7rilyhu2a-uc.a.run.app/api/classroom/${classID}/manage_students`
+          `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${classID}/manage_students`
         );
+
+        // const response = await fetch(
+        //   `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${classID}/manage_students`,
+        //   {
+        //     method: "GET",
+        //     // headers: {
+        //     //   "Content-Type": "application/json",
+        //     // },
+        //   }
+        // );
 
         console.log("Fetched Students:", response.data.students);
 
@@ -57,7 +67,7 @@ const ManageStudent = () => {
 
       const response = await axios.post(
         // `http://localhost:5000/api/classroom/${className}/delete_student/${lsuId}`
-        `https://polyflux-server-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/delete_student/${lsuId}`
+        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/delete_student/${lsuId}`
       );
 
       addMessage("success", response.data.message);

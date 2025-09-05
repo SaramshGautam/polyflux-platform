@@ -91,7 +91,7 @@ const EditClassroom = () => {
         //   formData,
         //   {
         await axios.post(
-          `https://polyflux-server-l7rilyhu2a-uc.a.run.app/update-students/${className}`,
+          `https://flask-app-l7rilyhu2a-uc.a.run.app/update-students/${className}`,
           formData,
           {
             withCredentials: true,

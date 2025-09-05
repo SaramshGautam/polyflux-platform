@@ -43,7 +43,7 @@ const LoginPage = () => {
 
     const actionCodeSettings = {
       // url: "https://colla-board.vercel.app//finishSignIn", // Adjust for deployed domain later
-      url: "https://polyflux-platform.vercel.app//finishSignIn",
+      url: "https://polyflux-platform.vercel.app/finishSignIn",
       handleCodeInApp: true,
     };
 
@@ -60,6 +60,7 @@ const LoginPage = () => {
   const googleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      console.log("Google sign-in successful:", result);
       const user = result.user;
       const userEmail = user.email;
       const userName = user.displayName;

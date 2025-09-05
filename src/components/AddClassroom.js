@@ -55,7 +55,7 @@ const AddClassroom = () => {
       //   formData,
       //   {
       const response = await axios.post(
-        "https://polyflux-server-l7rilyhu2a-uc.a.run.app/addclassroom",
+        "https://flask-app-l7rilyhu2a-uc.a.run.app/addclassroom",
         formData,
         {
           withCredentials: true,

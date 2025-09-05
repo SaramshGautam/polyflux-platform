@@ -20,7 +20,7 @@ const EditStudent = () => {
         console.log(`Fetching data for student: ${studentId}`);
         const response = await axios.get(
           // `http://localhost:5000/api/classroom/${className}/edit_student/${studentId}`
-          `https://polyflux-server-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${studentId}`
+          `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${studentId}`
         );
         console.log("Student Data Fetched:", response.data.student); // Debugging log
         setStudent(response.data.student);
@@ -49,7 +49,7 @@ const EditStudent = () => {
     try {
       await axios.put(
         // `http://localhost:5000/api/classroom/${className}/edit_student/${studentId}`,
-        `https://polyflux-server-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${studentId}`,
+        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${studentId}`,
         student
       );
       navigate(`/classroom/${className}/manage-students`);

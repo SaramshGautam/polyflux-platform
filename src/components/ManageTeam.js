@@ -11,6 +11,9 @@ const ManageTeams = () => {
   const [teams, setTeams] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [teamSize, setTeamSize] = useState(3);
+  const [reassignAll, setReassignAll] = useState(true);
+
   useEffect(() => {
     const fetchTeamsAndStudents = async () => {
       try {
@@ -85,7 +88,7 @@ const ManageTeams = () => {
     }));
 
     // fetch("http://localhost:5000/save-teams", {
-    fetch("https://polyflux-server-l7rilyhu2a-uc.a.run.app/save-teams", {
+    fetch("https://flask-app-l7rilyhu2a-uc.a.run.app/save-teams", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -199,6 +202,73 @@ const ManageTeams = () => {
     setTeams(updatedTeams);
   };
 
+  // ADD:
+  const shuffle = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  // generate "Team 1", "Team 2", ... without clashing
+  const nextTeamName = (existingNames) => {
+    const set = new Set(existingNames);
+    let n = 1;
+    while (set.has(`Team ${n}`)) n++;
+    return `Team ${n}`;
+  };
+
+  const randomizeIntoTeams = () => {
+    const size = Math.max(1, Number(teamSize) || 1);
+
+    if (reassignAll) {
+      // everyone (assigned + unassigned)
+      const pool = [...students, ...teams.flatMap((t) => t.students)];
+      if (!pool.length) return;
+
+      const shuffled = shuffle(pool);
+      const numTeams = Math.max(1, Math.ceil(shuffled.length / size));
+
+      // reuse existing names if available, then auto-generate more
+      let names = [...teams.map((t) => t.teamName)];
+      while (names.length < numTeams) names.push(nextTeamName(names));
+      names = names.slice(0, numTeams);
+
+      const buckets = names.map((name) => ({ teamName: name, students: [] }));
+      shuffled.forEach((s, i) => buckets[i % numTeams].students.push(s));
+
+      setTeams(buckets);
+      setStudents([]); // all assigned now
+      return;
+    }
+
+    // only place currently unassigned students into existing teams up to the size
+    if (!students.length) return;
+
+    const shuffled = shuffle(students);
+    const current = teams.length
+      ? teams.map((t) => ({ ...t, students: [...t.students] }))
+      : [{ teamName: "Team 1", students: [] }];
+
+    shuffled.forEach((stu) => {
+      // find a team with capacity, or create a new one
+      let idx = current.findIndex((t) => t.students.length < size);
+      if (idx === -1) {
+        current.push({
+          teamName: nextTeamName(current.map((t) => t.teamName)),
+          students: [],
+        });
+        idx = current.length - 1;
+      }
+      current[idx].students.push(stu);
+    });
+
+    setTeams(current);
+    setStudents([]); // all unassigned placed
+  };
+
   return (
     <div className="manage-teams-wrapper">
       <h1>
@@ -217,6 +287,40 @@ const ManageTeams = () => {
           <button className="action-btn" onClick={handleCreateTeam}>
             <i className="bi bi-plus-circle"></i> Create Team
           </button>
+          {/* ADD: randomizer controls */}
+          <div className="mt-3 d-flex align-items-center">
+            <label className="d-flex align-items-center">
+              Team size:&nbsp;
+              <input
+                type="number"
+                min="1"
+                style={{ width: 90 }}
+                value={teamSize}
+                onChange={(e) => setTeamSize(e.target.value)}
+              />
+            </label>
+
+            <label
+              className="d-flex align-items-center"
+              style={{ marginLeft: 16 }}
+            >
+              <input
+                type="checkbox"
+                checked={reassignAll}
+                onChange={(e) => setReassignAll(e.target.checked)}
+              />
+              <span style={{ marginLeft: 6 }}>Reassign all students</span>
+            </label>
+
+            <button
+              type="button"
+              className="btn action-btn"
+              style={{ marginLeft: 16 }}
+              onClick={randomizeIntoTeams}
+            >
+              <i className="bi bi-shuffle"></i> Randomize
+            </button>
+          </div>
         </div>
       </div>
       <div className="manage-teams-container">
