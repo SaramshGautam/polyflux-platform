@@ -1,5 +1,23 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import "./HowToUse.css";
+
+const CUSTOM_STUDENTS_FILE = "Studentlist.xlsx";
+const CUSTOM_TEAMS_FILE = "Studentlist_teams.xlsx";
+
+const pub = (f) => `${process.env.PUBLIC_URL}/howto/${f}`;
+function useFileExists(url) {
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    let ignore = false;
+    fetch(url, { method: "HEAD" })
+      .then((r) => !ignore && setOk(r.ok))
+      .catch(() => !ignore && setOk(false));
+    return () => {
+      ignore = true;
+    };
+  }, [url]);
+  return ok;
+}
 
 const studentsCSV = `firstName,lastName,email,lsu_id
 Avery,Stone,avery.stone@lsu.edu,89-123-4567
@@ -36,6 +54,9 @@ export default function HowToUse() {
     []
   );
 
+  const hasCustomStudents = useFileExists(pub(CUSTOM_STUDENTS_FILE));
+  const hasCustomTeams = useFileExists(pub(CUSTOM_TEAMS_FILE));
+
   // Images served from /public/howto/*
   const img = (name) => `${process.env.PUBLIC_URL}/howto/${name}.png`;
 
@@ -57,18 +78,43 @@ export default function HowToUse() {
           >
             Open PolyFlux
           </a>
-          <button
+
+          {/* <button
             className="howto-btn"
             onClick={() => downloadCSV("sample_students.csv", studentsCSV)}
           >
             Download sample_students.csv
-          </button>
-          <button
+          </button> */}
+          {hasCustomStudents ? (
+            <a className="howto-btn" href={pub(CUSTOM_STUDENTS_FILE)} download>
+              Download class roster (your CSV)
+            </a>
+          ) : (
+            <button
+              className="howto-btn"
+              onClick={() => downloadCSV("sample_students.csv", studentsCSV)}
+            >
+              Download sample_students.csv
+            </button>
+          )}
+          {/* <button
             className="howto-btn"
             onClick={() => downloadCSV("sample_teams.csv", teamsCSV)}
           >
             Download sample_teams.csv
-          </button>
+          </button> */}
+          {hasCustomTeams ? (
+            <a className="howto-btn" href={pub(CUSTOM_TEAMS_FILE)} download>
+              Download teams (your CSV)
+            </a>
+          ) : (
+            <button
+              className="howto-btn"
+              onClick={() => downloadCSV("sample_teams.csv", teamsCSV)}
+            >
+              Download sample_teams.csv
+            </button>
+          )}
         </div>
       </header>
 
@@ -241,7 +287,7 @@ export default function HowToUse() {
       <pre>{studentsCSV.trim()}</pre>
       <button
         className="howto-btn"
-        onClick={() => downloadCSV("sample_students.csv", studentsCSV)}
+        onClick={() => downloadCSV("Studentlist.xlsx", studentsCSV)}
       >
         Download sample_students.csv
       </button>
@@ -254,7 +300,7 @@ export default function HowToUse() {
       <pre>{teamsCSV.trim()}</pre>
       <button
         className="howto-btn"
-        onClick={() => downloadCSV("sample_teams.csv", teamsCSV)}
+        onClick={() => downloadCSV("Studentlist_teams.xlsx", teamsCSV)}
       >
         Download sample_teams.csv
       </button>
