@@ -5,6 +5,18 @@ const CUSTOM_STUDENTS_FILE = "Studentlist.xlsx";
 const CUSTOM_TEAMS_FILE = "Studentlist_teams.xlsx";
 
 const pub = (f) => `${process.env.PUBLIC_URL}/howto/${f}`;
+
+const IMAGE_MAP = {
+  login: "welcome",
+  add_classroom: "addnewclass",
+  add_project: "addnewproject",
+  edit_classroom: "editclassroom",
+  edit_project: "editproject",
+};
+
+const img = (name) =>
+  `${process.env.PUBLIC_URL}/howto/${IMAGE_MAP[name] || name}.png`;
+
 function useFileExists(url) {
   const [ok, setOk] = useState(false);
   useEffect(() => {
@@ -58,7 +70,7 @@ export default function HowToUse() {
   const hasCustomTeams = useFileExists(pub(CUSTOM_TEAMS_FILE));
 
   // Images served from /public/howto/*
-  const img = (name) => `${process.env.PUBLIC_URL}/howto/${name}.png`;
+  // const img = (name) => `${process.env.PUBLIC_URL}/howto/${name}.png`;
 
   return (
     <div className="howto-wrap">
@@ -87,7 +99,7 @@ export default function HowToUse() {
           </button> */}
           {hasCustomStudents ? (
             <a className="howto-btn" href={pub(CUSTOM_STUDENTS_FILE)} download>
-              Download class roster (your CSV)
+              Download example class roster
             </a>
           ) : (
             <button
@@ -105,7 +117,7 @@ export default function HowToUse() {
           </button> */}
           {hasCustomTeams ? (
             <a className="howto-btn" href={pub(CUSTOM_TEAMS_FILE)} download>
-              Download teams (your CSV)
+              Download example student with teams
             </a>
           ) : (
             <button
