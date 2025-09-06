@@ -22,7 +22,7 @@ import {
 // const provider = new GoogleAuthProvider();
 // const db = getFirestore(app);
 
-const ALLOWED_EMAILS = new Set(["sgauta4@lsu.edu"]);
+const ALLOWED_EMAILS = new Set(["skuike1@lsu.edu"]);
 
 const LoginPage = () => {
   const [message, setMessage] = useState(null);
@@ -230,7 +230,7 @@ const LoginPage = () => {
               onClick={handleDirectEmailSignIn}
               title="Direct sign-in (checks Firestore and signs you in)"
             >
-              Sign In with Email (Direct)
+              Sign In with Email
             </button>
           </div>
 
