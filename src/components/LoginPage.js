@@ -22,6 +22,8 @@ import {
 // const provider = new GoogleAuthProvider();
 // const db = getFirestore(app);
 
+const ALLOWED_EMAILS = new Set(["sgauta4@lsu.edu"]);
+
 const LoginPage = () => {
   const [message, setMessage] = useState(null);
   const navigate = useNavigate();
@@ -102,6 +104,41 @@ const LoginPage = () => {
     }
   };
 
+  const handleDirectEmailSignIn = async () => {
+    const raw = (email || "").trim().toLowerCase();
+
+    if (!ALLOWED_EMAILS.has(raw)) {
+      addMessage("danger", "This email is not allowed for direct sign-in.");
+      return;
+    }
+
+    try {
+      // Look up user in Firestore
+      const snap = await getDoc(doc(db, "users", raw));
+      if (!snap.exists()) {
+        addMessage("danger", "User not found in the database.");
+        return;
+      }
+
+      const data = snap.data();
+      const role = (data.role || "student").toLowerCase();
+      const LSUID = data.lsuID || null;
+      const photoURL = data.photoURL || ""; // if you stored one
+
+      // Persist like Google sign-in does
+      localStorage.setItem("role", role);
+      localStorage.setItem("userEmail", raw);
+      if (photoURL) localStorage.setItem("photoURL", photoURL);
+      if (LSUID) localStorage.setItem("LSUID", LSUID);
+
+      addMessage("success", `Welcome, ${data.firstName || raw}!`);
+      navigate(role === "teacher" ? "/teachers-home" : "/students-home");
+    } catch (err) {
+      console.error(err);
+      addMessage("danger", "Direct sign-in failed. Please try again.");
+    }
+  };
+
   return (
     <div
       className="d-flex justify-content-center align-items-center min-vh-100"
@@ -177,16 +214,42 @@ const LoginPage = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your LSU email (e.g., ntotar1@lsu.edu)"
+            />
+
+            {/* Existing magic-link option */}
+            {/* <button
+              className="btn btn-primary w-100"
+              onClick={handleEmailSignIn}
+            >
+              Send Sign-In Link
+            </button> */}
+
+            <button
+              className="btn btn-outline-secondary w-100 mt-2"
+              onClick={handleDirectEmailSignIn}
+              title="Direct sign-in (checks Firestore and signs you in)"
+            >
+              Sign In with Email (Direct)
+            </button>
+          </div>
+
+          {/* <div className="mt-4">
+            <input
+              className="form-control mb-2"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your LSU email"
             />
-            {/* <button onClick={handleEmailSignIn}>Send Sign-In Link</button> */}
+            <button onClick={handleEmailSignIn}>Send Sign-In Link</button>
             <button
               className="btn btn-primary w-100"
               onClick={handleEmailSignIn}
             >
               Send Sign-In Link
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
