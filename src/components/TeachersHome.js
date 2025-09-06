@@ -200,12 +200,12 @@ const TeacherHome = () => {
             className="admin-button-container"
             style={{ textAlign: "center", marginBottom: "1rem" }}
           >
-            <button
+            {/* <button
               className="admin-add-user-button"
               onClick={() => navigate("/add-user")}
             >
               ➕ Add User
-            </button>
+            </button> */}
           </div>
           {/* )} */}
 

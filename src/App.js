@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  useNavigate,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import { useParams, Link } from "react-router-dom";
 import ChatSidebar from "./components/chatsidebar/ChatSidebar";
 import ChatBot from "./components/ChatBot";
+import HowToUse from "./components/navbar/HowToUse";
 
 // Importing pages
 import LoginPage from "./components/LoginPage";
@@ -102,12 +109,26 @@ const App = () => {
     }
   };
 
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+
+  const TeacherOnlyRoute = ({ children }) =>
+    role === "teacher" ? children : <Navigate to="/" replace />;
+
   return (
     <Routes>
       {/* Login Page */}
       <Route path="/" element={<LoginPage onLogin={googleLogin} />} />
 
       <Route path="/finishSignIn" element={<FinishSignIn />} />
+
+      <Route
+        path="/how-to-use"
+        element={
+          <TeacherOnlyRoute>
+            <HowToUse />
+          </TeacherOnlyRoute>
+        }
+      />
 
       {/* Teacher's Home */}
       <Route

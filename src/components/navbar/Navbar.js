@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate, Routes, Route } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./Navbar.css";
+import HowToUse from "./HowToUse";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -51,6 +53,11 @@ const Navbar = () => {
         <div className="navbar-links">
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
+          {role === "teacher" && (
+            <Link to="/how-to-use" title="Open PolyFlux Teacher Guide">
+              How to Use
+            </Link>
+          )}
         </div>
       </div>
       <div className="navbar-right">
@@ -100,6 +107,17 @@ const Navbar = () => {
           </li>
           {/* Dropdown Menu */}
           <ul className={`dropdown-menu ${isProfileOpen ? "show" : ""}`}>
+            {/* Optional: show guide in dropdown too (teachers only) */}
+            {role === "teacher" && (
+              <li>
+                <Link
+                  className="dropdown-item btn btn-dark btn-sm"
+                  to="/how-to-use"
+                >
+                  📘 How to Use
+                </Link>
+              </li>
+            )}
             <li>
               <button
                 className="dropdown-item btn btn-dark btn-sm"
