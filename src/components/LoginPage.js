@@ -214,7 +214,7 @@ const LoginPage = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your LSU email (e.g., ntotar1@lsu.edu)"
+              placeholder="Enter your LSU email (e.g., abc1@lsu.edu)"
             />
 
             {/* Existing magic-link option */}
