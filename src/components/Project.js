@@ -16,6 +16,7 @@ const Project = () => {
   const [teams, setTeams] = useState([]);
   const [studentTeamAssigned, setStudentTeamAssigned] = useState(null);
   const [role, setRole] = useState(localStorage.getItem("role"));
+  const [notifying, setNotifying] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -113,6 +114,47 @@ const Project = () => {
     navigate(`/classroom/${className}/project/${projectName}/manage-teams`);
   };
 
+  const handleNotifyStudents = async () => {
+    const yes = window.confirm(
+      "Notify all stiudents now? They'll receive an email to log in and set their passwords."
+    );
+    if (!yes) return;
+    console.log("Students Notified");
+
+    try {
+      setNotifying(true);
+
+      const formData = new FormData();
+      formData.append("role", localStorage.getItem("role") || "");
+      formData.append("userEmail", localStorage.getItem("userEmail") || "");
+
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
+
+      const res = await fetch(
+        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/notify_students`,
+        {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.error || data.message || "Notify failed");
+
+      const sent = (data.results || []).filter((r) => r.sent).length;
+      const total = (data.results || []).length;
+      alert(`Emails sent: ${sent}/${total}`);
+    } catch (err) {
+      alert(`Notify failed: ${err.message}`);
+    } finally {
+      setNotifying(false);
+    }
+  };
+
   const handleEditProjectClick = () => {
     navigate(`/classroom/${className}/project/${projectName}/edit`, {
       state: { projectDetails },
@@ -184,6 +226,15 @@ const Project = () => {
           </button>
           <button className="btn action-btn" onClick={handleManageTeams}>
             <i className="bi bi-people me-2"></i> Manage Teams
+          </button>
+          <button
+            className="btn action-btn"
+            onClick={handleNotifyStudents}
+            disabled={notifying}
+            title={notifying ? "Sending Notification..." : "Notify Students"}
+          >
+            <i className="bi bi-envelope me-2"></i>{" "}
+            {notifying ? "Notifying..." : "Notify Students"}
           </button>
         </div>
       )}

@@ -196,17 +196,17 @@ const TeacherHome = () => {
           )}
 
           {/* {userRole === "admin" && ( */}
-          <div
+          {/* <div
             className="admin-button-container"
             style={{ textAlign: "center", marginBottom: "1rem" }}
           >
-            {/* <button
+            <button
               className="admin-add-user-button"
               onClick={() => navigate("/add-user")}
             >
               ➕ Add User
-            </button> */}
-          </div>
+            </button>
+          </div> */}
           {/* )} */}
 
           <div className="classrooms-list">

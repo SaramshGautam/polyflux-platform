@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, getDocs, getDoc, doc } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import React, { useState, useEffect } from "react";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  getDoc,
+  doc,
+} from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const StudentHome = () => {
-  const [classrooms, setClassrooms] = useState({ groupedClassrooms: {}, sortedSemesters: [] });
+  const [classrooms, setClassrooms] = useState({
+    groupedClassrooms: {},
+    sortedSemesters: [],
+  });
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState(null);
   const navigate = useNavigate();
@@ -24,15 +33,15 @@ const StudentHome = () => {
     return () => unsubscribe();
   }, [auth]);
 
-  // Updated sorting logic: 
+  // Updated sorting logic:
   // - Valid semesters (e.g., "Fall 2025") are sorted by year (descending) first.
   // - For the same year, order is: Fall (1), Summer (2), Spring (3).
   // - Any missing/invalid semester (e.g., undefined) is pushed to the end.
   const sortSemesters = (semesters) => {
     const semesterOrder = {
-      "Fall": 1,
-      "Summer": 2,
-      "Spring": 3,
+      Fall: 1,
+      Summer: 2,
+      Spring: 3,
     };
 
     return semesters.sort((a, b) => {
@@ -74,13 +83,16 @@ const StudentHome = () => {
       try {
         setLoading(true);
         const db = getFirestore();
-        const classroomsRef = collection(db, 'classrooms');
+        const classroomsRef = collection(db, "classrooms");
         const querySnapshot = await getDocs(classroomsRef);
 
         const studentClassrooms = [];
         for (const docSnapshot of querySnapshot.docs) {
           const classroom = docSnapshot.data();
-          const studentsRef = collection(db, `classrooms/${docSnapshot.id}/students`);
+          const studentsRef = collection(
+            db,
+            `classrooms/${docSnapshot.id}/students`
+          );
           const studentsSnapshot = await getDocs(studentsRef);
 
           // Check if the student exists in the classroom's students subcollection
@@ -90,12 +102,16 @@ const StudentHome = () => {
 
           if (isStudentInClassroom) {
             // Fetch teacher's name using the teacher's email
-            const teacherDoc = await getDoc(doc(db, 'users', classroom.teacherEmail));
-            const teacherName = teacherDoc.exists() ? teacherDoc.data().name : 'Unknown';
+            const teacherDoc = await getDoc(
+              doc(db, "users", classroom.teacherEmail)
+            );
+            const teacherName = teacherDoc.exists()
+              ? teacherDoc.data().name
+              : "Unknown";
 
             studentClassrooms.push({
               id: docSnapshot.id,
-              teacherName,  // Add teacher's name here
+              teacherName, // Add teacher's name here
               ...classroom,
             });
           }
@@ -117,7 +133,7 @@ const StudentHome = () => {
 
         setClassrooms({ groupedClassrooms, sortedSemesters });
       } catch (error) {
-        console.error('Error fetching classrooms:', error);
+        console.error("Error fetching classrooms:", error);
       } finally {
         setLoading(false);
       }
@@ -127,39 +143,39 @@ const StudentHome = () => {
   }, [userEmail]);
 
   return (
-    <div className="container student-dashboard-container mt-4">
+    // <div className="container student-dashboard-container mt-4">
+    <div className="student-dashboard mt-4">
       {loading ? (
         <p>Loading...</p>
       ) : userEmail ? (
         <>
           {/* Centered Title */}
           <div className="text-center">
-            <h1 className="dashboard-title mb-4">
+            <h1 className="dashboard-title center-title mb-4">
               <i className="bi bi-person-badge"></i> Student's Dashboard
             </h1>
           </div>
-  
+
           {/* Classrooms organized by semester */}
           <div className="assigned-classrooms">
             {classrooms.sortedSemesters.length > 0 ? (
               classrooms.sortedSemesters.map((semester) => (
                 <div key={semester} className="semester-section">
                   <h4>{semester}</h4>
-                  <div className="row">
+                  <div className="classrooms-grid">
                     {classrooms.groupedClassrooms[semester].map((classroom) => (
-                      <div key={classroom.id} className="col-md-4 mb-4">
-                        <div
-                          className="classroom-card"
-                          onClick={() => navigate(`/classroom/${classroom.id}`)}
-                        >
-                          <div className="card-body">
-                            <h5 className="card-title">
-                              {classroom.courseID} - {classroom.class_name}
-                            </h5>
-                            <p className="card-text">
-                              Instructor: {classroom.teacherName}
-                            </p>
-                          </div>
+                      // <div key={classroom.id} className="col-md-4 mb-4">
+                      <div
+                        className="classroom-card"
+                        onClick={() => navigate(`/classroom/${classroom.id}`)}
+                      >
+                        <div className="card-body">
+                          <h5 className="card-title">
+                            {classroom.courseID} - {classroom.class_name}
+                          </h5>
+                          <p className="card-text">
+                            Instructor: {classroom.teacherName}
+                          </p>
                         </div>
                       </div>
                     ))}
