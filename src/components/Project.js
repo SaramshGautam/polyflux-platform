@@ -121,22 +121,29 @@ const Project = () => {
     if (!yes) return;
     console.log("Students Notified");
 
+    setNotifying(true);
     try {
-      setNotifying(true);
+      const payload = {
+        role: localStorage.getItem("role") || "",
+        userEmail: localStorage.getItem("userEmail") || "",
+      };
+      console.log("JSON payload:", payload);
 
-      const formData = new FormData();
-      formData.append("role", localStorage.getItem("role") || "");
-      formData.append("userEmail", localStorage.getItem("userEmail") || "");
+      // const formData = new FormData();
+      // formData.append("role", localStorage.getItem("role") || "");
+      // formData.append("userEmail", localStorage.getItem("userEmail") || "");
 
-      for (const [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
-      }
+      // for (const [key, value] of formData.entries()) {
+      //   console.log(`${key}:`, value);
+      // }
 
       const res = await fetch(
         `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/notify_students`,
         {
           method: "POST",
-          body: formData,
+          // body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
           credentials: "include",
         }
       );
@@ -145,6 +152,7 @@ const Project = () => {
       if (!res.ok)
         throw new Error(data.error || data.message || "Notify failed");
 
+      console.log("Response:", data);
       const sent = (data.results || []).filter((r) => r.sent).length;
       const total = (data.results || []).length;
       alert(`Emails sent: ${sent}/${total}`);
