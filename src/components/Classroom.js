@@ -49,6 +49,49 @@ const Classroom = () => {
     fetchClassroomData();
   }, [className, db]);
 
+  // Helpers (add above the component return)
+
+  const toDateObj = (val) => {
+    if (!val) return null;
+
+    // Firestore Timestamp (client SDK)
+    if (typeof val?.toDate === "function") return val.toDate();
+
+    // Firestore-like { seconds, nanoseconds }
+    if (typeof val === "object" && val.seconds != null) {
+      return new Date(val.seconds * 1000);
+    }
+
+    // ISO or other string
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const formatDueDate = (val) => {
+    const d = toDateObj(val);
+    if (!d) return "No due date set";
+
+    const now = new Date();
+    const diffMs = d.setSeconds(0, 0) - now.setSeconds(0, 0);
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    const dtf = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    const pretty = dtf.format(d);
+
+    if (diffMs < -oneDay) return `Past due (was ${pretty})`;
+    if (diffMs < 0) return `Past due (was ${pretty})`; // same-day past
+    if (diffMs < oneDay) return `Due today (${pretty})`;
+
+    const days = Math.round(diffMs / oneDay);
+    if (days === 1) return `Due tomorrow (${pretty})`;
+    if (days <= 7) return `Due in ${days} days (${pretty})`;
+
+    return `Due ${pretty}`;
+  };
+
   return (
     <div className="classroom-page">
       <h1 className="classroom-title">
@@ -98,13 +141,19 @@ const Classroom = () => {
                 <h5>{project.projectName}</h5>
                 <p className="project-description">
                   <strong>Description:</strong>{" "}
-                  {project.description.length > 100
-                    ? `${project.description.substring(0, 100)}...`
-                    : project.description}
+                  {project.description
+                    ? project.description.length > 100
+                      ? `${project.description.substring(0, 100)}...`
+                      : project.description
+                    : "No description provided"}
                 </p>
-                <p className="project-due-date">
+
+                {/* <p className="project-due-date">
                   <strong>Due Date:</strong>{" "}
                   {new Date(project.dueDate).toLocaleDateString()}
+                </p> */}
+                <p className="project-due-date">
+                  <strong>Due:</strong> {formatDueDate(project.dueDate)}
                 </p>
               </div>
             ))
