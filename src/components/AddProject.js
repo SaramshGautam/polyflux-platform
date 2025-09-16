@@ -5,12 +5,14 @@ import axios from "axios";
 const AddProject = () => {
   const { className } = useParams();
   const navigate = useNavigate();
+
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [teamFile, setTeamFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
   const [role] = useState(localStorage.getItem("role"));
   const [userEmail] = useState(localStorage.getItem("userEmail"));
 
@@ -20,16 +22,33 @@ const AddProject = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const optionalMissing = !dueDate || dueDate.trim() === "" || !teamFile;
+    if (optionalMissing) {
+      const confirmed = window.confirm(
+        [
+          "You left one or more optional fields blank:",
+          !dueDate ? "- Due Date" : null,
+          !teamFile ? "- Team CSV/Excel file" : null,
+          "",
+          "Proceed anyway?",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      );
+      if (!confirmed) return;
+    }
+
     setIsSubmitting(true);
 
     const formData = new FormData();
     formData.append("project_name", projectName);
     formData.append("description", description);
-    formData.append("due_date", dueDate);
+    if (dueDate) formData.append("due_date", dueDate);
     if (teamFile) formData.append("team_file", teamFile);
 
-    formData.append("role", role);
-    formData.append("userEmail", userEmail);
+    formData.append("role", role || "");
+    formData.append("userEmail", userEmail || "");
 
     try {
       // const response = await axios.post(
@@ -50,14 +69,21 @@ const AddProject = () => {
       );
 
       setErrorMessage("");
-      alert(response.data.message);
+      // alert(response.data.message);
+      alert(response.data.message || "Project added.");
       navigate(`/classroom/${className}`);
     } catch (error) {
-      setErrorMessage(error.response?.data?.message || "Something went wrong!");
+      setErrorMessage(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Something went wrong!"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const minDateLocal = new Date().toISOString().slice(0, 16);
 
   return (
     <div className="container form-container mt-4">
@@ -66,7 +92,7 @@ const AddProject = () => {
       <form onSubmit={handleSubmit} encType="multipart/form-data">
         <div className="mb-3">
           <label htmlFor="project_name" className="form-label">
-            Project Name
+            Project Name <span className="text-danger">*</span>
           </label>
           <input
             type="text"
@@ -80,7 +106,7 @@ const AddProject = () => {
 
         <div className="mb-3">
           <label htmlFor="description" className="form-label">
-            Project Description
+            Project Description <span className="text-danger">*</span>
           </label>
           <textarea
             id="description"
@@ -94,7 +120,7 @@ const AddProject = () => {
 
         <div className="mb-3">
           <label htmlFor="due_date" className="form-label">
-            Due Date
+            Due Date <small className="text-muted">(optional)</small>
           </label>
           <input
             type="datetime-local"
@@ -102,14 +128,15 @@ const AddProject = () => {
             className="form-control"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            required
-            min={new Date().toISOString().slice(0, 16)}
+            min={minDateLocal}
+            // required
+            // min={new Date().toISOString().slice(0, 16)}
           />
         </div>
 
         <div className="mb-3">
           <label htmlFor="team_file" className="form-label">
-            Team CSV/Excel File (Optional)
+            Team CSV/Excel File <small className="text-muted">(optional)</small>
           </label>
           <input
             type="file"
