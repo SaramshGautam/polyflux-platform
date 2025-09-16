@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 // import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useFlashMessage } from "../FlashMessageContext"; // Import the flash message hook
@@ -22,13 +28,20 @@ import {
 // const provider = new GoogleAuthProvider();
 // const db = getFirestore(app);
 
-const ALLOWED_EMAILS = new Set(["skuike1@lsu.edu"]);
+const ALLOWED_EMAILS = new Set(["ntotar1@lsu.edu"]);
 
 const LoginPage = () => {
   const [message, setMessage] = useState(null);
   const navigate = useNavigate();
   const addMessage = useFlashMessage();
   const [email, setEmail] = useState("");
+
+  const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+
+  const toLSU = (s) => (s || "").trim().toLowerCase();
+
   // Add 'login-page' class to the body when the component mounts
   useEffect(() => {
     document.body.classList.add("login-page");
@@ -36,6 +49,85 @@ const LoginPage = () => {
       document.body.classList.remove("login-page");
     };
   }, []);
+
+  const handleEmailPasswordSignIn = async () => {
+    const userEmail = toLSU(email);
+
+    // Optional domain guard
+    if (!userEmail.endsWith("@lsu.edu")) {
+      addMessage("danger", "Only LSU email addresses are allowed.");
+      return;
+    }
+    if (!password) {
+      addMessage("danger", "Please enter your password.");
+      return;
+    }
+
+    try {
+      setSigningIn(true);
+
+      // 1) Firebase Auth sign-in
+      const cred = await signInWithEmailAndPassword(auth, userEmail, password);
+      const authedEmail = cred.user.email;
+
+      // 2) Fetch role/profile from Firestore
+      const userSnap = await getDoc(doc(db, "users", authedEmail));
+      if (!userSnap.exists()) {
+        addMessage(
+          "danger",
+          "User profile not found. Please contact your instructor."
+        );
+        return;
+      }
+
+      const u = userSnap.data();
+      const role = (u.role || "student").toLowerCase();
+      const LSUID = u.lsuID || null;
+      const photoURL = u.photoURL || cred.user.photoURL || "";
+
+      // 3) Store locally
+      localStorage.setItem("role", role);
+      localStorage.setItem("userEmail", authedEmail);
+      if (photoURL) localStorage.setItem("photoURL", photoURL);
+      if (LSUID) localStorage.setItem("LSUID", LSUID);
+
+      addMessage("success", `Welcome, ${u.firstName || authedEmail}!`);
+      navigate(role === "teacher" ? "/teachers-home" : "/students-home");
+    } catch (err) {
+      // Friendly Firebase error mapping
+      const code = err?.code || "";
+      if (
+        code === "auth/invalid-credential" ||
+        code === "auth/wrong-password"
+      ) {
+        addMessage("danger", "Incorrect email or password.");
+      } else if (code === "auth/user-not-found") {
+        addMessage("danger", "No account found for this email.");
+      } else if (code === "auth/too-many-requests") {
+        addMessage("danger", "Too many attempts. Try again later.");
+      } else {
+        console.error(err);
+        addMessage("danger", "Sign-in failed. Please try again.");
+      }
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const userEmail = toLSU(email);
+    if (!userEmail) {
+      addMessage("info", "Enter your email first, then click Forgot Password.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, userEmail);
+      addMessage("info", "Password reset email sent. Check your inbox.");
+    } catch (e) {
+      console.error(e);
+      addMessage("danger", "Could not send reset email.");
+    }
+  };
 
   const handleEmailSignIn = async () => {
     if (!email.endsWith("@lsu.edu")) {
@@ -178,6 +270,78 @@ const LoginPage = () => {
           </div>
         )}
 
+        <div className="mt-4">
+          {/* Email */}
+          <input
+            className="form-control mb-2"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            required
+          />
+
+          {/* Password */}
+          <div className="input-group mb-2">
+            <input
+              className="form-control pe-5"
+              type={showPwd ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+            <span
+              className="password-toggle"
+              onClick={() => setShowPwd((s) => !s)}
+              title={showPwd ? "Hide password" : "Show password"}
+              style={{
+                position: "absolute",
+                right: "8px",
+                top: "40%",
+                transform: "translateY(-50%)",
+                cursor: "pointer",
+                color: "#667085",
+                fontSize: "1.1rem",
+                transition: "color 0.2s ease",
+              }}
+            >
+              <i className={`bi ${showPwd ? "bi-eye-slash" : "bi-eye"}`} />
+            </span>
+            {/* <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => setShowPwd((s) => !s)}
+              title={showPwd ? "Hide password" : "Show password"}
+            >
+              <i className={`bi ${showPwd ? "bi-eye-slash" : "bi-eye"}`} />
+            </button> */}
+          </div>
+
+          {/* Submit */}
+          <button
+            className="btn btn-primary w-100"
+            onClick={handleEmailPasswordSignIn}
+            disabled={signingIn}
+          >
+            {signingIn ? "Signing in..." : "Sign In with Email"}
+          </button>
+
+          {/* Forgot password */}
+          <button
+            className="btn btn-link w-100 mt-2"
+            type="button"
+            onClick={handleForgotPassword}
+          >
+            Forgot password?
+          </button>
+
+          {/* (Optional) Keep your magic-link button if you like */}
+          {/* <button className="btn btn-outline-secondary w-100 mt-2" onClick={handleEmailSignIn}>
+    Send Sign-In Link
+  </button> */}
+        </div>
+
         <div className="mb-3">
           {/* Google Login Button - Centered */}
           <div className="d-flex justify-content-center">
@@ -208,7 +372,7 @@ const LoginPage = () => {
             </button>
           </div>
 
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <input
               className="form-control mb-2"
               type="email"
@@ -217,13 +381,6 @@ const LoginPage = () => {
               placeholder="Enter your LSU email (e.g., abc1@lsu.edu)"
             />
 
-            {/* Existing magic-link option */}
-            {/* <button
-              className="btn btn-primary w-100"
-              onClick={handleEmailSignIn}
-            >
-              Send Sign-In Link
-            </button> */}
 
             <button
               className="btn btn-outline-secondary w-100 mt-2"
@@ -232,7 +389,7 @@ const LoginPage = () => {
             >
               Sign In with Email
             </button>
-          </div>
+          </div> */}
 
           {/* <div className="mt-4">
             <input

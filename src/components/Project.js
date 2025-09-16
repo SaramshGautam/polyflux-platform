@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import defaultTeamPreview from "../utils/teamA.png";
+import TeamCard from "./TeamCard";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -249,7 +250,7 @@ const Project = () => {
 
       <section className="teams-section mt-4">
         <h2>Teams</h2>
-        {teams.length > 0 ? (
+        {/* {teams.length > 0 ? (
           <div className="teams-list">
             {role === "student" ? (
               studentTeamAssigned ? (
@@ -310,28 +311,10 @@ const Project = () => {
                       />
                     </div>
 
-                    {/* <div className="card-body">
-                    <h5 className="card-title">
-                      <i className="bi bi-people-fill me-2"></i> {team.name}
-                    </h5>
-                    <div className="d-flex justify-content-around card-footer">
-                      <Link
-                        to={`/classroom/${className}/project/${projectName}/team/${team.name}`}
-                        className="btn btn-view"
-                      >
-                        View Team
-                      </Link>
-                      <button
-                        className="btn btn-whiteboard"
-                        onClick={() => handleWhiteboardClick(team.name)}
-                      >
-                        <i className="bi bi-tv"></i> Whiteboard
-                      </button> */}
                     <div className="card-body">
                       <h5 className="card-title">
                         <i className="bi bi-people-fill me-2"></i> {team.name}
                       </h5>
-                      {/* <div className="d-flex justify-content-around"> */}
                       <div className="card-footer">
                         <Link
                           to={`/classroom/${className}/project/${projectName}/team/${team.name}`}
@@ -347,10 +330,45 @@ const Project = () => {
                         </button>
                       </div>
                     </div>
-                    {/* </div> */}
                   </div>
                 );
               })
+            )}
+          </div>
+        ) : (
+          <p className="text-muted">No teams available.</p>
+        )} */}
+        {teams.length > 0 ? (
+          <div className="teams-list">
+            {role === "student" ? (
+              studentTeamAssigned ? (
+                <TeamCard
+                  className={className}
+                  projectName={projectName}
+                  team={{ name: studentTeamAssigned, members: [] }}
+                  previewUrl={localStorage.getItem(
+                    `preview-${className}-${projectName}-${studentTeamAssigned}`
+                  )}
+                  onWhiteboardClick={handleWhiteboardClick}
+                />
+              ) : (
+                <p className="text-muted">
+                  You are not assigned to any team yet.
+                </p>
+              )
+            ) : (
+              teams.map((team) => (
+                <TeamCard
+                  key={team.name}
+                  className={className}
+                  projectName={projectName}
+                  team={team}
+                  previewUrl={localStorage.getItem(
+                    `preview-${className}-${projectName}-${team.name}`
+                  )}
+                  onWhiteboardClick={handleWhiteboardClick}
+                />
+              ))
             )}
           </div>
         ) : (
