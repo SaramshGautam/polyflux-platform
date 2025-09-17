@@ -494,7 +494,7 @@ export default function CustomContextMenu({
   return (
     <div onContextMenu={handleContextMenu}>
       <DefaultContextMenu {...props}>
-        <TldrawUiMenuGroup id="askAI">
+        {/* <TldrawUiMenuGroup id="askAI">
           <button
             className="tlui-button tlui-button__menu"
             tabIndex={-2}
@@ -599,7 +599,7 @@ export default function CustomContextMenu({
               Suggest Clusters
             </span>
           </button>
-        </TldrawUiMenuGroup>
+        </TldrawUiMenuGroup> */}
 
         <DefaultContextMenuContent />
       </DefaultContextMenu>
