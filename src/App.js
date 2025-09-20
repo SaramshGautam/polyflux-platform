@@ -66,6 +66,9 @@ import CustomContextMenu from "./components/CustomContextMenu";
 import Navbar from "./components/navbar/Navbar";
 import ContextToolbarComponent from "./components/ContextToolbarComponent";
 import CustomActionsMenu from "./components/CustomActionsMenu";
+import VerifyEmail from "./components/VerifyEmail";
+// import ProtectedRoute from "./components/ProtectedRoute";
+import AccountCreatedSuccess from "./components/AccountCreatedSuccess";
 // import ",/Project.css";
 
 const App = () => {
@@ -120,6 +123,10 @@ const App = () => {
       <Route path="/" element={<LoginPage onLogin={googleLogin} />} />
 
       <Route path="/finishSignIn" element={<FinishSignIn />} />
+
+      {/* <Route path="/verify-email" element={<VerifyEmail />} /> */}
+
+      <Route path="/account-created" element={<AccountCreatedSuccess />} />
 
       <Route
         path="/how-to-use"

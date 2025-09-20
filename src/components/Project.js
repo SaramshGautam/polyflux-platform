@@ -149,9 +149,31 @@ const Project = () => {
         }
       );
 
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || data.message || "Notify failed");
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Request failed:", res.status, errText);
+        return;
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : await res.text();
+
+      console.log("--- data from the backend ---");
+      console.dir(data); // best for inspecting objects
+      if (Array.isArray(data)) {
+        console.log("First item:", data[0]);
+      }
+
+      if (data && data.message) {
+        console.log("Message:", data.message);
+      }
+
+      // const data = await res.json();
+      // console.log(`--- data from the backend --- ${data[0]}`);
+      // if (!res.ok)
+      //   throw new Error(data.error || data.message || "Notify failed");
 
       console.log("Response:", data);
       const sent = (data.results || []).filter((r) => r.sent).length;

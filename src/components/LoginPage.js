@@ -6,8 +6,16 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
 } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useFlashMessage } from "../FlashMessageContext"; // Import the flash message hook
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -19,6 +27,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from "firebase/auth";
+import { Password } from "@mui/icons-material";
 
 // Firebase configuration
 
@@ -34,11 +43,14 @@ const LoginPage = () => {
   const [message, setMessage] = useState(null);
   const navigate = useNavigate();
   const addMessage = useFlashMessage();
-  const [email, setEmail] = useState("");
 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
+  // const [confirmPwd, setConfirmPwd] = useState(false);
+  const [confirmPwd, setConfirmPwd] = useState("");
 
   const toLSU = (s) => (s || "").trim().toLowerCase();
 
@@ -68,6 +80,18 @@ const LoginPage = () => {
 
       // 1) Firebase Auth sign-in
       const cred = await signInWithEmailAndPassword(auth, userEmail, password);
+      await cred.user.reload();
+      // if (!cred.user.emailVerified) {
+      //   await auth.signOut();
+      //   ["role", "userEmail", "photoURL", "LSUID"].forEach((k) =>
+      //     localStorage.removeItem(k)
+      //   );
+      //   addMessage(
+      //     "danger",
+      //     "Please verify your email first. We sent a verification link to your inbox."
+      //   );
+      //   return;
+      // }
       const authedEmail = cred.user.email;
 
       // 2) Fetch role/profile from Firestore
@@ -126,6 +150,92 @@ const LoginPage = () => {
     } catch (e) {
       console.error(e);
       addMessage("danger", "Could not send reset email.");
+    }
+  };
+
+  const handleSignUp = async () => {
+    const userEmail = toLSU(email);
+
+    // if (!userEmail.endsWith("@lsu.edu")){
+    //   addMessage("danger","Only LSU email addresses are allowed.")
+    // }
+
+    if (!password || password.length < 5) {
+      addMessage("danger", "Password must be at least 5 characters.");
+    }
+
+    if (password !== confirmPwd) {
+      addMessage("danger", "Password do not match");
+      return;
+    }
+
+    try {
+      setSigningIn(true);
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        userEmail,
+        password
+      );
+
+      // await sendEmailVerification(cred.user);
+      // await sendEmailVerification(
+      //   cred.user /*, { url: "https://polyflux-platform.vercel.app" }*/
+      // );
+      addMessage("success", "Account created successfully!");
+      // addMessage(
+      //   "info",
+      //   "Verification email sent. Please verify your email address."
+      // );
+
+      const authedEmail = cred.user.email;
+
+      //creating firebase profile
+      const userRef = doc(db, "users", authedEmail);
+      const snap = await getDoc(userRef);
+      if (!snap.exists()) {
+        await setDoc(userRef, {
+          email: authedEmail,
+          role: "student",
+          firstName: "",
+          photoURL: cred.user.photoURL || "",
+          createdAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp(),
+        });
+      }
+
+      // const profile = (await getDoc(userRef)).data() || {};
+      // const role = (profile.role || "student").toLowerCase();
+
+      // localStorage.setItem("role", role);
+      // localStorage.setItem("userEmail", authedEmail);
+      // if (profile.photoURL) localStorage.setItem("photoURL", profile.photoURL);
+
+      // addMessage(
+      //   "info",
+      //   "Verification email sent. Please verify your address, then sign in."
+      // );
+      await auth.signOut();
+
+      // navigate("/verify-email", { state: { email: authedEmail } });
+      navigate("/account-created", { state: { email: authedEmail } });
+
+      // addMessage("success", "Account created! Welcome aboard.");
+      // navigate(role === "teacher" ? "/teachers-home" : "/students-home");
+    } catch (err) {
+      console.log(err);
+      const code = err.code || "";
+      // if (code === "auth/email-already-in-use") {
+      //   addMessage("danger", "An account already exists for this email.");
+      // } else
+      if (code === "auth/invalid-email") {
+        addMessage("danger", "Invalid email address.");
+      } else if (code === "auth/weak-password") {
+        addMessage("danger", "Password is too weak.");
+      } else {
+        addMessage("danger", "Sign-up failed. Please try again.");
+      }
+    } finally {
+      setSigningIn(false);
     }
   };
 
@@ -246,7 +356,8 @@ const LoginPage = () => {
           className="mb-4"
           style={{ fontWeight: 700, fontSize: "28px", color: "#333" }}
         >
-          Welcome to PolyFlux
+          {isSignup ? "Create your PolyFlux account" : "Welcome to PolyFlux"}
+          {/* Welcome to PolyFlux */}
         </h2>
         <img
           src="/logo.png"
@@ -277,18 +388,27 @@ const LoginPage = () => {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+            placeholder={
+              isSignup
+                ? "Enter a sign up email address (eg. abc1@lsu.edu)"
+                : "Your email address"
+            }
             required
           />
 
           {/* Password */}
-          <div className="input-group mb-2">
+          <div className="input-group">
             <input
-              className="form-control pe-5"
+              style={{ borderTopRightRadius: 5, borderBottomRightRadius: 5 }}
+              className="form-control mb-2"
               type={showPwd ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder={
+                isSignup
+                  ? "Create a password (min 5 chars)"
+                  : "Enter your password"
+              }
               required
             />
             <span
@@ -308,33 +428,100 @@ const LoginPage = () => {
             >
               <i className={`bi ${showPwd ? "bi-eye-slash" : "bi-eye"}`} />
             </span>
-            {/* <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => setShowPwd((s) => !s)}
-              title={showPwd ? "Hide password" : "Show password"}
-            >
-              <i className={`bi ${showPwd ? "bi-eye-slash" : "bi-eye"}`} />
-            </button> */}
           </div>
+
+          {isSignup && (
+            <div className="input-group mb-2">
+              <input
+                className="form-control mb-2"
+                type={showPwd ? "text" : "password"}
+                value={confirmPwd}
+                onChange={(e) => setConfirmPwd(e.target.value)}
+                placeholder="Confirm your password"
+                required
+              />
+              <span
+                className="password-toggle"
+                onClick={() => setShowPwd((s) => !s)}
+                title={showPwd ? "Hide password" : "Show password"}
+                style={{
+                  position: "absolute",
+                  right: "8px",
+                  top: "45%",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer",
+                  color: "#667085",
+                  fontSize: "1.1rem",
+                  transition: "color 0.2s ease",
+                }}
+              >
+                <i className={`bi ${showPwd ? "bi-eye-slash" : "bi-eye"}`} />
+              </span>
+            </div>
+          )}
 
           {/* Submit */}
           <button
             className="btn btn-primary w-100"
-            onClick={handleEmailPasswordSignIn}
+            // onClick={handleEmailPasswordSignIn}
+            onClick={isSignup ? handleSignUp : handleEmailPasswordSignIn}
             disabled={signingIn}
           >
-            {signingIn ? "Signing in..." : "Sign In with Email"}
+            {/* {signingIn ? "Signing in..." : "Sign In with Email"} */}
+            {signingIn
+              ? isSignup
+                ? "Creating..."
+                : "Signing in..."
+              : isSignup
+              ? "Create Account"
+              : "Sign In"}
           </button>
 
-          {/* Forgot password */}
+          {/* <p className="mb-3 text-muted">
+            {isSignup ? "Create your PolyFlux account" : "Ready to co-create!"}
+          </p> */}
+
+          {/* Forgot password (hide during signup mode to reduce clutter) */}
+          {!isSignup && (
+            <button
+              className="btn btn-link w-100 mt-2"
+              type="button"
+              onClick={handleForgotPassword}
+            >
+              Forgot password?
+            </button>
+          )}
+
           <button
+            type="button"
+            className="btn btn-link w-100 mt-1"
+            onClick={() => {
+              setIsSignup((s) => !s);
+              setConfirmPwd("");
+            }}
+          >
+            {isSignup
+              ? "Have an account? Sign in"
+              : "New here? Create an account"}
+          </button>
+
+          {/* Divider */}
+          <div className="d-flex align-items-center my-3">
+            <div className="flex-grow-1 border-top" />
+            <span className="px-2 text-muted" style={{ fontSize: 12 }}>
+              or
+            </span>
+            <div className="flex-grow-1 border-top" />
+          </div>
+
+          {/* Forgot password */}
+          {/* <button
             className="btn btn-link w-100 mt-2"
             type="button"
             onClick={handleForgotPassword}
           >
             Forgot password?
-          </button>
+          </button> */}
 
           {/* (Optional) Keep your magic-link button if you like */}
           {/* <button className="btn btn-outline-secondary w-100 mt-2" onClick={handleEmailSignIn}>
