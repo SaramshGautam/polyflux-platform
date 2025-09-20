@@ -51,8 +51,8 @@ const Navbar = () => {
           PolyFlux
         </div>
         <div className="navbar-links">
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
+          {/* <a href="#about">About</a> */}
+          {/* <a href="#contact">Contact</a> */}
           {role === "teacher" && (
             <Link to="/how-to-use" title="Open PolyFlux Teacher Guide">
               How to Use
