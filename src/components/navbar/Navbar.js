@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 // import { useNavigate, Routes, Route } from "react-router-dom";
 import { useNavigate, Link } from "react-router-dom";
 import "./Navbar.css";
+import Breadcrumbs from "./Breadcrumbs";
 import HowToUse from "./HowToUse";
 
 const Navbar = () => {
@@ -58,6 +59,10 @@ const Navbar = () => {
               How to Use
             </Link>
           )}
+        </div>
+        <div className="divider" aria-hidden="true" />
+        <div className="navbar-breadcrumbs">
+          <Breadcrumbs />
         </div>
       </div>
       <div className="navbar-right">
