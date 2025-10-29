@@ -84,6 +84,11 @@ const Project = () => {
             members: teamMembers,
           });
         });
+        
+        // Sort teams
+        teamsData.sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+        );
 
         setTeams(teamsData);
 

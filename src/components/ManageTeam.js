@@ -3,6 +3,10 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { doc, deleteDoc } from "firebase/firestore";
 
+// Sort teams by teamName
+const ncmp = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+const sortTeamsByName = (arr) => [...arr].sort((t1, t2) => ncmp(t1.teamName, t2.teamName));
+
 const ManageTeams = () => {
   const { className, projectName } = useParams();
   const navigate = useNavigate();
@@ -64,8 +68,12 @@ const ManageTeams = () => {
           (student) => !assignedEmails.includes(student.email)
         );
 
-        setStudents(unassignedStudents);
-        setTeams(teamsList);
+        setStudents(
+        [...unassignedStudents].sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+        )
+      );
+      setTeams(sortTeamsByName(teamsList));
       } catch (error) {
         console.error("Error fetching teams or students:", error);
       }
@@ -76,7 +84,7 @@ const ManageTeams = () => {
 
   const handleCreateTeam = () => {
     if (teamName && !teams.some((team) => team.teamName === teamName)) {
-      setTeams([...teams, { teamName, students: [] }]);
+      setTeams((prev) => sortTeamsByName([...prev, { teamName, students: [] }]));
       setTeamName("");
     }
   };
@@ -137,7 +145,7 @@ const ManageTeams = () => {
       );
 
       setStudents(updatedStudents);
-      setTeams(updatedTeams);
+      setTeams(sortTeamsByName(updatedTeams));
     }
   };
 
@@ -148,7 +156,7 @@ const ManageTeams = () => {
 
     // Remove the deleted team from the teams list in state
     const updatedTeams = teams.filter((team) => team.teamName !== teamName);
-    setTeams(updatedTeams);
+    setTeams(sortTeamsByName(updatedTeams));
 
     // Add the students from the deleted team back to the unassigned list
     const updatedStudents = [...students, ...studentsInDeletedTeam];
@@ -199,7 +207,7 @@ const ManageTeams = () => {
       });
     }
 
-    setTeams(updatedTeams);
+    setTeams(sortTeamsByName(updatedTeams));
   };
 
   // ADD:
@@ -239,7 +247,7 @@ const ManageTeams = () => {
       const buckets = names.map((name) => ({ teamName: name, students: [] }));
       shuffled.forEach((s, i) => buckets[i % numTeams].students.push(s));
 
-      setTeams(buckets);
+      setTeams(sortTeamsByName(buckets));
       setStudents([]); // all assigned now
       return;
     }
@@ -265,7 +273,7 @@ const ManageTeams = () => {
       current[idx].students.push(stu);
     });
 
-    setTeams(current);
+    setTeams(sortTeamsByName(current));
     setStudents([]); // all unassigned placed
   };
 
