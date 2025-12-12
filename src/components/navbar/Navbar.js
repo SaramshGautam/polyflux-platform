@@ -61,9 +61,9 @@ const Navbar = () => {
           )}
         </div>
         <div className="divider" aria-hidden="true" />
-        <div className="navbar-breadcrumbs">
+        {/* <div className="navbar-breadcrumbs">
           <Breadcrumbs />
-        </div>
+        </div> */}
       </div>
       <div className="navbar-right">
         {/* Dropdown for logout */}
