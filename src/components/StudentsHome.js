@@ -7,6 +7,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import "./StudentHome.css";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const StudentHome = () => {
@@ -167,7 +168,15 @@ const StudentHome = () => {
                       // <div key={classroom.id} className="col-md-4 mb-4">
                       <div
                         className="classroom-card"
-                        onClick={() => navigate(`/classroom/${classroom.id}`)}
+                        // onClick={() => navigate(`/classroom/${classroom.id}`)}
+                        onClick={() =>
+                          navigate(`/classroom/${classroom.id}`, {
+                            state: {
+                              from: "student-home",
+                              viewMode: "student",
+                            },
+                          })
+                        }
                       >
                         <div className="card-body">
                           <h5 className="card-title">

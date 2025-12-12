@@ -1,5 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+from firebase_admin import auth as fb_auth
 from flask import Flask, request, jsonify, session
 import os
 from datetime import datetime
@@ -11,6 +12,12 @@ from google.cloud.firestore import SERVER_TIMESTAMP
 import json
 from dotenv import load_dotenv
 import base64
+import secrets
+import string
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+from python_http_client.exceptions import HTTPError
+
 
 
 # Initialize Flask App
@@ -25,6 +32,10 @@ if firebase_key_base64:
     cred = credentials.Certificate(firebase_key)
     firebase_admin.initialize_app(cred)
 
+MAIL_FROM = os.getenv("MAIL_FROM", "lsu.ntotaro2@gmail.com")
+# MAIL_FROM = os.getenv("MAIL_FROM", "sgauta4@lsu.edu")
+APP_SIGNIN_URL = os.getenv("APP_SIGNIN_URL", "https://polyflux-platform.vercel.app/")
+
 # Initialize Firebase
 # firebase_key = json.loads(os.getenv("FIREBASE_KEY"))
 # cred = credentials.Certificate("firebase-key.json")
@@ -32,14 +43,22 @@ if firebase_key_base64:
 # firebase_admin.initialize_app(cred)
 # CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
 # CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://polyflux-platform.vercel.app/"]}})
+CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://polyflux-platform.vercel.app"]}})
 
 db = firestore.client()
 
 # Ensure uploads directory exists
-UPLOAD_FOLDER = 'uploads'
+# UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/tmp/uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}  # You can add other file extensions here
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config.update(
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_SECURE=True  # required for SameSite=None on HTTPS (Cloud Run)
+)
+
 
 
 @app.route('/test_cors', methods=['GET'])
@@ -51,18 +70,54 @@ def is_authenticated():
 
 @app.after_request
 def after_request(response):
-    allowed_origins = ["http://localhost:3000", "https://colla-board.vercel.app"]
+    allowed_origins = ["http://localhost:3000", "https://polyflux-platform.vercel.app"]
     origin = request.headers.get("Origin")
 
     if origin in allowed_origins:
         response.headers.add('Access-Control-Allow-Origin', origin)
-    response.headers.add('Access-Control-Allow-Credentials', 'true')  
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-    # response.headers.add('Cross-Origin-Opener-Policy', 'same-origin')
-    # response.headers.add('Cross-Origin-Embedder-Policy', 'require-corp')
+        response.headers.add('Vary', 'Origin')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')  
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        # response.headers.add('Cross-Origin-Opener-Policy', 'same-origin')
+        # response.headers.add('Cross-Origin-Embedder-Policy', 'require-corp')
     return response
 
+
+# sign in link sending
+def gen_password(length=12):
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+def send_email(to_email: str, subject: str, html: str):
+    api_key = os.getenv("SENDGRID_API_KEY")
+    if not api_key:
+        print("WARN: SENDGRID_API_KEY is not set; skipping email to", to_email)
+        return False
+
+    message = Mail(
+        from_email=MAIL_FROM,
+        to_emails=to_email,
+        subject=subject,
+        html_content=html
+    )
+    try:
+        sg = SendGridAPIClient(api_key)
+        resp = sg.send(message)
+        print("SendGrid OK:",
+              resp.status_code,
+              "x-message-id:", getattr(resp, "headers", {}).get("X-Message-Id"))
+        return 200 <= resp.status_code < 300
+    except HTTPError as e:
+        # e.body contains SendGrid's JSON error with the real reason
+        try:
+            print("SendGrid HTTPError:", e.status_code, e.body.decode() if hasattr(e.body, "decode") else e.body)
+        except Exception:
+            print("SendGrid HTTPError (no body):", repr(e))
+        return False
+    except Exception as e:
+        print(f"Email send failed to {to_email}: {e}")
+        return False
 
 @app.route('/')
 def home():
@@ -73,8 +128,8 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Create the 'uploads' folder if it doesn't exist
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# if not os.path.exists(UPLOAD_FOLDER):
+#     os.makedirs(UPLOAD_FOLDER)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -111,8 +166,17 @@ def addclassroom():
         semester = request.form.get('semester') 
         file = request.files.get('student_file')
 
-        if not class_name or not course_id or not semester or not file:
-            return jsonify({"error": "Class name, course ID, semester, and file are required."}), 400
+        # if not class_name or not course_id or not semester or not file:
+            # return jsonify({"error": "Class name, course ID, semester, and file are required."}), 400
+
+        if not class_name.strip():
+            return jsonify({"error": "Class name cannot be empty."}), 400
+        if not course_id.strip():
+            return jsonify({"error": "Course ID cannot be empty."}), 400
+        if not semester.strip():
+            return jsonify({"error": "Semester cannot be empty."}), 400
+        if file.filename == '':
+            return jsonify({"error": "No selected file."}), 400
 
         file_ext = os.path.splitext(file.filename)[1].lower()
 
@@ -131,9 +195,10 @@ def addclassroom():
                 df = pd.read_excel(file_path)
 
             # Check if required columns are present
-            if not {'firstname', 'lastname', 'email', 'lsu_id'}.issubset(df.columns):
+            # if not {'firstname', 'lastname', 'email', 'lsu_id'}.issubset(df.columns):
+            if not {'firstname', 'lastname', 'email'}.issubset(df.columns):
                 os.remove(file_path)
-                return jsonify({"error": "File must have columns: firstname, lastname, email, lsu_id."}), 400
+                return jsonify({"error": "File must have columns: firstname, lastname, email"}), 400
 
             # --- NEW: Check if the classroom ID (course_id) is unique ---
             classroom_ref = db.collection('classrooms').document(course_id)
@@ -163,13 +228,13 @@ def addclassroom():
             # Add students to Firestore
             for _, row in df.iterrows():
                 student_email = row['email']
-                lsu_id = str(row['lsu_id'])  # Ensure LSU ID is treated as a string
+                # lsu_id = str(row['lsu_id'])  # Ensure LSU ID is treated as a string
 
                 student_data = {
                     'firstName': row['firstname'],
                     'lastName': row['lastname'],
                     'email': student_email,
-                    'lsuID': lsu_id,
+                    # 'lsuID': lsu_id,
                     'assignedAt': firestore.SERVER_TIMESTAMP
                 }
 
@@ -183,7 +248,7 @@ def addclassroom():
                         'email': student_email,
                         'role': 'student',
                         'name': f"{row['lastname']}, {row['firstname']}",
-                        'lsuID': lsu_id,
+                        # 'lsuID': lsu_id,
                         'createdAt': firestore.SERVER_TIMESTAMP
                     })
 
@@ -241,11 +306,26 @@ def manage_students(classID):
         students = []
         for doc in classroom_ref.stream():
             student_data = doc.to_dict()
+
+            ts = student_data.get('assignedAt')
+            assigned_at = None
+            if ts is not None:
+                # Firestore usually returns a Python datetime
+                if isinstance(ts, datetime):
+                    assigned_at = ts.isoformat()
+                else:
+                    # Some SDKs return a Timestamp-like with .to_datetime()
+                    to_dt = getattr(ts, "to_datetime", None)
+                    assigned_at = to_dt().isoformat() if callable(to_dt) else str(ts)
+
+
             students.append({
                 'firstName': student_data.get('firstName'),
                 'lastName': student_data.get('lastName'),
                 'lsuId': student_data.get('lsuID'),
                 'assignedAt': student_data.get('assignedAt'),
+                # 'assignedAt': student_data.get('assignedAt'),
+                'assignedAt': assigned_at,
                 'email': doc.id  # Use Firestore document ID as email
             })
         return jsonify({'students': students}), 200
@@ -260,7 +340,7 @@ def add_student(class_name):
         first_name = data.get('first_name')
         last_name = data.get('last_name')
         email = data.get('email')
-        lsu_id = str(data.get('lsu_id'))  
+        # lsu_id = str(data.get('lsu_id'))  
 
         classroom_ref = db.collection('classrooms').document(class_name)
         
@@ -269,7 +349,7 @@ def add_student(class_name):
             'firstName': first_name,
             'lastName': last_name,
             'email': email,
-            'lsuID': lsu_id,
+            # 'lsuID': lsu_id,
             'assignedAt': firestore.SERVER_TIMESTAMP
         })
 
@@ -279,7 +359,7 @@ def add_student(class_name):
                 'email': email,
                 'role': 'student',
                 'name': f"{last_name}, {first_name}",
-                'lsuID': lsu_id,
+                # 'lsuID': lsu_id,
                 'createdAt': firestore.SERVER_TIMESTAMP
             })
 
@@ -287,6 +367,93 @@ def add_student(class_name):
 
     except Exception as e:
         return jsonify({'error': f'Error adding student: {str(e)}'}), 500
+
+
+@app.route('/api/classroom/<class_name>/notify_students', methods=['POST'])
+def notify_students(class_name):
+    """
+    For each student in classrooms/{class_name}/students:
+      - ensure a Firebase Auth user exists
+      - generate a password reset link
+      - email the link + their sign-in email
+    """
+    try:
+        # Optional: simple “authorization”
+        role = request.form.get('role') or request.json.get('role') if request.is_json else None
+        user_email = request.form.get('userEmail') or request.json.get('userEmail') if request.is_json else None
+        classroom_doc = db.collection('classrooms').document(class_name).get()
+        if not classroom_doc.exists:
+            return jsonify({"error": "Classroom not found."}), 404
+
+        # teacher_email = classroom_doc.to_dict().get('teacherEmail')
+        # if not user_email or user_email != teacher_email:
+        # if not user_email:
+        #     return jsonify({"error": "Only the classroom teacher can notify students."}), 403
+
+        if not user_email:
+            return jsonify({
+                "error": "Only the classroom teacher can notify students.",
+                "received_user_email": user_email,
+                "received_role": role
+            }), 403
+
+        students_ref = db.collection('classrooms').document(class_name).collection('students').stream()
+
+        results = []
+        for s in students_ref:
+            sd = s.to_dict()
+            student_email = sd.get('email')
+            first = sd.get('firstName', '')
+            last  = sd.get('lastName', '')
+
+            if not student_email:
+                continue
+
+            # ensure Firebase Auth user
+            try:
+                user_rec = fb_auth.get_user_by_email(student_email)
+            except fb_auth.UserNotFoundError:
+                # create with a random initial password (not emailed), and custom claim role=student
+                temp_pw = gen_password()
+                user_rec = fb_auth.create_user(
+                    email=student_email,
+                    email_verified=False,
+                    password=temp_pw,
+                    display_name=f"{first} {last}".strip() or None
+                )
+                try:
+                    fb_auth.set_custom_user_claims(user_rec.uid, {"role": "student"})
+                except Exception as e:
+                    print("Failed to set custom claims for", student_email, e)
+
+            # generate a password reset link
+            try:
+                reset_link = fb_auth.generate_password_reset_link(student_email)
+            except Exception as e:
+                print("Failed to create reset link for", student_email, e)
+                results.append({"email": student_email, "sent": False, "reason": "reset_link_failed"})
+                continue
+
+            # send the email
+            subject = f"[{class_name}] Your PolyFlux account"
+            html = f"""
+                <p>Hi {first or ''} {last or ''},</p>
+                <p>Your account is ready for the <strong>{class_name}</strong> workspace.</p>
+                <p><strong>Sign-in email:</strong> {student_email}</p>
+                <p>Please set your password using this link:</p>
+                <p><a href="{reset_link}">Set your password</a></p>
+                <p>Then sign in here: <a href="{APP_SIGNIN_URL}">{APP_SIGNIN_URL}</a></p>
+                <p>— PolyFlux</p>
+            """
+
+            ok = send_email(student_email, subject, html)
+            results.append({"email": student_email, "sent": ok})
+
+        return jsonify({"message": "Notifications processed.", "results": results}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to notify students: {e}"}), 500
+
     
 @app.route('/api/classroom/<class_name>/edit_student/<student_email>', methods=['GET', 'PUT'])
 def edit_student(class_name, student_email):
@@ -314,20 +481,20 @@ def edit_student(class_name, student_email):
             data = request.get_json()
             first_name = data.get('firstName')
             last_name = data.get('lastName')
-            lsu_id = data.get('lsuId')  # Ensure LSU ID is updated
+            # lsu_id = data.get('lsuId')  # Ensure LSU ID is updated
 
             # Update student details
             classroom_ref.update({
                 'firstName': first_name,
                 'lastName': last_name,
-                'lsuID': lsu_id
+                # 'lsuID': lsu_id
             })
 
             # Also update the user record in Firestore (users collection)
             user_doc = db.collection('users').document(student_email)
             user_doc.update({
                 'name': f"{last_name}, {first_name}",
-                'lsuID': lsu_id
+                # 'lsuID': lsu_id
             })
 
             return jsonify({'message': 'Student information updated successfully.'}), 200
@@ -389,30 +556,47 @@ def delete_student(class_name, lsu_id):
 def add_project(class_name):
     try:
         project_name = request.form.get('project_name')
-        due_date = request.form.get('due_date')
         description = request.form.get('description')
-        team_file = request.files.get('team_file')
+        due_date = request.form.get('due_date') #OPTIONAL
+        team_file = request.files.get('team_file') #OPTIONAL
 
-        if not project_name or not due_date or not description:
-            return jsonify({"message": "Project name, due date, and description are required."}), 400
+        # if not project_name or not due_date or not description:
+        if not project_name or not description:
+            return jsonify({"message": "Project name and description are required."}), 400
 
         project_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name)
-        project_ref.set({
+
+        payload = {
             'projectName': project_name,
-            'dueDate': due_date,
             'description': description,
             'createdAt': firestore.SERVER_TIMESTAMP
-        })
+        }
+        if due_date:
+            payload['dueDate'] = due_date
+        
+        project_ref.set(payload)
+
+
+
+        # project_ref.set({
+        #     'projectName': project_name,
+        #     'dueDate': due_date,
+        #     'description': description,
+        #     'createdAt': firestore.SERVER_TIMESTAMP
+        # })
 
         teams_created = False
         if team_file and allowed_file(team_file.filename):
             filename = secure_filename(team_file.filename)
-            file_path = os.path.join('uploads', filename)
+            # file_path = os.path.join('uploads', filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             team_file.save(file_path)
 
             try:
                 data = pd.read_csv(file_path) if filename.endswith('.csv') else pd.read_excel(file_path)
-                required_columns = ['firstname', 'lastname', 'email', 'lsu_id', 'teamname']
+                # required_columns = ['firstname', 'lastname', 'email', 'lsu_id', 'teamname']
+                data.columns = data.columns.str.strip().str.lower()
+                required_columns = ['firstname', 'lastname', 'email']
 
                 missing_columns = [col for col in required_columns if col not in data.columns]
                 if missing_columns:
@@ -423,22 +607,22 @@ def add_project(class_name):
                 }
 
                 for _, row in data.iterrows():
-                    lsu_id = str(row['lsu_id'])
+                    # lsu_id = str(row['lsu_id'])
                     student_email = row['email']
                     student_name = f"{row['lastname']}, {row['firstname']}"
-                    team_name = row['teamname']
+                    # team_name = row['teamname']
 
-                    if lsu_id not in class_students:
-                        return jsonify({"message": f"Student {student_name} (LSUID: {lsu_id}) is not in this class."}), 400
+                    # if lsu_id not in class_students:
+                    #     return jsonify({"message": f"Student {student_name} (LSUID: {lsu_id}) is not in this class."}), 400
 
-                    team_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams').document(team_name)
+                    # team_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams').document(team_name)
                     
-                    team_ref.set({
-                        lsu_id: {
-                            "name": student_name,
-                            "email": student_email
-                        }
-                    }, merge=True)
+                    # team_ref.set({
+                    #     lsu_id: {
+                    #         "name": student_name,
+                    #         "email": student_email
+                    #     }
+                    # }, merge=True)
 
                 teams_created = True
 
@@ -715,5 +899,7 @@ def add_shape():
 
 
 
-if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+if __name__ == '__main__' and os.getenv("FLASK_ENV") != "production":
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=False)
+

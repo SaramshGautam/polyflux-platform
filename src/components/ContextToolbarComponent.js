@@ -6,6 +6,7 @@ import { getAuth } from "firebase/auth";
 import {
   doc,
   getDoc,
+  setDoc,
   updateDoc,
   arrayUnion,
   arrayRemove,
@@ -55,9 +56,21 @@ const ContextToolbarComponent = track(
 
     // Function to fetch comment count from Firestore
     const fetchCommentCount = async (shapeId) => {
+      // const shapeRef = doc(
+      //   db,
+      //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
+      // );
+
       const shapeRef = doc(
         db,
-        `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
+        "classrooms",
+        className,
+        "Project",
+        projectName,
+        "teams",
+        teamName,
+        "shapes",
+        shapeId
       );
 
       try {
@@ -83,12 +96,30 @@ const ContextToolbarComponent = track(
     };
 
     const fetchReactions = async (shapeId) => {
+      // const shapeRef = doc(
+      //   db,
+      //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
+      // );
       const shapeRef = doc(
         db,
-        `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
+        "classrooms",
+        className,
+        "Projects",
+        projectName,
+        "teams",
+        teamName,
+        "shapes",
+        shapeId
       );
       try {
         const snap = await getDoc(shapeRef);
+        if (!snap.exists()) {
+          setShapeReactions((prev) => ({
+            ...prev,
+            [shapeId]: {},
+          }));
+          return;
+        }
         const data = snap.data();
         setShapeReactions((prev) => ({
           ...prev,
@@ -130,9 +161,20 @@ const ContextToolbarComponent = track(
       const shapeId = selectedShape.id;
       const shapeType = selectedShape.type;
       const userName = user.displayName || "Anonymous";
+      // const shapeRef = doc(
+      //   db,
+      //   `/classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
+      // );
       const shapeRef = doc(
         db,
-        `/classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
+        "classrooms",
+        className,
+        "Project",
+        projectName,
+        "teams",
+        teamName,
+        "shapes",
+        shapeId
       );
 
       const usersReacted = shapeReactions[shapeId]?.[reactionType] || [];
@@ -143,9 +185,14 @@ const ContextToolbarComponent = track(
       try {
         if (hasReacted) {
           // User is removing their reaction
-          await updateDoc(shapeRef, {
-            [`reactions.${reactionType}`]: arrayRemove(userName),
-          });
+          // await updateDoc(shapeRef, {
+          //   [`reactions.${reactionType}`]: arrayRemove(userName),
+          // });
+          await setDoc(
+            shapeRef,
+            { [`reactions.${reactionType}`]: arrayRemove(userName) },
+            { merge: true }
+          );
 
           // Update state
           setShapeReactions((prevReactions) => ({
@@ -163,15 +210,22 @@ const ContextToolbarComponent = track(
             shapeId,
             shapeType
           );
-          fetchActionHistory(
-            { className, projectName, teamName },
-            setActionHistory
-          );
+          fetchActionHistory({ className, projectName, teamName });
+          // fetchActionHistory(
+          //   { className, projectName, teamName },
+          //   setActionHistory
+          // );
         } else {
           // User is adding a reaction
-          await updateDoc(shapeRef, {
-            [`reactions.${reactionType}`]: arrayUnion(userName),
-          });
+          // await updateDoc(shapeRef, {
+          //   [`reactions.${reactionType}`]: arrayUnion(userName),
+          // });
+
+          await setDoc(
+            shapeRef,
+            { [`reactions.${reactionType}`]: arrayUnion(userName) },
+            { merge: true }
+          );
 
           // Update state
           setShapeReactions((prevReactions) => ({
@@ -193,10 +247,11 @@ const ContextToolbarComponent = track(
             shapeId,
             shapeType
           );
-          fetchActionHistory(
-            { className, projectName, teamName },
-            setActionHistory
-          );
+          fetchActionHistory({ className, projectName, teamName });
+          // fetchActionHistory(
+          //   { className, projectName, teamName },
+          //   setActionHistory
+          // );
         }
       } catch (error) {
         console.error("Error updating reactions in Firestore:", error);
