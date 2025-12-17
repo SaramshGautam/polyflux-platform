@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from "react";
 // import { useNavigate, Routes, Route } from "react-router-dom";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
 import Breadcrumbs from "./Breadcrumbs";
 import HowToUse from "./HowToUse";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isInWhiteboard = location.pathname.startsWith("/whiteboard");
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const role = localStorage.getItem("role");
   const photoURL = localStorage.getItem("photoURL");
+  const displayName = localStorage.getItem("displayName") || "";
+
   const homeRoute =
     role === "teacher"
       ? "/teachers-home"
@@ -66,30 +71,9 @@ const Navbar = () => {
         </div> */}
       </div>
       <div className="navbar-right">
-        {/* Dropdown for logout */}
-        {/* <button
-          onClick={() => {
-            const panel = document.querySelector(".inactivity-panel");
-            if (panel) {
-              panel.style.display =
-                panel.style.display === "none" ? "block" : "none";
-            }
-          }}
-          style={{
-            background: "none",
-            border: "none",
-            color: "white",
-            fontSize: "20px",
-            cursor: "pointer",
-            marginRight: "10px",
-          }}
-          title="Toggle Inactivity Monitor"
-        >
-          🕒
-        </button> */}
         <ul className="nav-item dropdown">
           <li className="nav-link dropdown-toggle" onClick={handleProfileClick}>
-            {photoURL ? (
+            {/* {photoURL ? (
               <img
                 src={photoURL}
                 alt="Profile"
@@ -108,7 +92,30 @@ const Navbar = () => {
                 className="bi bi-person"
                 style={{ fontSize: "24px", color: "white" }}
               ></i>
-            )}
+            )} */}
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {/* Initials avatar */}
+              <div
+                style={{
+                  width: "34px",
+                  height: "34px",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: "14px",
+                  background: "rgba(255,255,255,0.18)",
+                  border: "2px solid white",
+                  color: "white",
+                  userSelect: "none",
+                }}
+                title={displayName || "User"}
+              >
+                {displayName}
+              </div>
+            </div>
           </li>
           {/* Dropdown Menu */}
           <ul className={`dropdown-menu ${isProfileOpen ? "show" : ""}`}>
@@ -131,6 +138,20 @@ const Navbar = () => {
                 <i className="bi bi-box-arrow-right me-2"></i> Logout
               </button>
             </li>
+
+            {isInWhiteboard && (
+              <li>
+                <a
+                  className="dropdown-item btn btn-dark btn-sm"
+                  href="https://lsu.qualtrics.com/jfe/form/SV_ea1qXwTavlQNfv0"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i className="bi bi-send me-2"></i>
+                  Submit Feedback
+                </a>
+              </li>
+            )}
           </ul>
         </ul>
       </div>

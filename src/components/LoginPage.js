@@ -608,6 +608,7 @@
 //////////////////////////
 //////////////////////////
 //////////////////////////
+
 // sign in using email and display name only
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -738,6 +739,7 @@ const LoginPage = () => {
       // Persist for the rest of the app (TeacherOnlyRoute uses this)
       localStorage.setItem("role", roleFromDb);
       localStorage.setItem("userEmail", userEmail);
+      localStorage.setItem("displayName", name);
 
       addMessage("success", `Welcome, ${name}!`);
 
