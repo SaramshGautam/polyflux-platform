@@ -260,32 +260,123 @@ export async function ensureImageInStorageAndGetUrl({
  * @returns {Promise<void>} A promise that resolves when the shape is successfully stored.
  */
 
+// export async function logAction(
+//   userContext,
+//   logMessage,
+//   shapeId,
+//   shapeType,
+//   onLogged = () => {}
+// ) {
+//   if (!userContext) {
+//     console.error("❌ Missing userContext");
+//   }
+//   if (!logMessage) {
+//     console.error("❌ Missing logMessage");
+//   }
+//   if (!shapeId) {
+//     console.error("❌ Missing shapeId");
+//   }
+//   if (!shapeType) {
+//     console.error("❌ Missing shapeType");
+//   }
+
+//   const { className, projectName, teamName, userId } = userContext;
+//   // console.log(
+//   //   `className = ${className} projectName = ${projectName} teamName= ${teamName}`
+//   // );
+
+//   const shapeRef = doc(
+//     db,
+//     "classrooms",
+//     className,
+//     "Projects",
+//     projectName,
+//     "teams",
+//     teamName,
+//     "shapes",
+//     shapeId
+//   );
+
+//   const shapeSnap = await getDoc(shapeRef);
+//   const shape = shapeSnap.data();
+//   const actorId = shape?.createdBy || userId || "unknown";
+
+//   const cleanAction = logMessage.replace(/\s+/g, "_").toLowerCase();
+
+//   const historyID = `${actorId}_${cleanAction}_${shapeId}_${Date.now()}`;
+//   console.log("History Id === ", historyID);
+
+//   try {
+//     // const historyRef = doc(
+//     //   db,
+//     //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/history/${historyID}`
+//     // );
+
+//     const historyRef = doc(
+//       db,
+//       "classrooms",
+//       className,
+//       "Projects",
+//       projectName,
+//       "teams",
+//       teamName,
+//       "history",
+//       historyID
+//     );
+
+//     // const historyDoc = {
+//     //   action: logMessage,
+//     //   timestamp: serverTimestamp(),
+//     //   userId: userId,
+//     //   shapeId: shapeId,
+//     //   shapeType: shapeType || "unknown",
+//     // };
+
+//     await setDoc(historyRef, {
+//       action: logMessage,
+//       timestamp: serverTimestamp(),
+//       userId: actorId,
+//       shapeId,
+//       shapeType: shapeType || "unknown",
+//     });
+
+//     // console.log(
+//     //   `---history doc --- ${historyDoc.action} --- ${historyDoc.userId} --- ${historyDoc.shapeType} --- ${historyDoc.timestamp}`
+//     // );
+
+//     console.log(
+//       `✅ Log added: ${logMessage} by creator ${actorId} on shape ${shapeId}`
+//     );
+
+//     // await setDoc(historyRef, historyDoc);
+
+//     // console.log(`✅ Log added: ${logMessage}`);
+//     console.log("Action logged by creator:", actorId);
+
+//     onLogged();
+//   } catch (error) {
+//     console.error(`Error adding log: ${error.message}`);
+//   }
+// }
+
+// BEFORE: logAction(userContext, logMessage, actorId, shapeId, shapeType, onLogged)
+// where actorId was effectively the creator identity.
+
 export async function logAction(
   userContext,
   logMessage,
+  userId,
+  displayName,
   shapeId,
   shapeType,
   onLogged = () => {}
 ) {
-  if (!userContext) {
-    console.error("❌ Missing userContext");
-  }
-  if (!logMessage) {
-    console.error("❌ Missing logMessage");
-  }
-  if (!shapeId) {
-    console.error("❌ Missing shapeId");
-  }
-  if (!shapeType) {
-    console.error("❌ Missing shapeType");
-  }
+  const { className, projectName, teamName } = userContext;
 
-  const { className, projectName, teamName, userId } = userContext;
-  // console.log(
-  //   `className = ${className} projectName = ${projectName} teamName= ${teamName}`
-  // );
+  const cleanAction = logMessage.replace(/\s+/g, "_").toLowerCase();
+  const historyID = `${userId}_${cleanAction}_${shapeId}_${Date.now()}`;
 
-  const shapeRef = doc(
+  const historyRef = doc(
     db,
     "classrooms",
     className,
@@ -293,70 +384,20 @@ export async function logAction(
     projectName,
     "teams",
     teamName,
-    "shapes",
-    shapeId
+    "history",
+    historyID
   );
 
-  const shapeSnap = await getDoc(shapeRef);
-  const shape = shapeSnap.data();
-  const actorId = shape?.createdBy || userId || "unknown";
+  await setDoc(historyRef, {
+    action: logMessage,
+    timestamp: serverTimestamp(),
+    userId, // ✅ editor email (stable id)
+    displayName: displayName || "", // ✅ what you want to show in UI
+    shapeId,
+    shapeType: shapeType || "unknown",
+  });
 
-  const cleanAction = logMessage.replace(/\s+/g, "_").toLowerCase();
-
-  const historyID = `${actorId}_${cleanAction}_${shapeId}_${Date.now()}`;
-  console.log("History Id === ", historyID);
-
-  try {
-    // const historyRef = doc(
-    //   db,
-    //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/history/${historyID}`
-    // );
-
-    const historyRef = doc(
-      db,
-      "classrooms",
-      className,
-      "Projects",
-      projectName,
-      "teams",
-      teamName,
-      "history",
-      historyID
-    );
-
-    // const historyDoc = {
-    //   action: logMessage,
-    //   timestamp: serverTimestamp(),
-    //   userId: userId,
-    //   shapeId: shapeId,
-    //   shapeType: shapeType || "unknown",
-    // };
-
-    await setDoc(historyRef, {
-      action: logMessage,
-      timestamp: serverTimestamp(),
-      userId: actorId,
-      shapeId,
-      shapeType: shapeType || "unknown",
-    });
-
-    // console.log(
-    //   `---history doc --- ${historyDoc.action} --- ${historyDoc.userId} --- ${historyDoc.shapeType} --- ${historyDoc.timestamp}`
-    // );
-
-    console.log(
-      `✅ Log added: ${logMessage} by creator ${actorId} on shape ${shapeId}`
-    );
-
-    // await setDoc(historyRef, historyDoc);
-
-    // console.log(`✅ Log added: ${logMessage}`);
-    console.log("Action logged by creator:", actorId);
-
-    onLogged();
-  } catch (error) {
-    console.error(`Error adding log: ${error.message}`);
-  }
+  onLogged();
 }
 
 export async function registerShape(newShape, userContext, editor) {
@@ -371,7 +412,7 @@ export async function registerShape(newShape, userContext, editor) {
     `Registering shape ${shapeID} of type ${shapeType} at position (${x}, ${y}) with props:`,
     props
   );
-  const { className, projectName, teamName, userId } = userContext;
+  const { className, projectName, teamName, userId, displayName } = userContext;
 
   if (
     !shapeID ||
@@ -408,7 +449,8 @@ export async function registerShape(newShape, userContext, editor) {
       color: props?.color || "#000000",
       teamName: teamName,
       createdAt: serverTimestamp(),
-      createdBy: userId,
+      // createdBy: userId,
+      createdBy: displayName || "",
       comments: [],
       reactions: {
         like: [],
@@ -566,7 +608,14 @@ export async function registerShape(newShape, userContext, editor) {
     await setDoc(shapeRef, shapeDoc);
     console.log(`✅ Shape ${shapeID} successfully added to Firestore!`);
 
-    await logAction(userContext, `added `, newShape.id, newShape.type);
+    await logAction(
+      userContext,
+      `added `,
+      userId,
+      displayName,
+      newShape.id,
+      newShape.type
+    );
 
     const move = buildMoveFromShape({
       action: "added",
@@ -1029,7 +1078,12 @@ export async function scheduleUpdateShape(shape, userContext) {
 }
 
 /** call on blur/Enter (commit); this DOES log history + export move (once) */
-export async function endEditSession({ shape, userContext, userId }) {
+export async function endEditSession({
+  shape,
+  userContext,
+  userId,
+  displayName,
+}) {
   const key = shape?.id;
   const ses = _sessions.get(key);
   if (!ses) return;
@@ -1069,6 +1123,7 @@ export async function endEditSession({ shape, userContext, userId }) {
     action: "updated",
     timestamp: serverTimestamp(),
     userId,
+    displayName: displayName || "",
     shapeId: key,
     shapeType: shape?.type || "unknown",
     _session_dwell_ms: durationMs,
@@ -1109,7 +1164,7 @@ export async function deleteShape(shapeID, userContext) {
     return;
   }
   // const { id: shapeID, type: shapeType } = newShape;
-  const { className, projectName, teamName, userId } = userContext;
+  const { className, projectName, teamName, userId, displayName } = userContext;
 
   try {
     // Firestore document reference
@@ -1130,9 +1185,22 @@ export async function deleteShape(shapeID, userContext) {
     );
 
     // Delete document
-    await deleteDoc(shapeRef);
+    // await deleteDoc(shapeRef);
+    await updateDoc(shapeRef, {
+      isDeleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: displayName,
+    });
+
     console.log(`🗑️ Shape ${shapeID} successfully deleted from Firestore.`);
-    await logAction(userContext, `deleted`, shapeID, "unknown");
+    await logAction(
+      userContext,
+      `deleted`,
+      userId,
+      displayName,
+      shapeID,
+      "unknown"
+    );
 
     const move = buildMoveFromShape({
       action: "deleted",
