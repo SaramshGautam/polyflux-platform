@@ -30,6 +30,8 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem("role");
     localStorage.removeItem("photoURL");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("displayName");
     navigate("/"); // Redirect to login page
   };
 

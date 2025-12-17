@@ -44,11 +44,16 @@ export default function CustomContextMenu({
 }) {
   const editor = useEditor();
   const currentUser = auth.currentUser;
-  const userIdFromAuth =
+  const userIdFromAuth = (currentUser?.email || currentUser?.uid || "anon")
+    .trim()
+    .toLowerCase(); // ✅ stable
+
+  const displayName = (
+    localStorage.getItem("displayName") ||
     currentUser?.displayName ||
     currentUser?.email ||
-    currentUser?.uid ||
-    "anon";
+    "Anonymous"
+  ).trim();
 
   const [showCommentBox, setShowCommentBox] = useState(false);
   // const [comments, setComments] = useState({});
@@ -119,7 +124,12 @@ export default function CustomContextMenu({
     clearTimeout(ses.idleTimer);
     activeSessions.delete(key);
 
-    const didCommit = await endEditSession({ shape, userContext, userId });
+    const didCommit = await endEditSession({
+      shape,
+      userContext,
+      userId: userIdFromAuth,
+      displayName: displayName,
+    });
 
     const newlyCreated = newlyCreatedRef.current;
     if (newlyCreated.has(key)) {
@@ -186,7 +196,8 @@ export default function CustomContextMenu({
     const imageUrl =
       shapeType === "image" ? extractImageUrl(editor, shape) : "";
     return {
-      userId: userIdFromAuth || "anon",
+      userId: userId || userIdFromAuth || "anon",
+      displayName: displayName,
       verb, // normalized (no 'a' duplication)
       shapeType, // 'note' | 'text' | 'image' | ...
       shapeId: shape?.id,
@@ -255,6 +266,7 @@ export default function CustomContextMenu({
         projectName,
         teamName,
         userId: userIdFromAuth,
+        displayName: displayName,
       };
 
       newlyCreatedRef.current.add(newShape.id);
@@ -286,7 +298,7 @@ export default function CustomContextMenu({
       }
 
       const entry = makeHistoryEntry({
-        userIdFromAuth,
+        userId: userIdFromAuth,
         verb: "added",
         shape: newShape,
         editor,
@@ -312,6 +324,7 @@ export default function CustomContextMenu({
         projectName,
         teamName,
         userId: userIdFromAuth,
+        displayName: displayName,
       };
 
       await deleteShape(deletedShapeID.id, userContext);
@@ -364,6 +377,7 @@ export default function CustomContextMenu({
           projectName,
           teamName,
           userId: userIdFromAuth,
+          displayName: displayName,
         };
 
         // --- session-based update ---
@@ -403,6 +417,7 @@ export default function CustomContextMenu({
                 projectName,
                 teamName,
                 userId: userIdFromAuth,
+                displayName: displayName,
               };
               // end if any
               endSessionIfAny(leftShape, userContext, userIdFromAuth);
@@ -438,6 +453,7 @@ export default function CustomContextMenu({
               projectName,
               teamName,
               userId: userIdFromAuth,
+              displayName: displayName,
             };
             endSessionIfAny(shape, userContext, userIdFromAuth);
           }

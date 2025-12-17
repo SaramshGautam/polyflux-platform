@@ -72,7 +72,8 @@ export default function HistoryPanel({
               ? new Date(entry.timestamp).toLocaleString()
               : "Unknown Time";
 
-            const who = entry.userId || "Unknown User";
+            // const who = entry.userId || "Unknown User";
+            const who = entry.displayName || entry.userId || "Unknown User";
             const action = entry.action || entry.verb || "did";
             const article = getIndefiniteArticle(entry.shapeType || "shape");
             const line = `${who} ${action} ${article} ${
