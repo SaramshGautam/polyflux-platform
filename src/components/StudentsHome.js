@@ -20,24 +20,34 @@ const StudentHome = () => {
   const navigate = useNavigate();
   const auth = getAuth();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserEmail(user.email);
-      } else {
-        setUserEmail(null);
-        setClassrooms({ groupedClassrooms: {}, sortedSemesters: [] });
-      }
-      setLoading(false);
-    });
+  // useEffect(() => {
+  //   const unsubscribe = onAuthStateChanged(auth, (user) => {
+  //     if (user) {
+  //       setUserEmail(user.email);
+  //     } else {
+  //       setUserEmail(null);
+  //       setClassrooms({ groupedClassrooms: {}, sortedSemesters: [] });
+  //     }
+  //     setLoading(false);
+  //   });
 
-    return () => unsubscribe();
-  }, [auth]);
+  //   return () => unsubscribe();
+  // }, [auth]);
 
   // Updated sorting logic:
   // - Valid semesters (e.g., "Fall 2025") are sorted by year (descending) first.
   // - For the same year, order is: Fall (1), Summer (2), Spring (3).
   // - Any missing/invalid semester (e.g., undefined) is pushed to the end.
+
+  useEffect(() => {
+    const stored = (localStorage.getItem("userEmail") || "")
+      .trim()
+      .toLowerCase();
+
+    setUserEmail(stored || null);
+    setLoading(false);
+  }, []);
+
   const sortSemesters = (semesters) => {
     const semesterOrder = {
       Fall: 1,
@@ -97,8 +107,14 @@ const StudentHome = () => {
           const studentsSnapshot = await getDocs(studentsRef);
 
           // Check if the student exists in the classroom's students subcollection
+          // const isStudentInClassroom = studentsSnapshot.docs.some(
+          //   (studentDoc) => studentDoc.data().email === userEmail
+          // );
           const isStudentInClassroom = studentsSnapshot.docs.some(
-            (studentDoc) => studentDoc.data().email === userEmail
+            (studentDoc) => {
+              const e = (studentDoc.data().email || "").trim().toLowerCase();
+              return e === (userEmail || "").trim().toLowerCase();
+            }
           );
 
           if (isStudentInClassroom) {
@@ -167,6 +183,7 @@ const StudentHome = () => {
                     {classrooms.groupedClassrooms[semester].map((classroom) => (
                       // <div key={classroom.id} className="col-md-4 mb-4">
                       <div
+                        key={classroom.id}
                         className="classroom-card"
                         // onClick={() => navigate(`/classroom/${classroom.id}`)}
                         onClick={() =>
