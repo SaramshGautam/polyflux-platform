@@ -21,58 +21,12 @@ export default function HistoryPanel({
       {actionHistory.length === 0 ? (
         <p className="historyEmpty">No actions recorded yet.</p>
       ) : (
-        // <ul className="historyList">
-        //   {actionHistory.map((entry, index) => {
-        //     const timeString = entry.timestamp
-        //       ? new Date(entry.timestamp).toLocaleString()
-        //       : "Unknown Time";
-
-        //     const who = entry.userId || "Unknown User";
-        //     const action = entry.action || "unknown action";
-        //     const article = getIndefiniteArticle(entry.shapeType || "shape");
-        //     const line = `${who} ${action} ${article} ${
-        //       entry.shapeType || "shape"
-        //     }`;
-
-        //     return (
-        //       <li key={index} className="historyItem">
-        //         <strong>{line}</strong>
-        //         <div className="timestamp">{timeString}</div>
-
-        //         {/* Text preview for notes/text */}
-        //         {entry.text && (
-        //           <div className="historyTextPreview" title={entry.text}>
-        //             “
-        //             {entry.text.length > 160
-        //               ? entry.text.slice(0, 160) + "…"
-        //               : entry.text}
-        //             ”
-        //           </div>
-        //         )}
-
-        //         {/* Image thumbnail */}
-        //         {entry.imageUrl && (
-        //           <div className="historyThumbWrap">
-        //             <img
-        //               src={entry.imageUrl}
-        //               alt="Edited image"
-        //               className="historyThumb"
-        //               loading="lazy"
-        //               referrerPolicy="no-referrer"
-        //             />
-        //           </div>
-        //         )}
-        //       </li>
-        //     );
-        //   })}
-        // </ul>
         <ul className="historyList">
           {actionHistory.map((entry, index) => {
             const timeString = entry.timestamp
               ? new Date(entry.timestamp).toLocaleString()
               : "Unknown Time";
 
-            // const who = entry.userId || "Unknown User";
             const who = entry.displayName || entry.userId || "Unknown User";
             const action = entry.action || entry.verb || "did";
             const article = getIndefiniteArticle(entry.shapeType || "shape");

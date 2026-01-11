@@ -9,6 +9,7 @@ import {
   collection,
   addDoc,
   writeBatch,
+  runTransaction,
 } from "firebase/firestore";
 import {
   ref as storageRef,
@@ -17,6 +18,7 @@ import {
 } from "firebase/storage";
 
 import { db, storage } from "../firebaseConfig";
+import { getActorIdentity } from "../utils/identity";
 
 function scheduleImageUrlBackfill({ editor, userContext, shapeId, assetId }) {
   // Try a few times, spaced out
@@ -199,53 +201,6 @@ export async function ensureImageInStorageAndGetUrl({
   return url;
 }
 
-// export async function ensureImageInStorageAndGetUrl({
-//   userContext,
-//   shapeId,
-//   props,
-// }) {
-//   const { className, projectName, teamName } = userContext;
-
-//   let fileOrBlob = pickFileFromProps(props);
-//   let original = pickUrlFromProps(props);
-
-//   // data URL → Blob
-//   if (
-//     !fileOrBlob &&
-//     typeof original === "string" &&
-//     /^data:image\//i.test(original)
-//   ) {
-//     fileOrBlob = await dataUrlToBlob(original);
-//   }
-
-//   // already hosted URL
-//   if (
-//     !fileOrBlob &&
-//     typeof original === "string" &&
-//     /^https?:\/\//i.test(original)
-//   ) {
-//     return original;
-//   }
-
-//   if (!fileOrBlob) return null;
-
-//   const mime = fileOrBlob.type || "application/octet-stream";
-//   const ext = guessExtFromMime(mime, "png");
-
-//   const path = [
-//     "upload",
-//     sanitizePathPart(className),
-//     sanitizePathPart(projectName),
-//     sanitizePathPart(teamName),
-//     `${sanitizePathPart(shapeId)}.${ext}`,
-//   ].join("/");
-
-//   const ref = storageRef(storage, path);
-//   await uploadBytes(ref, fileOrBlob, { contentType: mime });
-//   return await getDownloadURL(ref);
-// }
-// props?.src || props?.url || props?.imageUrl || null;
-
 /**
  * Registers a shape in Firestore under the correct classroom/project/team.
  *
@@ -259,108 +214,6 @@ export async function ensureImageInStorageAndGetUrl({
  * @param {string} userContext.userId - The ID of the user adding the shape.
  * @returns {Promise<void>} A promise that resolves when the shape is successfully stored.
  */
-
-// export async function logAction(
-//   userContext,
-//   logMessage,
-//   shapeId,
-//   shapeType,
-//   onLogged = () => {}
-// ) {
-//   if (!userContext) {
-//     console.error("❌ Missing userContext");
-//   }
-//   if (!logMessage) {
-//     console.error("❌ Missing logMessage");
-//   }
-//   if (!shapeId) {
-//     console.error("❌ Missing shapeId");
-//   }
-//   if (!shapeType) {
-//     console.error("❌ Missing shapeType");
-//   }
-
-//   const { className, projectName, teamName, userId } = userContext;
-//   // console.log(
-//   //   `className = ${className} projectName = ${projectName} teamName= ${teamName}`
-//   // );
-
-//   const shapeRef = doc(
-//     db,
-//     "classrooms",
-//     className,
-//     "Projects",
-//     projectName,
-//     "teams",
-//     teamName,
-//     "shapes",
-//     shapeId
-//   );
-
-//   const shapeSnap = await getDoc(shapeRef);
-//   const shape = shapeSnap.data();
-//   const actorId = shape?.createdBy || userId || "unknown";
-
-//   const cleanAction = logMessage.replace(/\s+/g, "_").toLowerCase();
-
-//   const historyID = `${actorId}_${cleanAction}_${shapeId}_${Date.now()}`;
-//   console.log("History Id === ", historyID);
-
-//   try {
-//     // const historyRef = doc(
-//     //   db,
-//     //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/history/${historyID}`
-//     // );
-
-//     const historyRef = doc(
-//       db,
-//       "classrooms",
-//       className,
-//       "Projects",
-//       projectName,
-//       "teams",
-//       teamName,
-//       "history",
-//       historyID
-//     );
-
-//     // const historyDoc = {
-//     //   action: logMessage,
-//     //   timestamp: serverTimestamp(),
-//     //   userId: userId,
-//     //   shapeId: shapeId,
-//     //   shapeType: shapeType || "unknown",
-//     // };
-
-//     await setDoc(historyRef, {
-//       action: logMessage,
-//       timestamp: serverTimestamp(),
-//       userId: actorId,
-//       shapeId,
-//       shapeType: shapeType || "unknown",
-//     });
-
-//     // console.log(
-//     //   `---history doc --- ${historyDoc.action} --- ${historyDoc.userId} --- ${historyDoc.shapeType} --- ${historyDoc.timestamp}`
-//     // );
-
-//     console.log(
-//       `✅ Log added: ${logMessage} by creator ${actorId} on shape ${shapeId}`
-//     );
-
-//     // await setDoc(historyRef, historyDoc);
-
-//     // console.log(`✅ Log added: ${logMessage}`);
-//     console.log("Action logged by creator:", actorId);
-
-//     onLogged();
-//   } catch (error) {
-//     console.error(`Error adding log: ${error.message}`);
-//   }
-// }
-
-// BEFORE: logAction(userContext, logMessage, actorId, shapeId, shapeType, onLogged)
-// where actorId was effectively the creator identity.
 
 export async function logAction(
   userContext,
@@ -401,305 +254,145 @@ export async function logAction(
 }
 
 export async function registerShape(newShape, userContext, editor) {
-  if (!newShape || !userContext) {
-    console.error("❌ Missing shape data or user context.");
-    return;
-  }
+  if (!newShape || !userContext) return;
 
   const { id: shapeID, type: shapeType, x, y, props } = newShape;
+  const { className, projectName, teamName, userId } = userContext;
 
-  console.log(
-    `Registering shape ${shapeID} of type ${shapeType} at position (${x}, ${y}) with props:`,
-    props
+  if (!shapeID || !shapeType || !className || !projectName || !teamName) return;
+
+  const shapeRef = doc(
+    db,
+    "classrooms",
+    className,
+    "Projects",
+    projectName,
+    "teams",
+    teamName,
+    "shapes",
+    shapeID
   );
-  const { className, projectName, teamName, userId, displayName } = userContext;
 
-  if (
-    !shapeID ||
-    !shapeType ||
-    !className ||
-    !projectName ||
-    !teamName ||
-    !userId
-  ) {
-    console.error(
-      "❌ Missing required fields: shapeID, shapeType, className, projectName, teamName, or userId."
-    );
-    return;
-  }
+  const { actorId, actorName } = getActorIdentity();
 
-  try {
-    const shapeRef = doc(
-      db,
-      "classrooms",
-      className,
-      "Projects",
-      projectName,
-      "teams",
-      teamName,
-      "shapes",
-      shapeID
-    );
+  let finalImageUrl = null;
 
-    const shapeDoc = {
-      shapeId: shapeID,
-      shapeType,
-      position: { x, y },
-      text: props?.text || "",
-      color: props?.color || "#000000",
-      teamName: teamName,
-      createdAt: serverTimestamp(),
-      // createdBy: userId,
-      createdBy: displayName || "",
-      comments: [],
-      reactions: {
-        like: [],
-        dislike: [],
-        surprised: [],
-        confused: [],
-      },
-    };
+  if (shapeType === "image") {
+    console.log("[registerShape] handling image shape:", {
+      shapeID,
+      props,
+    });
 
-    let finalImageUrl = null;
+    // Start from props as-is
+    let uploadProps = props || {};
+    let inlineUrl = pickUrlFromProps(uploadProps);
+    let blobFromProps = pickFileFromProps(uploadProps);
 
-    if (shapeType === "image") {
-      console.log("[registerShape] handling image shape:", {
-        shapeID,
-        props,
-      });
+    // If we don't have anything usable yet, try pulling from tldraw asset
+    if (!inlineUrl && !blobFromProps && uploadProps.assetId && editor) {
+      const asset = editor.getAsset(uploadProps.assetId);
+      console.log("[registerShape] asset for image:", asset);
 
-      let uploadProps = props || {};
-      let inlineUrl = pickUrlFromProps(uploadProps);
-      let blobFromProps = pickFileFromProps(uploadProps);
-
-      if (!inlineUrl && !blobFromProps && uploadProps.assetId && editor) {
-        const asset = editor.getAsset(uploadProps.assetId);
-        console.log("[registerShape] asset for image:", asset);
-
-        if (asset && asset.props && asset.props.src) {
-          uploadProps = {
-            ...uploadProps,
-            src: asset.props.src,
-          };
-          console.log(
-            "[registerShape] Using asset.props.src for upload:",
-            asset.props.src && asset.props.src.slice(0, 80)
-          );
-        } else {
-          console.log(
-            "[registerShape] No asset.src found for assetId:",
-            uploadProps.assetId
-          );
-        }
-        inlineUrl = pickUrlFromProps(uploadProps);
-        blobFromProps = pickFileFromProps(uploadProps);
-      }
-
-      if (inlineUrl || blobFromProps) {
-        finalImageUrl = await ensureImageInStorageAndGetUrl({
-          userContext,
-          shapeId: shapeID,
-          props: uploadProps,
-        });
-
-        if (!finalImageUrl) {
-          finalImageUrl = pickUrlFromProps(uploadProps);
-        }
-
-        if (finalImageUrl) {
-          console.log(
-            "[registerShape] Got finalImageUrl on first try:",
-            finalImageUrl
-          );
-          shapeDoc.url = finalImageUrl;
-        }
-      }
-      if (!finalImageUrl) {
+      if (asset?.props?.src) {
+        uploadProps = {
+          ...uploadProps,
+          src: asset.props.src,
+        };
         console.log(
-          "⚠️ Image shape has no resolvable URL *yet*; scheduling backfill..."
+          "[registerShape] Using asset.props.src for upload:",
+          String(asset.props.src).slice(0, 80)
         );
-
-        if (props?.assetId && editor) {
-          scheduleImageUrlBackfill({
-            editor,
-            userContext,
-            shapeId: shapeID,
-            assetId: props.assetId,
-          });
-        }
+      } else {
+        console.log(
+          "[registerShape] No asset.props.src found yet for assetId:",
+          uploadProps.assetId
+        );
       }
+
+      inlineUrl = pickUrlFromProps(uploadProps);
+      blobFromProps = pickFileFromProps(uploadProps);
     }
 
-    // let finalImageUrl = null;
+    // If we have either URL-ish or a Blob/File, attempt to store in Firebase Storage
+    if (inlineUrl || blobFromProps) {
+      finalImageUrl = await ensureImageInStorageAndGetUrl({
+        userContext,
+        shapeId: shapeID,
+        props: uploadProps,
+      });
 
-    // if (shapeType === "image") {
-    //   console.log("[registerShape] handling image shape:", {
-    //     shapeID,
-    //     props,
-    //   });
+      // last fallback: if upload failed but we at least have something URL-like
+      if (!finalImageUrl) {
+        finalImageUrl = pickUrlFromProps(uploadProps);
+      }
 
-    //   // Start from props as-is
-    //   let uploadProps = props || {};
+      if (finalImageUrl) {
+        console.log("[registerShape] finalImageUrl resolved:", finalImageUrl);
+      }
+    } else {
+      console.log(
+        "[registerShape] No inlineUrl/blob yet (will backfill if asset appears later)."
+      );
+    }
+  }
 
-    //   // Do we already have a usable URL/file in props?
-    //   const inlineUrl = pickUrlFromProps(uploadProps);
-    //   const fileOrBlob = pickFileFromProps(uploadProps);
+  // Build doc once
+  const shapeDoc = {
+    shapeId: shapeID,
+    shapeType,
+    position: { x, y },
+    text: props?.text || "",
+    color: props?.color || "#000000",
+    teamName,
+    createdAt: serverTimestamp(),
+    // createdByActorId: actorId,
+    createdBy: actorName,
+    comments: [],
+    reactions: { like: [], dislike: [], surprised: [], confused: [] },
+    ...(finalImageUrl ? { url: finalImageUrl } : {}),
+  };
 
-    //   // If not, fall back to the tldraw asset via assetId + editor
-    //   if (!inlineUrl && !fileOrBlob && uploadProps.assetId && editor) {
-    //     const asset = editor.getAsset(uploadProps.assetId);
-    //     console.log("[registerShape] asset for image:", asset);
+  const didCreate = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(shapeRef);
+    if (snap.exists()) return false;
+    tx.set(shapeRef, shapeDoc);
+    return true;
+  });
 
-    //     if (asset && asset.props && asset.props.src) {
-    //       // Inject src so ensureImageInStorageAndGetUrl can use it
-    //       uploadProps = {
-    //         ...uploadProps,
-    //         src: asset.props.src,
-    //       };
-    //       console.log(
-    //         "[registerShape] Using asset.props.src for upload:",
-    //         asset.props.src.slice(0, 80)
-    //       );
-    //     } else {
-    //       console.log(
-    //         "[registerShape] No asset.src found for assetId:",
-    //         uploadProps.assetId
-    //       );
-    //     }
-    //   }
+  if (!didCreate) return;
 
-    //   // Upload / resolve final URL
-    //   finalImageUrl = await ensureImageInStorageAndGetUrl({
-    //     userContext,
-    //     shapeId: shapeID,
-    //     props: uploadProps,
-    //   });
+  console.log(
+    `Registering shape ${shapeID} of type ${shapeType} at (${x}, ${y}) createdBy=${actorName}`,
+    props
+  );
 
-    //   if (!finalImageUrl) {
-    //     // last fallback: take whatever URL-ish thing we can see
-    //     finalImageUrl = pickUrlFromProps(uploadProps);
-    //   }
-
-    //   if (finalImageUrl) {
-    //     shapeDoc.url = finalImageUrl;
-    //     console.log(
-    //       "[registerShape] Final image URL stored in Firestore:",
-    //       finalImageUrl
-    //     );
-    //   } else {
-    //     console.log("⚠️ Image shape has no resolvable URL.");
-    //   }
-    // }
-
-    // if (shapeType === "image") {
-    //   console.log("Registering image shape with props:", props);
-
-    //   const url = pickUrlFromProps(props);
-    //   if (url) {
-    //     shapeDoc.url = url;
-    //   } else {
-    //     console.error(
-    //       "⚠️ Image shape registered without a valid URL in props."
-    //     );
-    //   }
-    // }
-
-    // Store data in Firestore
-    await setDoc(shapeRef, shapeDoc);
-    console.log(`✅ Shape ${shapeID} successfully added to Firestore!`);
-
-    await logAction(
-      userContext,
-      `added `,
-      userId,
-      displayName,
-      newShape.id,
-      newShape.type
+  if (shapeType === "image" && !finalImageUrl) {
+    console.log(
+      "⚠️ Image shape has no resolvable URL *yet*; scheduling backfill..."
     );
 
-    const move = buildMoveFromShape({
-      action: "added",
-      shape: newShape,
-      userId,
-      ts: new Date().toISOString(),
-      overrideUrl: finalImageUrl || undefined,
-    });
-    await appendMoveToExportBuffer({ ...userContext, move });
-
-    return finalImageUrl ?? null;
-  } catch (error) {
-    console.error("❌ Error adding shape to Firestore:", error);
+    if (props?.assetId && editor) {
+      scheduleImageUrlBackfill({
+        editor,
+        userContext,
+        shapeId: shapeID,
+        assetId: props.assetId,
+      });
+    }
   }
+
+  await logAction(userContext, "added", actorId, actorName, shapeID, shapeType);
+
+  const move = buildMoveFromShape({
+    action: "added",
+    shape: newShape,
+    userId,
+    ts: new Date().toISOString(),
+    overrideUrl: finalImageUrl || undefined,
+  });
+  await appendMoveToExportBuffer({ ...userContext, move });
+  return finalImageUrl ?? null;
 }
-
-// export async function updateShape(shape, userContext) {
-//   const { className, projectName, teamName, userId } = userContext;
-//   const { id: shapeID, type: shapeType, props, x, y } = shape;
-
-//   console.log(
-//     `Updating shape ${shapeID} of type ${shapeType} at position (${x}, ${y}) with props:`,
-//     props
-//   );
-
-//   // if (!shapeID || !updatedProps || !userContext) {
-//   //   console.error("❌ Missing shape ID, updated properties, or user context.");
-//   //   return;
-//   // }
-
-//   try {
-//     const shapeRef = doc(
-//       db,
-//       `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeID}`
-//     );
-
-//     const updatePayload = {};
-
-//     if (props?.text !== undefined) {
-//       updatePayload.text = props.text;
-//     }
-//     if (props?.color !== undefined) {
-//       updatePayload.color = props.color;
-//     }
-//     // if (props.position) {
-//     //   updatePayload.position = props.position;
-//     // }
-//     if (x !== undefined && y !== undefined) {
-//       updatePayload.position = { x, y };
-//     }
-
-//     if (shapeType === "image") {
-//       console.log("Updating image shape with props:", props);
-//       const url = pickUrlFromProps(props);
-//       if (url) {
-//         updatePayload.url = url;
-//       } else {
-//         console.log("⚠️ Image shape updated without a valid URL in props.");
-//       }
-//     }
-
-//     if (Object.keys(updatePayload).length === 0) {
-//       console.error("❌ No properties to update.");
-//       return;
-//     }
-
-//     await updateDoc(shapeRef, updatePayload);
-//     console.log(
-//       `✅ Shape ${shapeID} successfully updated in Firestore with ${updatePayload}.`
-//     );
-
-//     await logAction(userContext, `updated`, userId, shapeID, shapeType);
-
-//     const move = buildMoveFromShape({
-//       action: "updated",
-//       shape,
-//       userId,
-//       ts: new Date().toISOString(),
-//     });
-//     await appendMoveToExportBuffer({ ...userContext, move });
-//   } catch (error) {
-//     console.error("❌ Error updating shape in Firestore:", error);
-//   }
-// }
 
 /* ========= NEW: Edit Session Manager ========= */
 
@@ -749,244 +442,6 @@ export function startEditSession({ shape, userContext }) {
     userContext,
   });
 }
-
-/** call on every change; this DOES NOT log history; it only writes debounced changes */
-// export async function scheduleUpdateShape(shape, userContext) {
-//   const { className, projectName, teamName } = userContext;
-//   const { id: shapeID, type: shapeType, props, x, y } = shape;
-//   if (!shapeID) return;
-
-//   // Position-only updates are throttled
-//   const onlyPosition =
-//     props?.text === undefined &&
-//     props?.color === undefined &&
-//     props?.url === undefined;
-//   if (onlyPosition) {
-//     const lastAt = _lastWriteAt.get(shapeID) || 0;
-//     if (Date.now() - lastAt < DRAG_THROTTLE_MS) return;
-//     _lastWriteAt.set(shapeID, Date.now());
-//   }
-
-//   const updatePayload = {};
-//   if (props?.text !== undefined) updatePayload.text = props.text;
-//   if (props?.color !== undefined) updatePayload.color = props.color;
-//   if (x !== undefined && y !== undefined) updatePayload.position = { x, y };
-
-//   if (shapeType === "image") {
-//     const url = pickUrlFromProps(props);
-//     if (url) updatePayload.url = url;
-//   }
-//   if (Object.keys(updatePayload).length === 0) return;
-
-//   // Debounce by shape
-//   const key = shapeID;
-//   const h = hash(updatePayload);
-//   if (_lastPayloadHash.get(key) === h) return; // identical to last scheduled
-
-//   _lastPayloadHash.set(key, h);
-//   if (_debounceTimers.get(key)) clearTimeout(_debounceTimers.get(key));
-
-//   const timer = setTimeout(async () => {
-//     const shapeRef = doc(
-//       db,
-//       `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeID}`
-//     );
-//     await updateDoc(shapeRef, {
-//       ...updatePayload,
-//       updatedAt: serverTimestamp(),
-//     });
-//     _lastWriteAt.set(key, Date.now());
-
-//     // update session stats
-//     const ses = _sessions.get(key);
-//     if (ses) {
-//       ses.changes += 1;
-//       if (props?.text !== undefined) ses.lastText = props.text || "";
-//       _sessions.set(key, ses);
-//     }
-//   }, DEBOUNCE_MS);
-
-//   _debounceTimers.set(key, timer);
-// }
-
-// export async function scheduleUpdateShape(shape, userContext) {
-//   const { className, projectName, teamName } = userContext;
-//   const { id: shapeID, type: shapeType, props, x, y } = shape;
-//   if (!shapeID) return;
-
-//   const onlyPosition =
-//     props?.text === undefined &&
-//     props?.color === undefined &&
-//     props?.url === undefined;
-//   if (onlyPosition) {
-//     const lastAt = _lastWriteAt.get(shapeID) || 0;
-//     if (Date.now() - lastAt < DRAG_THROTTLE_MS) return;
-//     _lastWriteAt.set(shapeID, Date.now());
-//   }
-
-//   const updatePayload = {};
-//   if (props?.text !== undefined) updatePayload.text = props.text;
-//   if (props?.color !== undefined) updatePayload.color = props.color;
-//   if (x !== undefined && y !== undefined) updatePayload.position = { x, y };
-
-//   if (shapeType === "image") {
-//     const candidate = pickUrlFromProps(props);
-//     let hostedUrl = null;
-
-//     if (candidate) {
-//       if (/^https?:\/\//i.test(candidate)) {
-//         hostedUrl = candidate; // safe
-//       } else if (/^data:image\//i.test(candidate)) {
-//         hostedUrl = await ensureImageInStorageAndGetUrl({
-//           userContext,
-//           shapeId: shapeID,
-//           props,
-//         });
-//       }
-//     }
-//     if (hostedUrl) updatePayload.url = hostedUrl;
-//     // If we couldn't resolve a hosted URL, skip writing `url`
-//   }
-
-//   if (Object.keys(updatePayload).length === 0) return;
-
-//   const key = shapeID;
-//   const h = hash(updatePayload);
-//   if (_lastPayloadHash.get(key) === h) return;
-
-//   _lastPayloadHash.set(key, h);
-//   if (_debounceTimers.get(key)) clearTimeout(_debounceTimers.get(key));
-
-//   const timer = setTimeout(async () => {
-//     // const shapeRef = doc(
-//     //   db,
-//     //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeID}`
-//     // );
-//     const shapeRef = doc(
-//       db,
-//       "classrooms",
-//       className,
-//       "Projects",
-//       projectName,
-//       "teams",
-//       teamName,
-//       "shapes",
-//       shapeID
-//     );
-//     // await updateDoc(shapeRef, {
-//     //   ...updatePayload,
-//     //   updatedAt: serverTimestamp(),
-//     // });
-//     await setDoc(
-//       shapeRef,
-//       {
-//         shapeId: shapeID,
-//         shapeType: shapeType || "unknown",
-//         ...updatePayload,
-//         updatedAt: serverTimestamp(),
-//       },
-//       { merge: true }
-//     );
-
-//     _lastWriteAt.set(key, Date.now());
-
-//     const ses = _sessions.get(key);
-//     if (ses) {
-//       ses.changes += 1;
-//       if (props?.text !== undefined) ses.lastText = props.text || "";
-//       _sessions.set(key, ses);
-//     }
-//   }, DEBOUNCE_MS);
-
-//   _debounceTimers.set(key, timer);
-// }
-
-// export async function scheduleUpdateShape(shape, userContext) {
-//   const { className, projectName, teamName } = userContext;
-//   const { id: shapeID, type: shapeType, props, x, y } = shape;
-//   if (!shapeID) return;
-
-//   const onlyPosition =
-//     props?.text === undefined &&
-//     props?.color === undefined &&
-//     props?.url === undefined;
-
-//   if (onlyPosition) {
-//     const lastAt = _lastWriteAt.get(shapeID) || 0;
-//     if (Date.now() - lastAt < DRAG_THROTTLE_MS) return;
-//     _lastWriteAt.set(shapeID, Date.now());
-//   }
-
-//   const updatePayload = {};
-//   if (props?.text !== undefined) updatePayload.text = props.text;
-//   if (props?.color !== undefined) updatePayload.color = props.color;
-//   if (x !== undefined && y !== undefined) updatePayload.position = { x, y };
-
-//   if (shapeType === "image") {
-//     const candidate = pickUrlFromProps(props);
-//     let hostedUrl = null;
-
-//     if (candidate) {
-//       if (/^https?:\/\//i.test(candidate)) {
-//         hostedUrl = candidate;
-//       } else if (/^data:image\//i.test(candidate)) {
-//         hostedUrl = await ensureImageInStorageAndGetUrl({
-//           userContext,
-//           shapeId: shapeID,
-//           props,
-//         });
-//       }
-//     }
-//     if (hostedUrl) updatePayload.url = hostedUrl;
-//   }
-
-//   if (Object.keys(updatePayload).length === 0) return;
-
-//   const key = shapeID;
-//   const h = hash(updatePayload);
-//   if (_lastPayloadHash.get(key) === h) return;
-//   _lastPayloadHash.set(key, h);
-
-//   if (_debounceTimers.get(key)) clearTimeout(_debounceTimers.get(key));
-
-//   const timer = setTimeout(async () => {
-//     const shapeRef = doc(
-//       db,
-//       "classrooms",
-//       className,
-//       "Projects", // ✅ make sure this is plural everywhere
-//       projectName,
-//       "teams",
-//       teamName,
-//       "shapes",
-//       shapeID
-//     );
-
-//     await setDoc(
-//       shapeRef,
-//       {
-//         // these two are helpful if the doc did not exist yet:
-//         shapeId: shapeID,
-//         shapeType: shapeType || "unknown",
-//         // actual updates:
-//         ...updatePayload,
-//         updatedAt: serverTimestamp(),
-//       },
-//       { merge: true }
-//     );
-
-//     _lastWriteAt.set(key, Date.now());
-
-//     const ses = _sessions.get(key);
-//     if (ses) {
-//       ses.changes += 1;
-//       if (props?.text !== undefined) ses.lastText = props.text || "";
-//       _sessions.set(key, ses);
-//     }
-//   }, DEBOUNCE_MS);
-
-//   _debounceTimers.set(key, timer);
-// }
 
 export async function scheduleUpdateShape(shape, userContext) {
   const { className, projectName, teamName } = userContext || {};
@@ -1059,10 +514,12 @@ export async function scheduleUpdateShape(shape, userContext) {
       );
       return;
     }
+    const { actorId, actorName } = getActorIdentity();
 
     await updateDoc(shapeRef, {
       ...updatePayload,
       updatedAt: serverTimestamp(),
+      updatedBy: actorName || actorId,
     });
     _lastWriteAt.set(key, Date.now());
 
@@ -1192,12 +649,16 @@ export async function deleteShape(shapeID, userContext) {
       deletedBy: displayName,
     });
 
+    const { actorId, actorName } = getActorIdentity();
+
     console.log(`🗑️ Shape ${shapeID} successfully deleted from Firestore.`);
     await logAction(
       userContext,
       `deleted`,
-      userId,
-      displayName,
+      actorId,
+      actorName,
+      // userId,
+      // displayName,
       shapeID,
       "unknown"
     );
@@ -1213,62 +674,6 @@ export async function deleteShape(shapeID, userContext) {
     console.error("❌ Error deleting shape from Firestore:", error);
   }
 }
-
-// export async function upsertImageUrl(userContext, shapeId, urlOrProps) {
-//   if (!userContext || !shapeId || !urlOrProps) return;
-//   const { className, projectName, teamName } = userContext;
-
-//   let finalUrl = null;
-
-//   if (typeof urlOrProps === "string") {
-//     if (/^https?:\/\//i.test(urlOrProps)) {
-//       // already hosted, safe to store
-//       finalUrl = urlOrProps;
-//     } else if (/^data:image\//i.test(urlOrProps)) {
-//       // convert & upload, then get https URL
-//       finalUrl = await ensureImageInStorageAndGetUrl({
-//         userContext,
-//         shapeId,
-//         props: { dataUrl: urlOrProps },
-//       });
-//     } else {
-//       console.warn("upsertImageUrl: unsupported url format, skipping");
-//       return;
-//     }
-//   } else {
-//     // treat as props object with file/blob/dataUrl/src...
-//     finalUrl = await ensureImageInStorageAndGetUrl({
-//       userContext,
-//       shapeId,
-//       props: urlOrProps,
-//     });
-//   }
-
-//   if (!finalUrl) return;
-
-//   // const shapeRef = doc(
-//   //   db,
-//   //   `classrooms/${className}/Projects/${projectName}/teams/${teamName}/shapes/${shapeId}`
-//   // );
-
-//   const shapeRef = doc(
-//     db,
-//     "classrooms",
-//     className,
-//     "Projects",
-//     projectName,
-//     "teams",
-//     teamName,
-//     "shapes",
-//     shapeId
-//   );
-
-//   await setDoc(
-//     shapeRef,
-//     { shapeId, url: finalUrl, updatedAt: serverTimestamp() },
-//     { merge: true }
-//   );
-// }
 
 export async function upsertImageUrl(userContext, shapeId, urlOrProps) {
   console.groupCollapsed(

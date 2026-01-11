@@ -100,7 +100,7 @@ export function useCanvasActionHistory({ className, projectName, teamName }) {
         };
 
         // Debug log so you can see exactly what we have
-        console.log("[History] synthesized entry from shape:", entry);
+        // console.log("[History] synthesized entry from shape:", entry);
         return entry;
       });
 
