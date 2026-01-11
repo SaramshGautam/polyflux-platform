@@ -14,7 +14,11 @@ const Navbar = () => {
 
   const role = localStorage.getItem("role");
   const photoURL = localStorage.getItem("photoURL");
-  const displayName = localStorage.getItem("displayName") || "";
+  // const displayName = localStorage.getItem("displayName") || "";
+  const displayName =
+    localStorage.getItem("userDisplayName") ||
+    localStorage.getItem("displayName") ||
+    "";
 
   const homeRoute =
     role === "teacher"
@@ -32,6 +36,7 @@ const Navbar = () => {
     localStorage.removeItem("photoURL");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("displayName");
+    localStorage.removeItem("userDisplayName");
     navigate("/"); // Redirect to login page
   };
 
