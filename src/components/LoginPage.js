@@ -95,7 +95,7 @@ const LoginPage = () => {
         role: userData.role || "participant",
         studyId: userData.studyId || "Eval3333",
         taskName: userData.taskName || "ConditionC1",
-        teamId: userData.teamId || "TeamF",
+        teamId: userData.teamId || "TeamG",
         createdAt: serverTimestamp(),
       });
 
@@ -103,7 +103,7 @@ const LoginPage = () => {
 
       const studyId = userData.studyId || "Eval3333";
       const taskName = userData.taskName || "ConditionC1";
-      const teamId = userData.teamId || "TeamF";
+      const teamId = userData.teamId || "TeamG";
 
       navigate(
         `/whiteboard/${encodeURIComponent(studyId)}/${encodeURIComponent(
