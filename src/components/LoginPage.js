@@ -93,17 +93,17 @@ const LoginPage = () => {
         email: normalizedEmail,
         participantId: pid,
         role: userData.role || "participant",
-        studyId: userData.studyId || "Eval3333",
-        taskName: userData.taskName || "ConditionC1",
-        teamId: userData.teamId || "TeamG",
+        studyId: userData.studyId || "Dev8888",
+        taskName: userData.taskName || "Version2",
+        teamId: userData.teamId || "TeamX",
         createdAt: serverTimestamp(),
       });
 
       addMessage("success", "Welcome! Redirecting to the whiteboard...");
 
-      const studyId = userData.studyId || "Eval3333";
-      const taskName = userData.taskName || "ConditionC1";
-      const teamId = userData.teamId || "TeamG";
+      const studyId = userData.studyId || "Dev8888";
+      const taskName = userData.taskName || "Version2";
+      const teamId = userData.teamId || "TeamX";
 
       navigate(
         `/whiteboard/${encodeURIComponent(studyId)}/${encodeURIComponent(
