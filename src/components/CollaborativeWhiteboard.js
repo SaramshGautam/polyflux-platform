@@ -23,6 +23,7 @@ import { useParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMicrophone, faCircleStop } from "@fortawesome/free-solid-svg-icons";
 
+
 import {
   collection,
   doc,
@@ -43,6 +44,8 @@ import { MicrophoneTool } from "../tools/MicrophoneTool";
 import CustomActionsMenu from "./CustomActionsMenu";
 import { createToggleRecorder } from "../utils/audioRecorder";
 import { useCanvasActionHistory } from "./useCanvasActionHistory";
+import HistoryCommentPanel from "./HistoryCommentPanel";
+import ProvenanceTrendsChart from "./ProvenanceTrendsChart";
 
 const CUSTOM_TOOLS = [MicrophoneTool];
 const SHAPE_UTILS = [...defaultShapeUtils, AudioShapeUtil];
@@ -138,6 +141,8 @@ const CollaborativeWhiteboard = () => {
 
   const [shapeReactions, setShapeReactions] = useState({});
   const [selectedShape, setSelectedShape] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showChart, setShowChart] = useState(false);
 
   const [commentCounts, setCommentCounts] = useState({});
   const [comments, setComments] = useState({});
@@ -681,6 +686,46 @@ const CollaborativeWhiteboard = () => {
   return (
     <>
       <Navbar />
+      {/* Top-right menu buttons */}
+      <div style={{
+        position: "fixed",
+        top: 24,
+        right: 32,
+        zIndex: 2100,
+        display: "flex",
+        flexDirection: "row",
+        gap: 12,
+      }}>
+        <button
+          style={{
+            background: "#fff",
+            border: "1px solid #888",
+            borderRadius: 8,
+            padding: "8px 16px",
+            fontWeight: 600,
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+          }}
+          onClick={() => setShowHistory(true)}
+        >
+          🕑 History
+        </button>
+        <button
+          style={{
+            background: "#fff",
+            border: "1px solid #888",
+            borderRadius: 8,
+            padding: "8px 16px",
+            fontWeight: 600,
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+          }}
+          onClick={() => setShowChart(true)}
+        >
+          📈 Analytics
+        </button>
+      </div>
+
       <div className="main-container" style={{ position: "fixed", inset: 0 }}>
         <Tldraw
           onMount={(editor) => {
@@ -697,6 +742,99 @@ const CollaborativeWhiteboard = () => {
           components={tldrawComponents}
         />
       </div>
+
+      {/* History Panel Drawer/Modal */}
+      {showHistory && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            width: 360,
+            height: "100vh",
+            background: "#f7f7fa",
+            boxShadow: "-2px 0 8px rgba(0,0,0,0.05)",
+            zIndex: 2200,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <button
+            style={{
+              alignSelf: "flex-end",
+              margin: 8,
+              background: "transparent",
+              border: "none",
+              fontSize: 24,
+              cursor: "pointer",
+            }}
+            onClick={() => setShowHistory(false)}
+            title="Close"
+          >
+            ×
+          </button>
+          <HistoryCommentPanel
+            actionHistory={actionHistory}
+            comments={comments}
+            selectedShape={selectedShape}
+            isPanelCollapsed={false}
+            togglePanel={() => setShowHistory(false)}
+            onHistoryItemClick={(shapeId) => setSelectedShape({ id: shapeId })}
+          />
+        </div>
+      )}
+
+      {/* Chart Modal */}
+      {showChart && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.25)",
+            zIndex: 3000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onClick={() => setShowChart(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: 24,
+              borderRadius: 8,
+              minWidth: 400,
+              minHeight: 400,
+              maxWidth: "90vw",
+              maxHeight: "90vh",
+              overflow: "auto",
+              position: "relative",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                background: "transparent",
+                border: "none",
+                fontSize: 24,
+                cursor: "pointer",
+              }}
+              onClick={() => setShowChart(false)}
+              title="Close"
+            >
+              ×
+            </button>
+            <ProvenanceTrendsChart history={actionHistory} />
+          </div>
+        </div>
+      )}
+      
     </>
   );
 };
