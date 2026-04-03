@@ -10,71 +10,56 @@ const ManageStudent = () => {
   const [loading, setLoading] = useState(true);
   const addMessage = useFlashMessage();
 
-  // Fetch students from the backend
   useEffect(() => {
     if (!className) return;
 
     const fetchStudents = async (classID) => {
       try {
-        // const response = await axios.get(
-        //   `http://localhost:5000/api/classroom/${classID}/manage_students`
-        // );
         const response = await axios.get(
           `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${classID}/manage_students`
         );
 
-        // const response = await fetch(
-        //   `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${classID}/manage_students`,
-        //   {
-        //     method: "GET",
-        //     // headers: {
-        //     //   "Content-Type": "application/json",
-        //     // },
-        //   }
-        // );
-
         console.log("Fetched Students:", response.data.students);
 
-        // Ensure each student object has an LSU ID
         const updatedStudents = response.data.students.map((student) => ({
           ...student,
-          email: student.email || student.id, // Ensure email exists
-          lsuId: student.lsuId || "", // Ensure LSU ID exists
+          email: student.email || "",
+          lsuId: student.lsuId || "", // now optional
         }));
 
         setStudents(updatedStudents);
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching students:", error);
-        setLoading(false);
         addMessage("danger", "Failed to fetch students.");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchStudents(className);
   }, [className, addMessage]);
 
-  // Handle deleting a student using LSU ID
-  const handleDelete = async (lsuId) => {
-    if (!lsuId) {
-      console.error("Error: LSU ID is undefined");
-      addMessage("danger", "Unable to delete student: Missing LSU ID.");
+  // Delete using email instead of LSU ID
+  const handleDelete = async (email) => {
+    if (!email) {
+      console.error("Error: email is undefined");
+      addMessage("danger", "Unable to delete student: Missing email.");
       return;
     }
 
     try {
-      console.log("Sending delete request for LSU ID:", lsuId);
+      console.log("Sending delete request for email:", email);
+
+      const encodedEmail = encodeURIComponent(email);
 
       const response = await axios.post(
-        // `http://localhost:5000/api/classroom/${className}/delete_student/${lsuId}`
-        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/delete_student/${lsuId}`
+        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/delete_student/${encodedEmail}`
       );
 
       addMessage("success", response.data.message);
 
-      // Update state after deletion by filtering out the deleted student (using LSU ID)
       setStudents((prevStudents) =>
-        prevStudents.filter((student) => student.lsuId !== lsuId)
+        prevStudents.filter((student) => student.email !== email)
       );
     } catch (error) {
       console.error("Error deleting student:", error);
@@ -92,7 +77,6 @@ const ManageStudent = () => {
         <span className="text-dark">{className}</span>
       </h1>
 
-      {/* Add Student Button */}
       <button
         className="btn btn-dark mb-3"
         onClick={() => navigate(`/classroom/${className}/add-student`)}
@@ -100,7 +84,6 @@ const ManageStudent = () => {
         <i className="bi bi-person-plus"></i> Add New Student
       </button>
 
-      {/* Students List */}
       <div className="card border-dark">
         <div
           className="card-header"
@@ -108,6 +91,7 @@ const ManageStudent = () => {
         >
           <h2 className="h5">Students List</h2>
         </div>
+
         <ul className="list-group list-group-flush">
           {loading ? (
             <li className="list-group-item text-center text-muted">
@@ -116,14 +100,24 @@ const ManageStudent = () => {
           ) : students.length > 0 ? (
             students.map((student) => (
               <li
-                key={student.lsuId} // Use LSU ID as unique key
+                key={
+                  student.email || `${student.firstName}-${student.lastName}`
+                }
                 className="list-group-item d-flex justify-content-between align-items-center mb-2"
               >
                 <div className="d-flex flex-column">
-                  {student.lastName}, {student.firstName}
+                  <div>
+                    {student.lastName}, {student.firstName}
+                  </div>
+                  <small className="text-muted">{student.email}</small>
+                  {student.lsuId && (
+                    <small className="text-muted">
+                      LSU ID: {student.lsuId}
+                    </small>
+                  )}
                 </div>
+
                 <div className="d-flex align-items-center gap-2">
-                  {/* Edit Button */}
                   <button
                     className="btn btn-sm btn-edit"
                     onClick={() =>
@@ -133,14 +127,15 @@ const ManageStudent = () => {
                         )}/edit`
                       )
                     }
+                    disabled={!student.email}
                   >
                     <i className="bi bi-pencil"></i> Edit
                   </button>
 
-                  {/* Delete Button */}
                   <button
                     className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleDelete(student.lsuId)}
+                    onClick={() => handleDelete(student.email)}
+                    disabled={!student.email}
                   >
                     <i className="bi bi-x-lg"></i>
                   </button>
@@ -155,7 +150,6 @@ const ManageStudent = () => {
         </ul>
       </div>
 
-      {/* Back Button */}
       <button
         className="btn back-btn"
         onClick={() => navigate(`/classroom/${className}`)}

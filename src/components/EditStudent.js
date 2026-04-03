@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const EditStudent = () => {
-  // studentId is now expected to be the actual email (e.g., "gracia@gmail.com")
+  // studentId is the student's email from the route
   const { className, studentId } = useParams();
   const navigate = useNavigate();
 
@@ -17,13 +17,21 @@ const EditStudent = () => {
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
+        const encodedStudentId = encodeURIComponent(studentId);
+
         console.log(`Fetching data for student: ${studentId}`);
         const response = await axios.get(
-          // `http://localhost:5000/api/classroom/${className}/edit_student/${studentId}`
-          `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${studentId}`
+          `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${encodedStudentId}`
         );
-        console.log("Student Data Fetched:", response.data.student); // Debugging log
-        setStudent(response.data.student);
+
+        console.log("Student Data Fetched:", response.data.student);
+
+        setStudent({
+          firstName: response.data.student.firstName || "",
+          lastName: response.data.student.lastName || "",
+          email: response.data.student.email || "",
+          lsuId: response.data.student.lsuId || "",
+        });
       } catch (error) {
         if (error.response && error.response.status === 404) {
           console.error("Student not found.");
@@ -35,7 +43,9 @@ const EditStudent = () => {
       }
     };
 
-    fetchStudentData();
+    if (className && studentId) {
+      fetchStudentData();
+    }
   }, [className, studentId]);
 
   const handleChange = (e) => {
@@ -47,11 +57,16 @@ const EditStudent = () => {
     e.preventDefault();
 
     try {
+      const encodedStudentId = encodeURIComponent(studentId);
+
       await axios.put(
-        // `http://localhost:5000/api/classroom/${className}/edit_student/${studentId}`,
-        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${studentId}`,
-        student
+        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${encodedStudentId}`,
+        {
+          ...student,
+          lsuId: student.lsuId || "",
+        }
       );
+
       navigate(`/classroom/${className}/manage-students`);
     } catch (error) {
       console.error("Error updating student data:", error);
@@ -79,6 +94,7 @@ const EditStudent = () => {
             required
           />
         </div>
+
         <div className="mb-3">
           <label htmlFor="last_name" className="form-label">
             <i className="bi bi-person-fill"></i> Last Name:
@@ -93,6 +109,7 @@ const EditStudent = () => {
             required
           />
         </div>
+
         <div className="mb-3">
           <label htmlFor="email" className="form-label">
             <i className="bi bi-envelope"></i> Email:
@@ -107,6 +124,7 @@ const EditStudent = () => {
             required
           />
         </div>
+
         <div className="mb-3">
           <label htmlFor="lsuId" className="form-label">
             <i className="bi bi-card-list"></i> LSU ID:
@@ -118,13 +136,15 @@ const EditStudent = () => {
             className="form-control"
             value={student.lsuId || ""}
             onChange={handleChange}
-            required
+            placeholder="Optional"
           />
         </div>
+
         <div className="d-flex justify-content-start gap-3 mt-4">
           <button type="submit" className="btn action-btn">
             <i className="bi bi-check-circle"></i> Save Changes
           </button>
+
           <button
             type="button"
             className="btn back-btn"
