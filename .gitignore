@@ -21,6 +21,7 @@
 app.py
 Dockerfile
 
+shapes_dump
 venv
 venv/*
 npm-debug.log*
@@ -29,3 +30,4 @@ yarn-error.log*
 .vercel
 .env
 firebase-key.json
+bot_logs_dump
