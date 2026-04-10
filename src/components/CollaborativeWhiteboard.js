@@ -689,8 +689,9 @@ const CollaborativeWhiteboard = () => {
       {/* Top-right menu buttons */}
       <div style={{
         position: "fixed",
-        top: 24,
-        right: 32,
+        top: 20,
+        left: "50%",
+        transform: "translateX(-50%)",
         zIndex: 2100,
         display: "flex",
         flexDirection: "row",
@@ -700,23 +701,10 @@ const CollaborativeWhiteboard = () => {
           style={{
             background: "#fff",
             border: "1px solid #888",
-            borderRadius: 8,
-            padding: "8px 16px",
-            fontWeight: 600,
-            cursor: "pointer",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
-          }}
-          onClick={() => setShowHistory(true)}
-        >
-          🕑 History
-        </button>
-        <button
-          style={{
-            background: "#fff",
-            border: "1px solid #888",
-            borderRadius: 8,
-            padding: "8px 16px",
-            fontWeight: 600,
+            borderRadius: 6,
+            padding: "4px 12px",
+            fontWeight: 500,
+            fontSize: 14,
             cursor: "pointer",
             boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
           }}
@@ -743,46 +731,7 @@ const CollaborativeWhiteboard = () => {
         />
       </div>
 
-      {/* History Panel Drawer/Modal */}
-      {showHistory && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            right: 0,
-            width: 360,
-            height: "100vh",
-            background: "#f7f7fa",
-            boxShadow: "-2px 0 8px rgba(0,0,0,0.05)",
-            zIndex: 2200,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <button
-            style={{
-              alignSelf: "flex-end",
-              margin: 8,
-              background: "transparent",
-              border: "none",
-              fontSize: 24,
-              cursor: "pointer",
-            }}
-            onClick={() => setShowHistory(false)}
-            title="Close"
-          >
-            ×
-          </button>
-          <HistoryCommentPanel
-            actionHistory={actionHistory}
-            comments={comments}
-            selectedShape={selectedShape}
-            isPanelCollapsed={false}
-            togglePanel={() => setShowHistory(false)}
-            onHistoryItemClick={(shapeId) => setSelectedShape({ id: shapeId })}
-          />
-        </div>
-      )}
+      {/* History Panel Drawer/Modal removed */}
 
       {/* Chart Modal */}
       {showChart && (
