@@ -10,7 +10,7 @@ import "tldraw/tldraw.css";
 import "../App.css";
 import HistoryCommentPanel from "./HistoryCommentPanel";
 import ToggleExpandButton from "./ToggleExpandButton";
-import { getActorIdentity } from "../utils/identity";
+import { logAction } from "../utils/actionLog";
 
 import {
   registerShape,
@@ -23,8 +23,7 @@ import {
 
 import { useParams } from "react-router-dom";
 import { app, db, auth } from "../firebaseConfig";
-// import { collection, getDocs } from "firebase/firestore";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 export default function CustomContextMenu({
   selection,
@@ -46,20 +45,17 @@ export default function CustomContextMenu({
 }) {
   const editor = useEditor();
   const currentUser = auth.currentUser;
-  const userIdFromAuth = (currentUser?.email || currentUser?.uid || "anon")
-    .trim()
-    .toLowerCase(); // ✅ stable
+  const actorId =
+    auth.currentUser?.displayName || auth.currentUser?.uid || "anon";
+  const actorUid = auth.currentUser?.uid || null;
 
-  const displayName = (
-    localStorage.getItem("displayName") ||
+  const userIdFromAuth =
     currentUser?.displayName ||
     currentUser?.email ||
-    "Anonymous"
-  ).trim();
+    currentUser?.uid ||
+    "anon";
 
   const [showCommentBox, setShowCommentBox] = useState(false);
-  // const [comments, setComments] = useState({});
-  // const [actionHistory, setActionHistory] = useState([]);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const { className, projectName, teamName } = useParams();
   const [showAIInput, setShowAIInput] = useState(false);
@@ -68,138 +64,6 @@ export default function CustomContextMenu({
 
   const [panelWidth, setPanelWidth] = useState(340); // default width
   const [isResizing, setIsResizing] = useState(false);
-
-  const hasFetchedHistoryRef = useRef(false); // prevents refetch on every open
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-
-  // function toMillis(ts) {
-  //   if (!ts) return 0;
-  //   if (typeof ts?.toMillis === "function") return ts.toMillis();
-
-  //   // Sometimes you might store ISO string
-  //   if (typeof ts === "string") {
-  //     const ms = Date.parse(ts);
-  //     return Number.isFinite(ms) ? ms : 0;
-  //   }
-
-  //   // JS Date
-  //   if (ts instanceof Date) return ts.getTime();
-
-  //   // Unknown shape
-  //   return 0;
-  // }
-
-  function toMillis(ts) {
-    if (!ts) return 0;
-
-    // ✅ Firestore Timestamp (preferred)
-    if (typeof ts.toDate === "function") return ts.toDate().getTime();
-    if (typeof ts.toMillis === "function") return ts.toMillis();
-
-    // ✅ JS Date
-    if (ts instanceof Date) return ts.getTime();
-
-    // ✅ ISO string
-    if (typeof ts === "string") {
-      const ms = Date.parse(ts);
-      return Number.isFinite(ms) ? ms : 0;
-    }
-
-    // ✅ raw { seconds, nanoseconds } object
-    if (typeof ts === "object" && typeof ts.seconds === "number") {
-      const ms = ts.seconds * 1000 + Math.floor((ts.nanoseconds || 0) / 1e6);
-      return Number.isFinite(ms) ? ms : 0;
-    }
-
-    return 0;
-  }
-
-  function normalizeHistoryDoc(id, data) {
-    const ms = toMillis(data.timestamp);
-    console.log("[normalizeHistoryDoc] id:", id, "data:", data, "ms:", ms);
-    return {
-      id,
-      ...data,
-      timestamp: ms ? new Date(ms).toISOString() : null,
-      timestampMs: ms,
-    };
-  }
-
-  function actionHistoryCollectionRef() {
-    return collection(
-      db,
-      "classrooms",
-      className,
-      "Projects",
-      projectName,
-      "teams",
-      teamName,
-      "history"
-    );
-  }
-
-  async function fetchActionHistoryFromFirestore({ max = 200 } = {}) {
-    const ref = actionHistoryCollectionRef();
-
-    try {
-      const q = query(ref, orderBy("timestamp", "desc"), limit(max));
-      const snap = await getDocs(q);
-      return snap.docs.map((d) => normalizeHistoryDoc(d.id, d.data()));
-    } catch (err) {
-      console.log(
-        "[ActionHistory] orderBy(timestamp) failed, falling back to unordered fetch:",
-        err
-      );
-      const snap = await getDocs(ref);
-      const rows = snap.docs.map((d) => normalizeHistoryDoc(d.id, d.data()));
-
-      // fallback sort (works if timestamp is ISO string or Firestore Timestamp)
-      rows.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
-
-      return rows.slice(0, max);
-    }
-  }
-
-  useEffect(() => {
-    if (!db) return;
-    if (!className || !projectName || !teamName) return;
-
-    // Only when the panel is OPEN
-    if (isPanelCollapsed) return;
-
-    // If you want to fetch EVERY time panel opens, delete these 2 lines:
-    if (hasFetchedHistoryRef.current) return;
-    hasFetchedHistoryRef.current = true;
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setIsHistoryLoading(true);
-        const rows = await fetchActionHistoryFromFirestore({ max: 200 });
-        console.log("[ActionHistory] Fetched rows:", rows.length);
-        console.log(rows);
-        if (!cancelled) {
-          setActionHistory(rows); // replace local with Firestore truth
-        }
-      } catch (e) {
-        console.error("[ActionHistory] Fetch failed:", e);
-      } finally {
-        if (!cancelled) setIsHistoryLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isPanelCollapsed,
-    className,
-    projectName,
-    teamName,
-    db,
-    setActionHistory,
-  ]);
 
   const handleHistoryItemClick = (shapeId) => {
     if (!editor || !shapeId) return;
@@ -237,7 +101,7 @@ export default function CustomContextMenu({
     }
   };
 
-  const activeSessionsRef = useRef(new Map());
+  const activeSessionsRef = useRef(new Map()); // shapeId -> { idleTimer }
   const newlyCreatedRef = useRef(new Set());
 
   function ensureSession(shape, userContext) {
@@ -245,7 +109,7 @@ export default function CustomContextMenu({
     const activeSessions = activeSessionsRef.current;
     if (!activeSessions.has(key)) {
       startEditSession({ shape, userContext });
-      activeSessions.set(key, { idleTimer: null, ending: false });
+      activeSessions.set(key, { idleTimer: null });
     }
   }
 
@@ -255,35 +119,10 @@ export default function CustomContextMenu({
     const ses = activeSessions.get(key);
     if (!ses) return;
 
-    // ✅ prevent concurrent end calls (idle + selection leave + edit exit)
-    if (ses.ending) return;
-    ses.ending = true;
-    activeSessions.set(key, ses);
-
     clearTimeout(ses.idleTimer);
-
-    const { actorId, actorName } = getActorIdentity();
-
-    const didCommit = await endEditSession({
-      shape,
-      userContext,
-      userId: actorId,
-      displayName: actorName,
-    });
-
-    console.log(
-      "[endSessionIfAny] didCommit:",
-      didCommit,
-      "for shape:",
-      shape,
-      "by user:",
-      actorId,
-      "name:",
-      actorName
-    );
-
-    // done with this active session
     activeSessions.delete(key);
+
+    const didCommit = await endEditSession({ shape, userContext, userId });
 
     const newlyCreated = newlyCreatedRef.current;
     if (newlyCreated.has(key)) {
@@ -293,55 +132,35 @@ export default function CustomContextMenu({
 
     if (!didCommit) return;
 
-    // ✅ optimistic UI entry should match actor identity
+    // endEditSession({ shape, userContext, userId });
+
+    // const newlyCreated = newlyCreatedRef.current;
+    // if (newlyCreated.has(key)) {
+    //   newlyCreated.delete(key); // clear the flag so future edits *do* log
+    //   return;
+    // }
+
     const entry = makeHistoryEntry({
-      userId,
-      // displayNameOverride: userId,
+      userId: actorId,
       verb: "updated",
       shape,
       editor,
     });
-    setActionHistory((prev) => [entry, ...prev]);
+    // setActionHistory((prev) => [entry, ...prev]);
+
+    await logAction({
+      className,
+      projectName,
+      teamName,
+      actorId,
+      actorUid,
+      verb: "updated",
+      shapeId: shape.id,
+      shapeType: shape.type,
+      textPreview: entry.text || "",
+      imageUrl: entry.imageUrl || "",
+    });
   }
-
-  // async function endSessionIfAny(shape, userContext, userId) {
-  //   const key = shape?.id;
-  //   const activeSessions = activeSessionsRef.current;
-  //   const ses = activeSessions.get(key);
-  //   if (!ses) return;
-
-  //   clearTimeout(ses.idleTimer);
-  //   activeSessions.delete(key);
-  //   const { actorId, actorName } = getActorIdentity();
-
-  //   const didCommit = await endEditSession({
-  //     shape,
-  //     userContext,
-  //     // userId: userIdFromAuth,
-  //     // displayName: displayName,
-  //     userId: actorId,
-  //     displayName: actorName,
-  //   });
-
-  //   const newlyCreated = newlyCreatedRef.current;
-  //   if (newlyCreated.has(key)) {
-  //     newlyCreated.delete(key);
-  //     return;
-  //   }
-
-  //   if (!didCommit) return;
-
-  //   // endEditSession({ shape, userContext, userId });
-
-  //   // const newlyCreated = newlyCreatedRef.current;
-  //   // if (newlyCreated.has(key)) {
-  //   //   newlyCreated.delete(key); // clear the flag so future edits *do* log
-  //   //   return;
-  //   // }
-
-  //   const entry = makeHistoryEntry({ userId, verb: "updated", shape, editor });
-  //   setActionHistory((prev) => [entry, ...prev]);
-  // }
 
   // idle-end fallback (e.g., user stops typing/moving)
   function bumpIdleTimer(shape, userContext, userId, ms = 1200) {
@@ -374,35 +193,9 @@ export default function CustomContextMenu({
     return asset?.props?.src || "";
   }
 
-  // function makeHistoryEntry({
-  //   userId,
-  //   verb, // 'added' | 'updated' | 'deleted'
-  //   shape,
-  //   editor,
-  // }) {
-  //   const shapeType = shape?.type ?? "shape";
-  //   const text =
-  //     shapeType === "note" || shapeType === "text"
-  //       ? extractShapeText(shape)
-  //       : "";
-  //   const imageUrl =
-  //     shapeType === "image" ? extractImageUrl(editor, shape) : "";
-  //   return {
-  //     userId: userId || userIdFromAuth || "anon",
-  //     displayName: displayName,
-  //     verb, // normalized (no 'a' duplication)
-  //     shapeType, // 'note' | 'text' | 'image' | ...
-  //     shapeId: shape?.id,
-  //     text, // text preview ('' if not applicable)
-  //     imageUrl, // thumbnail url ('' if not applicable)
-  //     timestamp: new Date().toISOString(),
-  //   };
-  // }
-
   function makeHistoryEntry({
     userId,
-    displayNameOverride,
-    verb,
+    verb, // 'added' | 'updated' | 'deleted'
     shape,
     editor,
   }) {
@@ -413,10 +206,8 @@ export default function CustomContextMenu({
         : "";
     const imageUrl =
       shapeType === "image" ? extractImageUrl(editor, shape) : "";
-
     return {
-      userId: userId || userIdFromAuth || "anon",
-      displayName: (displayNameOverride || displayName || "Anonymous").trim(),
+      userId: userId || "anon",
       verb,
       shapeType,
       shapeId: shape?.id,
@@ -456,64 +247,6 @@ export default function CustomContextMenu({
   useEffect(() => {
     if (!editor || !className || !projectName || !teamName) return;
 
-    const userContext = {
-      className,
-      projectName,
-      teamName,
-      userId: userIdFromAuth,
-      displayName,
-    };
-
-    const { actorId, actorName } = getActorIdentity();
-
-    const unlisten = editor.store.listen(
-      async (e) => {
-        if (e.source !== "user") return;
-
-        const added = Object.values(e.changes?.added ?? {});
-        for (const rec of added) {
-          if (rec.typeName !== "shape") continue;
-
-          // rec is the newly created shape record
-          const newShape = rec;
-
-          newlyCreatedRef.current.add(newShape.id);
-
-          const finalImageUrl = await registerShape(
-            newShape,
-            userContext,
-            editor
-          );
-
-          if (newShape.type === "image" && finalImageUrl) {
-            const live = editor.getShape(newShape.id);
-            if (live) {
-              editor.updateShape({
-                id: live.id,
-                type: live.type,
-                props: { ...live.props, url: finalImageUrl },
-              });
-            }
-          }
-
-          const entry = makeHistoryEntry({
-            userId: actorName,
-            verb: "added",
-            shape: newShape,
-            editor,
-          });
-          setActionHistory((prev) => [entry, ...prev]);
-        }
-      },
-      { scope: "all" }
-    );
-
-    return () => unlisten?.();
-  }, [editor, className, projectName, teamName]);
-
-  useEffect(() => {
-    if (!editor || !className || !projectName || !teamName) return;
-
     //Logs the shape starting position
     let startPosition = {};
 
@@ -542,8 +275,7 @@ export default function CustomContextMenu({
         className,
         projectName,
         teamName,
-        userId: userIdFromAuth,
-        displayName: displayName,
+        userId: actorId,
       };
 
       newlyCreatedRef.current.add(newShape.id);
@@ -563,7 +295,7 @@ export default function CustomContextMenu({
             type: live.type,
             props: {
               ...live.props,
-              url: finalImageUrl, // 👈 this is what resolveImageUrl / Ask AI will see
+              url: finalImageUrl,
             },
           });
         }
@@ -575,12 +307,25 @@ export default function CustomContextMenu({
       }
 
       const entry = makeHistoryEntry({
-        userId: userIdFromAuth,
+        userId: actorId,
         verb: "added",
         shape: newShape,
         editor,
       });
-      setActionHistory((prev) => [entry, ...prev]);
+      // setActionHistory((prev) => [entry, ...prev]);
+
+      await logAction({
+        className,
+        projectName,
+        teamName,
+        actorId,
+        actorUid,
+        verb: "added",
+        shapeId: newShape.id,
+        shapeType: newShape.type,
+        textPreview: entry.text || "",
+        imageUrl: entry.imageUrl || "",
+      });
     };
 
     const handleShapeDeletion = async (deletedShapeID) => {
@@ -600,8 +345,7 @@ export default function CustomContextMenu({
         className,
         projectName,
         teamName,
-        userId: userIdFromAuth,
-        displayName: displayName,
+        userId: actorId,
       };
 
       await deleteShape(deletedShapeID.id, userContext);
@@ -609,23 +353,80 @@ export default function CustomContextMenu({
       const deleted = { id: deletedShapeID.id, type: "shape" };
 
       const entry = makeHistoryEntry({
-        userId: userIdFromAuth,
+        userId: actorId,
         verb: "deleted",
         shape: deleted,
         editor,
       });
-      setActionHistory((prev) => [entry, ...prev]);
+      // setActionHistory((prev) => [entry, ...prev]);
+
+      await logAction({
+        className,
+        projectName,
+        teamName,
+        actorId,
+        actorUid,
+        verb: "deleted",
+        shapeId: deletedShapeID.id,
+        shapeType: "shape",
+        textPreview: "",
+      });
     };
+
+    // ✅ Only log adds/deletes that come from the LOCAL user's actions
+    const unlistenUserAddsDeletes = editor.store.listen(
+      (entry) => {
+        // With { scope: "user" }, this should already be local-only,
+        // but keep this guard anyway if tldraw ever changes semantics.
+        if (entry?.source && entry.source !== "user") return;
+
+        const added = entry?.changes?.added
+          ? Object.values(entry.changes.added)
+          : [];
+        const removed = entry?.changes?.removed
+          ? Object.values(entry.changes.removed)
+          : entry?.changes?.deleted
+          ? Object.values(entry.changes.deleted)
+          : [];
+
+        // Added records -> log "added" once per shape
+        for (const rec of added) {
+          const isShapeRecord =
+            rec?.typeName === "shape" ||
+            rec?.type === "shape" ||
+            rec?.kind === "shape";
+          if (!isShapeRecord) continue;
+
+          const shape = editor.getShape(rec.id);
+          if (!shape) continue;
+
+          // IMPORTANT: log only local creates (scope=user should enforce this)
+          logShapeAddition(shape);
+        }
+
+        // Removed records -> log "deleted" once per shape
+        for (const rec of removed) {
+          const isShapeRecord =
+            rec?.typeName === "shape" ||
+            rec?.type === "shape" ||
+            rec?.kind === "shape";
+          if (!isShapeRecord) continue;
+
+          // Your existing handler expects { id: <shapeId> }
+          handleShapeDeletion({ id: rec.id });
+        }
+      }
+      // { scope: "user" }
+    );
 
     // const shapeCreateHandler = editor.sideEffects.registerAfterCreateHandler(
     //   "shape",
     //   logShapeAddition
     // );
-
-    const shapeDeleteHandler = editor.sideEffects.registerAfterDeleteHandler(
-      "shape",
-      handleShapeDeletion
-    );
+    // const shapeDeleteHandler = editor.sideEffects.registerAfterDeleteHandler(
+    //   "shape",
+    //   handleShapeDeletion
+    // );
 
     const shapeUpdateHandler = editor.sideEffects.registerAfterChangeHandler(
       "shape",
@@ -654,20 +455,20 @@ export default function CustomContextMenu({
           className,
           projectName,
           teamName,
-          userId: userIdFromAuth,
-          displayName: displayName,
+          userId: actorId,
         };
 
         // --- session-based update ---
         ensureSession(normalized, userContext);
         await scheduleUpdateShape(normalized, userContext); // debounced write
-        bumpIdleTimer(normalized, userContext, userIdFromAuth, 1200);
+        bumpIdleTimer(normalized, userContext, actorId, 1200);
       }
     );
 
     return () => {
       // shapeCreateHandler();
-      shapeDeleteHandler();
+      // shapeDeleteHandler();
+      unlistenUserAddsDeletes?.();
       shapeUpdateHandler();
     };
   }, [editor, className, projectName, teamName]);
@@ -694,11 +495,10 @@ export default function CustomContextMenu({
                 className,
                 projectName,
                 teamName,
-                userId: userIdFromAuth,
-                displayName: displayName,
+                userId: actorId,
               };
               // end if any
-              endSessionIfAny(leftShape, userContext, userIdFromAuth);
+              endSessionIfAny(leftShape, userContext, actorId);
             }
           }
         }
@@ -730,10 +530,9 @@ export default function CustomContextMenu({
               className,
               projectName,
               teamName,
-              userId: userIdFromAuth,
-              displayName: displayName,
+              userId: actorId,
             };
-            endSessionIfAny(shape, userContext, userIdFromAuth);
+            endSessionIfAny(shape, userContext, actorId);
           }
         }
         lastEditingId = now;
@@ -808,7 +607,8 @@ export default function CustomContextMenu({
     };
 
     // Also update when selection changes
-    const unsubscribe = editor.store.listen(({ changes }) => {
+    const unsubscribe = editor.store.listen(({ changes, source }) => {
+      if (source !== "user") return;
       if (changes.selectedIds) {
         updateSelectedShape(selectedShape);
       }
@@ -1187,7 +987,7 @@ export default function CustomContextMenu({
         <DefaultContextMenuContent />
       </DefaultContextMenu>
 
-      {/* <div className="panelContainerWrapper">
+      <div className="panelContainerWrapper">
         {!isPanelCollapsed && (
           <HistoryCommentPanel
             actionHistory={actionHistory}
@@ -1196,7 +996,6 @@ export default function CustomContextMenu({
             isPanelCollapsed={isPanelCollapsed}
             togglePanel={togglePanel}
             onHistoryItemClick={handleHistoryItemClick}
-            isHistoryLoading={isHistoryLoading}
           />
         )}
         {isPanelCollapsed && (
@@ -1205,7 +1004,7 @@ export default function CustomContextMenu({
             togglePanel={togglePanel}
           />
         )}
-      </div> */}
+      </div>
     </div>
   );
 }
