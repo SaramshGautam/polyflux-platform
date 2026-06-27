@@ -112,7 +112,7 @@ const Navbar = () => {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 700,
-                  fontSize: "14px",
+                  fontSize: "16px",
                   background: "rgba(255,255,255,0.18)",
                   border: "2px solid white",
                   color: "white",
@@ -120,7 +120,7 @@ const Navbar = () => {
                 }}
                 title={displayName || "User"}
               >
-                {displayName}
+                {(displayName || "?").charAt(0).toUpperCase()}
               </div>
             </div>
           </li>

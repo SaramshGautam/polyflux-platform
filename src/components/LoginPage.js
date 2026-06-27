@@ -1,40 +1,35 @@
 import React, { useState, useEffect } from "react";
 import {
-  signInWithPopup,
   signInWithEmailAndPassword,
-  signInAnonymously,
-  updateProfile,
   sendPasswordResetEmail,
+  createUserWithEmailAndPassword,
+  updateProfile,
 } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useFlashMessage } from "../FlashMessageContext";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
-import { db, auth, googleProvider } from "../firebaseConfig";
+import { db, auth } from "../firebaseConfig";
+import "./LoginPage.css";
 
 const LoginPage = () => {
+  const [view, setView] = useState("login"); // "login" | "signup" | "forgot" | "forgot-sent"
+
+  // Login fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // "login" | "forgot" | "forgot-sent"
-  const [view, setView] = useState("login");
+  // Signup fields
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupLsuId, setSignupLsuId] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirm, setSignupConfirm] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+
+  // Forgot password
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
-
-  const [showParticipantForm, setShowParticipantForm] = useState(false);
-  const [participantEmail, setParticipantEmail] = useState("");
-  const [participantId, setParticipantId] = useState("");
 
   const navigate = useNavigate();
   const addMessage = useFlashMessage();
@@ -44,151 +39,175 @@ const LoginPage = () => {
     return () => document.body.classList.remove("login-page");
   }, []);
 
-  // ─── Participant quick login ────────────────────────────────────────────────
-  const participantQuickLogin = async (e) => {
-    e.preventDefault();
-    const normalizedEmail = participantEmail.trim().toLowerCase();
-    const pid = participantId.trim();
+  const isLsuEmail = (val) => /^[^\s@]+@lsu\.edu$/i.test(val.trim());
 
-    if (!normalizedEmail || !pid) {
-      addMessage("danger", "Please enter both email and Participant ID.");
+  // ─── Sign in ─────────────────────────────────────────────────────────────
+  const emailPasswordLogin = async (e) => {
+    e.preventDefault();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isLsuEmail(normalizedEmail)) {
+      addMessage(
+        "danger",
+        "Please sign in with your LSU email address (@lsu.edu)."
+      );
       return;
     }
 
+    setLoading(true);
     try {
-      const userRef = collection(db, "users");
-      const q = query(userRef, where("email", "==", normalizedEmail));
-      const snap = await getDocs(q);
+      const result = await signInWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        password
+      );
+      const userDoc = await getDoc(doc(db, "users", normalizedEmail));
 
-      if (snap.empty) {
+      if (!userDoc.exists()) {
         addMessage(
           "danger",
-          "Not found. Please check your email and Participant ID."
+          "Your account is not registered. Please contact your instructor."
         );
+        await auth.signOut();
         return;
       }
 
-      const userDocSnap = snap.docs[0];
-      const userData = userDocSnap.data();
+      const userData = userDoc.data();
+      const role = (userData.role || "student").toLowerCase();
 
-      localStorage.setItem(
-        "role",
-        (userData.role || "participant").toLowerCase()
-      );
+      if (role !== "student") {
+        addMessage("danger", "This portal is for students only.");
+        await auth.signOut();
+        return;
+      }
+
+      localStorage.setItem("role", role);
       localStorage.setItem("userEmail", normalizedEmail);
-      localStorage.setItem("userDisplayName", pid);
-
-      await updateDoc(userDocSnap.ref, {
-        name: pid,
-        updatedAt: serverTimestamp(),
-        lastParticipantId: pid,
-      });
-
-      const anonRes = await signInAnonymously(auth);
-      const uid = anonRes.user.uid;
-      await updateProfile(anonRes.user, { displayName: pid });
-
-      await setDoc(doc(db, "participantSessions", uid), {
-        uid,
-        email: normalizedEmail,
-        participantId: pid,
-        role: userData.role || "participant",
-        studyId: userData.studyId || "Dev8888",
-        taskName: userData.taskName || "Version2",
-        teamId: userData.teamId || "TeamX",
-        createdAt: serverTimestamp(),
-      });
-
-      addMessage("success", "Welcome! Redirecting to the whiteboard...");
-
-      navigate(
-        `/whiteboard/${encodeURIComponent(
-          userData.studyId || "Dev8888"
-        )}/${encodeURIComponent(
-          userData.taskName || "Version2"
-        )}/${encodeURIComponent(userData.teamId || "TeamX")}`
+      localStorage.setItem(
+        "userDisplayName",
+        result.user.displayName || normalizedEmail
       );
-    } catch (err) {
-      console.error("Participant quick login failed:", err);
-      addMessage("danger", "Login failed. Please try again.");
+      if (userData.lsuID) localStorage.setItem("LSUID", userData.lsuID);
+
+      addMessage("success", "Welcome back!");
+      navigate("/students-home");
+    } catch (error) {
+      console.error("Login failed:", error);
+      const msgs = {
+        "auth/user-not-found": "No account found for this email.",
+        "auth/wrong-password": "Incorrect password. Please try again.",
+        "auth/invalid-credential": "Incorrect email or password.",
+        "auth/invalid-email": "Please enter a valid LSU email address.",
+        "auth/too-many-requests":
+          "Too many attempts. Please wait and try again.",
+      };
+      addMessage(
+        "danger",
+        msgs[error.code] || "Sign in failed. Please check your credentials."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ─── Google / email shared redirect handler ─────────────────────────────────
-  const handleProfileAndRedirect = async (user) => {
-    const userEmail = (user.email || "").trim().toLowerCase();
-    const userName = (user.displayName || userEmail).trim();
-    const photoURL = user.photoURL || "";
+  // ─── Sign up ─────────────────────────────────────────────────────────────
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    const normalizedEmail = signupEmail.trim().toLowerCase();
+    const trimmedName = signupName.trim();
+    const trimmedLsuId = signupLsuId.trim();
 
-    const userDocRef = doc(db, "users", userEmail);
-    const userDoc = await getDoc(userDocRef);
-
-    if (!userDoc.exists()) {
-      addMessage(
-        "danger",
-        "Your account is not registered in the system. Please contact the instructor."
-      );
-      await auth.signOut();
+    if (!isLsuEmail(normalizedEmail)) {
+      addMessage("danger", "Please use your LSU email address (@lsu.edu).");
+      return;
+    }
+    if (!trimmedName) {
+      addMessage("danger", "Please enter your full name.");
+      return;
+    }
+    if (!trimmedLsuId) {
+      addMessage("danger", "Please enter your LSU ID.");
+      return;
+    }
+    if (signupPassword.length < 6) {
+      addMessage("danger", "Password must be at least 6 characters.");
+      return;
+    }
+    if (signupPassword !== signupConfirm) {
+      addMessage("danger", "Passwords do not match.");
       return;
     }
 
-    const userData = userDoc.data();
-    const role = userData.role;
-    const LSUID = userData.lsuID || null;
-
-    localStorage.setItem("role", role);
-    localStorage.setItem("userEmail", userEmail);
-    localStorage.setItem("userDisplayName", userName);
-    if (photoURL) localStorage.setItem("photoURL", photoURL);
-    if (LSUID) localStorage.setItem("LSUID", LSUID);
-
-    addMessage("success", `Welcome, ${userName}!`);
-    navigate(role === "teacher" ? "/teachers-home" : "/students-home");
-  };
-
-  // ─── Google login ────────────────────────────────────────────────────────────
-  const googleLogin = async () => {
+    setSignupLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await handleProfileAndRedirect(result.user);
-    } catch (error) {
-      console.error("Google login failed:", error);
-      addMessage("danger", "Google login failed. Please try again.");
-    }
-  };
+      // Check if a Firestore user doc already exists (e.g. pre-registered by instructor)
+      const existingDoc = await getDoc(doc(db, "users", normalizedEmail));
+      if (existingDoc.exists()) {
+        addMessage(
+          "danger",
+          "An account with this email already exists. Please sign in."
+        );
+        setView("login");
+        return;
+      }
 
-  // ─── Email / password login ──────────────────────────────────────────────────
-  const emailPasswordLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      await handleProfileAndRedirect(result.user);
-    } catch (error) {
-      console.error("Email/password login failed:", error);
+      // Create Firebase Auth account
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        signupPassword
+      );
+      await updateProfile(result.user, { displayName: trimmedName });
 
-      const errorMessages = {
-        "auth/user-not-found": "No account found for this email.",
-        "auth/wrong-password": "Incorrect password. Please try again.",
-        "auth/invalid-email": "Please enter a valid email address.",
-        "auth/too-many-requests":
-          "Too many attempts. Please wait a moment and try again.",
+      // Write user doc to Firestore
+      await setDoc(doc(db, "users", normalizedEmail), {
+        name: trimmedName,
+        email: normalizedEmail,
+        lsuID: trimmedLsuId,
+        role: "student",
+        createdAt: serverTimestamp(),
+      });
+
+      // Populate localStorage and navigate
+      localStorage.setItem("role", "student");
+      localStorage.setItem("userEmail", normalizedEmail);
+      localStorage.setItem("userDisplayName", trimmedName);
+      localStorage.setItem("LSUID", trimmedLsuId);
+
+      addMessage("success", `Welcome, ${trimmedName}!`);
+      navigate("/students-home");
+    } catch (error) {
+      console.error("Sign-up failed:", error);
+      const msgs = {
+        "auth/email-already-in-use":
+          "An account with this email already exists. Please sign in.",
+        "auth/invalid-email": "Please enter a valid LSU email address.",
+        "auth/weak-password":
+          "Password is too weak. Use at least 6 characters.",
       };
-
       addMessage(
         "danger",
-        errorMessages[error.code] ||
-          "Login failed. Please check your email and password."
+        msgs[error.code] || "Sign-up failed. Please try again."
       );
+    } finally {
+      setSignupLoading(false);
     }
   };
 
-  // ─── Forgot password ─────────────────────────────────────────────────────────
+  // ─── Forgot password ──────────────────────────────────────────────────────
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     const trimmed = resetEmail.trim().toLowerCase();
 
     if (!trimmed) {
-      addMessage("danger", "Please enter your email address.");
+      addMessage("danger", "Please enter your LSU email address.");
+      return;
+    }
+    if (!isLsuEmail(trimmed)) {
+      addMessage(
+        "danger",
+        "Please enter a valid LSU email address (@lsu.edu)."
+      );
       return;
     }
 
@@ -198,275 +217,300 @@ const LoginPage = () => {
       setView("forgot-sent");
     } catch (error) {
       console.error("Password reset failed:", error);
-
-      const errorMessages = {
+      const msgs = {
         "auth/user-not-found": "No account found for this email address.",
-        "auth/invalid-email": "Please enter a valid email address.",
+        "auth/invalid-email": "Please enter a valid LSU email address.",
         "auth/too-many-requests":
           "Too many requests. Please wait before trying again.",
       };
-
       addMessage(
         "danger",
-        errorMessages[error.code] ||
-          "Failed to send reset email. Please try again."
+        msgs[error.code] || "Failed to send reset email. Please try again."
       );
     } finally {
       setResetLoading(false);
     }
   };
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+  const switchTo = (target) => {
+    // Pre-fill reset email from login email when switching to forgot
+    if (target === "forgot") setResetEmail(email);
+    setView(target);
+  };
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div
-      className="d-flex justify-content-center align-items-center min-vh-100"
+      className="lsu-login-bg"
       style={{
-        backgroundImage: 'url("/body-bg3.png")',
+        backgroundImage: `url(${process.env.PUBLIC_URL}/body-bg3.png)`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
     >
-      <div className="login-container p-4 bg-white rounded shadow text-center">
-        {/* ── Header (always shown) ── */}
-        <h2
-          className="mb-2"
-          style={{ fontWeight: 700, fontSize: "28px", color: "#333" }}
-        >
-          {view === "login" && "Welcome to PolyFlux"}
-          {view === "forgot" && "Reset Password"}
-          {view === "forgot-sent" && "Check Your Email"}
-        </h2>
+      <div className="lsu-login-card">
+        {/* ── Header ── */}
+        <div className="lsu-login-header">
+          {(view === "login" || view === "signup") && (
+            <>
+              <img src="/logo.png" alt="PolyFlux logo" className="lsu-logo" />
+              <h1 className="lsu-title">PolyFlux</h1>
+              <p className="lsu-subtitle">
+                {view === "login"
+                  ? "Sign in with your LSU account"
+                  : "Create your LSU student account"}
+              </p>
+            </>
+          )}
+          {view === "forgot" && (
+            <>
+              <h1 className="lsu-title lsu-title--sm">Reset Password</h1>
+              <p className="lsu-subtitle">
+                Enter your LSU email and we'll send you a reset link.
+              </p>
+            </>
+          )}
+          {view === "forgot-sent" && (
+            <>
+              <div className="lsu-check-icon">✓</div>
+              <h1 className="lsu-title lsu-title--sm">Check Your Email</h1>
+            </>
+          )}
+        </div>
 
-        {view === "login" && (
-          <img
-            src="/logo.png"
-            alt="App logo"
-            style={{ width: "150px", marginBottom: "16px" }}
-          />
-        )}
-
-        {view === "login" && (
-          <p className="mb-4 text-muted">Collaborate. Create. Reflect.</p>
-        )}
-
-        {/* ════════════════════════════════════════
+        {/* ════════════════════════════════
             VIEW: login
-        ════════════════════════════════════════ */}
+        ════════════════════════════════ */}
         {view === "login" && (
-          <>
-            {/* Google */}
-            <div className="mb-3 d-flex justify-content-center">
-              <button className="googlebutton" onClick={googleLogin}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  preserveAspectRatio="xMidYMid"
-                  viewBox="0 0 256 262"
-                >
-                  <path
-                    fill="#4285F4"
-                    d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782"
-                  />
-                  <path
-                    fill="#EB4335"
-                    d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251"
-                  />
-                </svg>
-                Login with Google
-              </button>
+          <form onSubmit={emailPasswordLogin} noValidate>
+            <div className="lsu-field">
+              <label htmlFor="lsu-email">LSU Email</label>
+              <input
+                id="lsu-email"
+                type="email"
+                placeholder="yourname@lsu.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                autoFocus
+              />
             </div>
 
-            {/* Divider */}
-            <div className="d-flex align-items-center my-3">
-              <hr className="flex-grow-1" />
-              <span className="mx-2 text-muted small">OR</span>
-              <hr className="flex-grow-1" />
-            </div>
-
-            {/* Email / password — always visible */}
-            <form onSubmit={emailPasswordLogin}>
-              <div className="mb-2 text-start">
-                <label className="form-label mb-1">Email</label>
-                <input
-                  type="email"
-                  className="form-control"
-                  placeholder="yourname@lsu.edu"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="mb-1 text-start">
-                <label className="form-label mb-1">Password</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* Forgot password link — sits right below the password field */}
-              <div className="text-end mb-3">
+            <div className="lsu-field">
+              <div className="lsu-field-row">
+                <label htmlFor="lsu-password">Password</label>
                 <button
                   type="button"
-                  className="btn btn-link p-0"
-                  style={{ fontSize: "0.85rem" }}
-                  onClick={() => {
-                    setResetEmail(email); // pre-fill with whatever user typed
-                    setView("forgot");
-                  }}
+                  className="lsu-forgot-link"
+                  onClick={() => switchTo("forgot")}
                 >
                   Forgot password?
                 </button>
               </div>
+              <input
+                id="lsu-password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </div>
 
-              <button type="submit" className="btn btn-primary w-100">
-                Sign In
+            <button
+              type="submit"
+              className="lsu-btn-primary"
+              disabled={loading}
+            >
+              {loading ? (
+                <span
+                  className="lsu-spinner"
+                  role="status"
+                  aria-label="Signing in"
+                />
+              ) : (
+                "Sign In"
+              )}
+            </button>
+
+            <p className="lsu-switch-text">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                className="lsu-switch-link"
+                onClick={() => switchTo("signup")}
+              >
+                Create one
               </button>
-            </form>
-
-            {/* Participant quick login (hidden by default; uncomment toggle to enable) */}
-            {showParticipantForm && (
-              <>
-                <div className="d-flex align-items-center my-3">
-                  <hr className="flex-grow-1" />
-                  <span className="mx-2 text-muted small">OR</span>
-                  <hr className="flex-grow-1" />
-                </div>
-
-                <form onSubmit={participantQuickLogin}>
-                  <div className="mb-2 text-start">
-                    <label className="form-label mb-1">Email</label>
-                    <input
-                      type="email"
-                      className="form-control"
-                      placeholder="yourname@lsu.edu"
-                      value={participantEmail}
-                      onChange={(e) => setParticipantEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="mb-3 text-start">
-                    <label className="form-label mb-1">Participant ID</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g., P014"
-                      value={participantId}
-                      onChange={(e) => setParticipantId(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <button type="submit" className="btn btn-dark w-100">
-                    Go to Whiteboard
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-link mt-2 p-0"
-                    onClick={() => setShowParticipantForm(false)}
-                  >
-                    Cancel
-                  </button>
-                </form>
-              </>
-            )}
-          </>
-        )}
-
-        {/* ════════════════════════════════════════
-            VIEW: forgot — enter email to reset
-        ════════════════════════════════════════ */}
-        {view === "forgot" && (
-          <>
-            <p className="text-muted mb-4" style={{ fontSize: "0.9rem" }}>
-              Enter your account email and we'll send you a link to reset your
-              password.
             </p>
 
-            <form onSubmit={handleForgotPassword}>
-              <div className="mb-3 text-start">
-                <label className="form-label mb-1">Email address</label>
-                <input
-                  type="email"
-                  className="form-control"
-                  placeholder="yourname@lsu.edu"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
+            <p className="lsu-help-text">
+              Having trouble? Contact your instructor or{" "}
+              <a href="mailto:helpdesk@lsu.edu">LSU Help Desk</a>.
+            </p>
+          </form>
+        )}
 
+        {/* ════════════════════════════════
+            VIEW: signup
+        ════════════════════════════════ */}
+        {view === "signup" && (
+          <form onSubmit={handleSignup} noValidate>
+            <div className="lsu-field">
+              <label htmlFor="signup-name">Full Name</label>
+              <input
+                id="signup-name"
+                type="text"
+                placeholder="Jane Doe"
+                value={signupName}
+                onChange={(e) => setSignupName(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="lsu-field">
+              <label htmlFor="signup-email">LSU Email</label>
+              <input
+                id="signup-email"
+                type="email"
+                placeholder="yourname@lsu.edu"
+                value={signupEmail}
+                onChange={(e) => setSignupEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="lsu-field">
+              <label htmlFor="signup-lsuid">LSU ID</label>
+              <input
+                id="signup-lsuid"
+                type="text"
+                placeholder="e.g. 89012345"
+                value={signupLsuId}
+                onChange={(e) => setSignupLsuId(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="lsu-field">
+              <label htmlFor="signup-password">Password</label>
+              <input
+                id="signup-password"
+                type="password"
+                placeholder="At least 6 characters"
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div className="lsu-field">
+              <label htmlFor="signup-confirm">Confirm Password</label>
+              <input
+                id="signup-confirm"
+                type="password"
+                placeholder="Re-enter your password"
+                value={signupConfirm}
+                onChange={(e) => setSignupConfirm(e.target.value)}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="lsu-btn-primary"
+              disabled={signupLoading}
+            >
+              {signupLoading ? (
+                <span
+                  className="lsu-spinner"
+                  role="status"
+                  aria-label="Creating account"
+                />
+              ) : (
+                "Create Account"
+              )}
+            </button>
+
+            <p className="lsu-switch-text">
+              Already have an account?{" "}
               <button
-                type="submit"
-                className="btn btn-primary w-100"
-                disabled={resetLoading}
+                type="button"
+                className="lsu-switch-link"
+                onClick={() => switchTo("login")}
               >
-                {resetLoading ? (
-                  <>
-                    <span
-                      className="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    />
-                    Sending…
-                  </>
-                ) : (
-                  "Send Reset Link"
-                )}
+                Sign in
               </button>
-            </form>
+            </p>
+          </form>
+        )}
+
+        {/* ════════════════════════════════
+            VIEW: forgot — enter email
+        ════════════════════════════════ */}
+        {view === "forgot" && (
+          <form onSubmit={handleForgotPassword} noValidate>
+            <div className="lsu-field">
+              <label htmlFor="reset-email">LSU Email Address</label>
+              <input
+                id="reset-email"
+                type="email"
+                placeholder="yourname@lsu.edu"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="lsu-btn-primary"
+              disabled={resetLoading}
+            >
+              {resetLoading ? (
+                <span
+                  className="lsu-spinner"
+                  role="status"
+                  aria-label="Sending"
+                />
+              ) : (
+                "Send Reset Link"
+              )}
+            </button>
 
             <button
               type="button"
-              className="btn btn-link mt-3 p-0"
-              style={{ fontSize: "0.85rem" }}
-              onClick={() => setView("login")}
+              className="lsu-back-link"
+              onClick={() => switchTo("login")}
             >
               ← Back to sign in
             </button>
-          </>
+          </form>
         )}
 
-        {/* ════════════════════════════════════════
+        {/* ════════════════════════════════
             VIEW: forgot-sent — confirmation
-        ════════════════════════════════════════ */}
+        ════════════════════════════════ */}
         {view === "forgot-sent" && (
-          <>
-            {/* Success icon */}
-            <div
-              className="mb-3"
-              style={{ fontSize: "3rem", color: "#198754" }}
-            >
-              <i className="bi bi-envelope-check-fill" />
-            </div>
-
-            <p className="text-muted mb-1" style={{ fontSize: "0.95rem" }}>
+          <div className="lsu-sent-body">
+            <p className="lsu-sent-desc">
               A password reset link has been sent to:
             </p>
-            <p className="fw-semibold mb-4">{resetEmail}</p>
-
-            <p className="text-muted mb-4" style={{ fontSize: "0.85rem" }}>
-              Check your inbox (and spam folder). The link expires in 1 hour.
+            <p className="lsu-sent-email">{resetEmail}</p>
+            <p className="lsu-sent-note">
+              Check your inbox and spam folder. The link expires in 1 hour.
             </p>
-
             <button
               type="button"
-              className="btn btn-outline-secondary w-100 mb-2"
+              className="lsu-btn-outline"
               onClick={() => {
                 setResetEmail("");
                 setView("forgot");
@@ -474,16 +518,14 @@ const LoginPage = () => {
             >
               Resend to a different email
             </button>
-
             <button
               type="button"
-              className="btn btn-link p-0"
-              style={{ fontSize: "0.85rem" }}
-              onClick={() => setView("login")}
+              className="lsu-back-link"
+              onClick={() => switchTo("login")}
             >
               ← Back to sign in
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>

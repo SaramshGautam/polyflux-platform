@@ -1,67 +1,77 @@
 :root {
   --navbar-height: 60px;
+  --accent: #6c63ff;
 }
 
-/* Overall container */
-.student-dashboard-container {
+/* ── Page shell — mirrors .classroom-page ── */
+.student-home-page {
   max-width: 1200px;
-  min-height: calc(100vh - var(--navbar-height));
   margin: 0 auto;
-  padding-bottom: 3rem;
-  padding-top: var(--navbar-height); /* keeps content below navbar */
+  min-height: calc(100vh - var(--navbar-height));
+  padding: var(--navbar-height) 1rem 3rem;
+  background-color: #f6f6f6;
+  color: #1a1a1a;
+  font-family: "Inter", sans-serif;
+  text-align: left;
 }
 
-/* Title */
-.dashboard-title {
+/* ── Page title — mirrors .classroom-title ── */
+.student-home-title {
   font-size: 2rem;
   font-weight: 700;
   color: #333;
+  margin-bottom: 1.5rem;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.dashboard-title .bi {
+.student-home-title .bi {
   font-size: 1.6rem;
-  color: #6c63ff;
+  color: var(--accent);
 }
 
-/* Semester section */
+/* ── Semester heading — mirrors .section-title ── */
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+  border-left: 4px solid var(--accent);
+  padding-left: 0.75rem;
+}
+
+/* ── Semester section spacing ── */
 .semester-section {
   margin-top: 2.5rem;
 }
 
-.semester-section h4 {
-  font-weight: 600;
-  margin-bottom: 1rem;
-  color: #444;
-  border-left: 4px solid #6c63ff;
-  padding-left: 0.75rem;
+.semester-section:first-child {
+  margin-top: 0;
 }
 
-/* Grid spacing */
-.assigned-classrooms .row {
-  margin-left: -0.5rem;
-  margin-right: -0.5rem;
+/* ── Classrooms grid — mirrors .projects-grid ── */
+.classrooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+  margin-bottom: 2.5rem;
 }
 
-.assigned-classrooms .col-md-4 {
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-}
-
-/* Classroom card */
+/* ── Classroom card — mirrors .project-card ── */
 .classroom-card {
-  background: #ffffff;
+  background-color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  padding: 1.1rem 1.2rem;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   transition: transform 0.18s ease, box-shadow 0.18s ease,
     border-color 0.18s ease, background-color 0.18s ease;
-  height: 100%;
-  display: flex;
-  align-items: stretch;
 }
 
 .classroom-card:hover {
@@ -71,83 +81,58 @@
   background-color: #faf9ff;
 }
 
-/* Inner card body */
-.classroom-card .card-body {
-  padding: 1.1rem 1.2rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  text-align: left;
-}
-
-/* Course title */
+/* ── Card title — mirrors .project-card h5 ── */
 .classroom-card .card-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #222;
   margin-bottom: 0.4rem;
+  color: #222;
 }
 
-/* Instructor / meta text */
-.classroom-card .card-text {
+/* ── Instructor line — mirrors .project-description ── */
+.classroom-card .card-instructor {
   font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 0;
+  color: #555;
+  margin-bottom: 0.35rem;
 }
 
-/* Subtle badge style for future extra info (optional) */
-.classroom-card .meta-badge {
-  display: inline-block;
-  font-size: 0.75rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: #f3f2ff;
-  color: #5a52d5;
-  margin-top: 0.4rem;
-}
-
-/* Hint text at bottom of card */
+/* ── Hint text ── */
 .card-hint {
   font-size: 0.78rem;
-  margin-top: auto;
+  color: var(--accent);
+  margin-top: 0.6rem;
   opacity: 0.65;
   letter-spacing: 0.3px;
-  align-self: flex-start; /* left in flex world */
-  text-align: left;
 }
 
 .classroom-card:hover .card-hint {
   opacity: 0.9;
 }
 
-/* Empty state */
-.assigned-classrooms .text-muted {
-  margin-top: 2rem;
-  text-align: center;
+/* ── Empty / loading states ── */
+.text-muted {
+  font-size: 0.9rem;
+  color: #777 !important;
+  margin-top: 1rem;
 }
 
-/* Loading / no user text */
-.student-dashboard-container > p {
+.student-home-state {
   text-align: center;
   margin-top: 3rem;
   color: #777;
 }
 
-/* Responsive tweaks */
+/* ── Responsive ── */
 @media (max-width: 767px) {
-  .dashboard-title {
-    font-size: 1.7rem;
+  .student-home-title {
+    font-size: 1.6rem;
   }
 
   .semester-section {
     margin-top: 2rem;
   }
 
-  .classroom-card .card-body {
-    padding: 0.9rem 1rem;
-  }
-
-  .assigned-classrooms .col-md-4 {
-    margin-bottom: 1rem;
+  .classrooms-grid {
+    grid-template-columns: 1fr;
   }
 }

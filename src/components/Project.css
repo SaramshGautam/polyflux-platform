@@ -1,120 +1,277 @@
-.teams-list {
-  display: flex;
-  flex-wrap: wrap;
-  /* justify-content: center; */
-  gap: 20px;
-  padding: 20px;
+:root {
+  --navbar-height: 60px;
+  --accent: #6c63ff;
 }
 
+/* ── Page shell — same as .classroom-page ── */
+.classroom-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - var(--navbar-height));
+  padding: var(--navbar-height) 1rem 3rem;
+  background-color: #f6f6f6;
+  color: #1a1a1a;
+  font-family: "Inter", sans-serif;
+  text-align: left;
+}
+
+/* ── Project title ── */
 .project-title {
-  font-size: 26px;
-  font-weight: bold;
-  color: #415b8b;
-  margin-bottom: 15px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 1rem;
 }
 
+/* ── Project info strip ── */
 .project-info {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 30px;
-  margin-bottom: 20px;
-  padding: 5px;
-}
-.project-info div {
-  font-size: 18px;
-  color: #333;
-  padding: 5px;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.team-card {
-  background-color: #f0f0f0;
-  border: 2px solid #000000;
-  border-radius: 10px;
-  cursor: pointer;
-  width: 400px;
-
+.info-item {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 0.2rem;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.info-item strong {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  font-weight: 600;
+}
+
+.info-item p {
+  margin: 0;
+  color: #222;
+  font-weight: 500;
+}
+
+/* ── Action buttons — mirrors .button-group / .action-btn ── */
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 2rem;
+}
+
+.btn.action-btn {
+  background-color: #14213d;
+  color: #ffffff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.btn.action-btn:hover:not(:disabled) {
+  background-color: #023e8a;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.btn.action-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── Section title — mirrors .section-title ── */
+.teams-section h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+  border-left: 4px solid var(--accent);
+  padding-left: 0.75rem;
+}
+
+/* ── Teams list ── */
+.teams-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+  padding: 0;
+  margin-bottom: 2.5rem;
+}
+
+/* ── Team card — matches .project-card style ── */
+.team-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  width: auto; /* override old fixed 400px */
+  transition: transform 0.18s ease, box-shadow 0.18s ease,
+    border-color 0.18s ease, background-color 0.18s ease;
 }
 
 .team-card:hover {
-  background-color: #f8f8f8;
+  transform: translateY(-4px);
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.08);
+  border-color: #6c63ff33;
+  background-color: #faf9ff;
 }
 
-.team-card .card-body {
-  padding: 10px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.team-card .card-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #333;
-}
-
+/* ── Whiteboard preview image ── */
 .whiteboard-preview {
   height: 180px;
   background-color: #eee;
   background-size: cover;
   background-position: center;
-  border-bottom: 1px solid #ccc;
-  border-radius: 10px 10px 0 0;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.whiteboard-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+}
+
+/* ── Card body ── */
+.team-card .card-body {
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.team-card .card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #222;
+  margin: 0;
+}
+
+/* ── Card footer with action buttons ── */
 .card-footer {
   display: flex;
+  gap: 8px;
   background-color: transparent;
-  align-items: center;
-  display: flex;
-  justify-content: space-around;
-  font-size: 0.85rem;
-  color: #0b0b0b;
+  padding: 0 1rem 1rem 1rem;
+  border: none;
 }
 
-/* .btn.btn-view,
-.btn.btn-whiteboard {
-  font-size: 0.9rem;
-  font-weight: bold;
-  padding: 6px 12px;
-  border-radius: 4px;
-  color: #1a1a1a;
-  border: 1px solid #415b8b;
-  background-color: transparent;
-} */
-
-/* .btn-view:hover {
-  background-color: rgb(31, 33, 35);
-  color: white;
-}
-
-.btn-view:active {
-  background-color: rgb(20, 22, 24);
-  color: white;
-} */
-
-/* Whiteboard Button */
+/* ── Whiteboard / View Team buttons ── */
 .btn-whiteboard {
-  background-color: #5f666f; /* Blue color */
-  color: white;
+  flex: 1;
   display: inline-flex;
   align-items: center;
-  justify-content: space-evenly;
-  gap: 5px;
-  width: 45%;
-  height: 45px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+  border: none;
 }
 
-.btn-whiteboard:hover {
-  background-color: #3b434b; /* Darker blue */
-  color: white;
+/* Primary — Whiteboard */
+.btn-whiteboard:first-child {
+  background-color: #14213d;
+  color: #fff;
 }
 
-.btn-whiteboard:active {
-  background-color: #393e44; /* Even darker blue */
-  color: white;
+.btn-whiteboard:first-child:hover {
+  background-color: #023e8a;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+/* Secondary — View Team */
+.btn-whiteboard:last-child {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #d0d0d0;
+}
+
+.btn-whiteboard:last-child:hover {
+  background-color: #e4e4e4;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Back button ── */
+.btn.back-btn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #1a1a1a;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.btn.back-btn:hover {
+  background-color: #eaeaea;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Empty / muted states ── */
+.text-muted {
+  font-size: 0.9rem;
+  color: #777 !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .project-title {
+    font-size: 1.6rem;
+  }
+
+  .project-info {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .teams-list {
+    grid-template-columns: 1fr;
+  }
+
+  .button-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-footer {
+    flex-direction: column;
+  }
+
+  .btn-whiteboard {
+    width: 100%;
+  }
 }

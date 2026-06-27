@@ -1,0 +1,190 @@
+:root {
+  --navbar-height: 60px;
+  --accent: #6c63ff;
+}
+
+/* ── Page shell ── */
+.team-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - var(--navbar-height));
+  padding: var(--navbar-height) 1rem 3rem;
+  background-color: #f6f6f6;
+  color: #1a1a1a;
+  font-family: "Inter", sans-serif;
+  text-align: left;
+}
+
+/* ── Page title ── */
+.team-container .dashboard-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.team-container .dashboard-title .bi {
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+
+/* ── Project sub-heading ── */
+.team-container .section-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 2rem;
+  padding-left: 0;
+  border: none;
+}
+
+/* ── Members card ── */
+.team-members {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  padding: 1.4rem 1.6rem;
+  max-width: 520px;
+  margin-bottom: 2rem;
+}
+
+.team-members h5 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+/* ── Member list ── */
+.team-members ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.team-members ul li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: #f6f6f6;
+  font-size: 0.95rem;
+  color: #222;
+  transition: background 0.15s;
+}
+
+.team-members ul li:hover {
+  background: #efedff;
+}
+
+/* Avatar initial bubble */
+.team-members ul li::before {
+  content: attr(data-initial);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* ── Action buttons ── */
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.btn.action-btn {
+  background-color: #14213d;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.btn.action-btn:hover {
+  background-color: #023e8a;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Back button ── */
+.btn.back-btn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #1a1a1a;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.btn.back-btn:hover {
+  background-color: #eaeaea;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Error alert ── */
+.alert.alert-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  font-size: 0.92rem;
+  margin-top: 2rem;
+}
+
+/* ── Loading / empty states ── */
+.team-container > p {
+  text-align: center;
+  margin-top: 3rem;
+  color: #777;
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .team-container .dashboard-title {
+    font-size: 1.6rem;
+  }
+
+  .team-members {
+    max-width: 100%;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
