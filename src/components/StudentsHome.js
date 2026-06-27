@@ -8,7 +8,6 @@ import {
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "./StudentHome.css";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const StudentHome = () => {
   const [classrooms, setClassrooms] = useState({
@@ -18,139 +17,87 @@ const StudentHome = () => {
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState(null);
   const navigate = useNavigate();
-  const auth = getAuth();
 
-  // useEffect(() => {
-  //   const unsubscribe = onAuthStateChanged(auth, (user) => {
-  //     if (user) {
-  //       setUserEmail(user.email);
-  //     } else {
-  //       setUserEmail(null);
-  //       setClassrooms({ groupedClassrooms: {}, sortedSemesters: [] });
-  //     }
-  //     setLoading(false);
-  //   });
-
-  //   return () => unsubscribe();
-  // }, [auth]);
-
-  // Updated sorting logic:
-  // - Valid semesters (e.g., "Fall 2025") are sorted by year (descending) first.
-  // - For the same year, order is: Fall (1), Summer (2), Spring (3).
-  // - Any missing/invalid semester (e.g., undefined) is pushed to the end.
-
+  // ─── Read email from localStorage ───────────────────────────────────────
   useEffect(() => {
     const stored = (localStorage.getItem("userEmail") || "")
       .trim()
       .toLowerCase();
-
     setUserEmail(stored || null);
     setLoading(false);
   }, []);
 
+  // ─── Semester sort: latest year first; Fall > Summer > Spring ───────────
   const sortSemesters = (semesters) => {
-    const semesterOrder = {
-      Fall: 1,
-      Summer: 2,
-      Spring: 3,
-    };
-
-    return semesters.sort((a, b) => {
-      // If a or b is missing or "undefined", push it to the end.
+    const order = { Fall: 1, Summer: 2, Spring: 3 };
+    return [...semesters].sort((a, b) => {
       if (!a || a === "undefined") return 1;
       if (!b || b === "undefined") return -1;
-
-      const partsA = a.split(" ");
-      const partsB = b.split(" ");
-
-      // If either semester string does not have two parts, treat it as invalid.
-      if (partsA.length < 2) return 1;
-      if (partsB.length < 2) return -1;
-
-      const [seasonA, yearA] = partsA;
-      const [seasonB, yearB] = partsB;
-      const numYearA = parseInt(yearA, 10);
-      const numYearB = parseInt(yearB, 10);
-
-      // If year parsing fails, push the invalid one to the end.
-      if (isNaN(numYearA)) return 1;
-      if (isNaN(numYearB)) return -1;
-
-      // First, sort by year (descending)
-      if (numYearA !== numYearB) {
-        return numYearB - numYearA;
-      }
-
-      // For the same year, sort by semester order
-      return semesterOrder[seasonA] - semesterOrder[seasonB];
+      const [sA, yA] = a.split(" ");
+      const [sB, yB] = b.split(" ");
+      const nA = parseInt(yA, 10);
+      const nB = parseInt(yB, 10);
+      if (isNaN(nA)) return 1;
+      if (isNaN(nB)) return -1;
+      if (nA !== nB) return nB - nA;
+      return (order[sA] ?? 99) - (order[sB] ?? 99);
     });
   };
 
-  // Fetch classrooms when userEmail changes
+  // ─── Fetch classrooms this student is enrolled in ────────────────────────
   useEffect(() => {
-    const fetchClassrooms = async () => {
-      if (!userEmail) return;
+    if (!userEmail) return;
 
+    const fetchClassrooms = async () => {
       try {
         setLoading(true);
         const db = getFirestore();
-        const classroomsRef = collection(db, "classrooms");
-        const querySnapshot = await getDocs(classroomsRef);
-
+        const classroomsSnap = await getDocs(collection(db, "classrooms"));
         const studentClassrooms = [];
-        for (const docSnapshot of querySnapshot.docs) {
-          const classroom = docSnapshot.data();
-          const studentsRef = collection(
-            db,
-            `classrooms/${docSnapshot.id}/students`
-          );
-          const studentsSnapshot = await getDocs(studentsRef);
 
-          // Check if the student exists in the classroom's students subcollection
-          // const isStudentInClassroom = studentsSnapshot.docs.some(
-          //   (studentDoc) => studentDoc.data().email === userEmail
-          // );
-          const isStudentInClassroom = studentsSnapshot.docs.some(
-            (studentDoc) => {
-              const e = (studentDoc.data().email || "").trim().toLowerCase();
-              return e === (userEmail || "").trim().toLowerCase();
-            }
+        for (const classDoc of classroomsSnap.docs) {
+          const classroom = classDoc.data();
+          const studentsSnap = await getDocs(
+            collection(db, `classrooms/${classDoc.id}/students`)
           );
 
-          if (isStudentInClassroom) {
-            // Fetch teacher's name using the teacher's email
-            const teacherDoc = await getDoc(
-              doc(db, "users", classroom.teacherEmail)
-            );
-            const teacherName = teacherDoc.exists()
+          // Match by document ID (email) OR by email field on the student doc
+          const enrolled = studentsSnap.docs.some((sDoc) => {
+            const docId = sDoc.id.trim().toLowerCase();
+            const fieldVal = (sDoc.data().email || "").trim().toLowerCase();
+            return docId === userEmail || fieldVal === userEmail;
+          });
+
+          if (enrolled) {
+            const teacherDoc = classroom.teacherEmail
+              ? await getDoc(doc(db, "users", classroom.teacherEmail))
+              : null;
+            const teacherName = teacherDoc?.exists()
               ? teacherDoc.data().name
               : "Unknown";
 
             studentClassrooms.push({
-              id: docSnapshot.id,
-              teacherName, // Add teacher's name here
+              id: classDoc.id,
+              teacherName,
               ...classroom,
             });
           }
         }
 
-        // Group classrooms by semester
-        const groupedClassrooms = studentClassrooms.reduce((acc, classroom) => {
-          const { semester } = classroom;
-          // Use the provided semester value; if missing, it will be undefined (or "undefined")
-          if (!acc[semester]) {
-            acc[semester] = [];
-          }
-          acc[semester].push(classroom);
+        // Group by semester
+        const grouped = studentClassrooms.reduce((acc, c) => {
+          const key = c.semester || "undefined";
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(c);
           return acc;
         }, {});
 
-        // Sort semesters in reverse order (latest semester first), with invalid ones at the end
-        const sortedSemesters = sortSemesters(Object.keys(groupedClassrooms));
-
-        setClassrooms({ groupedClassrooms, sortedSemesters });
-      } catch (error) {
-        console.error("Error fetching classrooms:", error);
+        setClassrooms({
+          groupedClassrooms: grouped,
+          sortedSemesters: sortSemesters(Object.keys(grouped)),
+        });
+      } catch (err) {
+        console.error("Error fetching classrooms:", err);
       } finally {
         setLoading(false);
       }
@@ -159,33 +106,30 @@ const StudentHome = () => {
     fetchClassrooms();
   }, [userEmail]);
 
+  // ─── Render ──────────────────────────────────────────────────────────────
   return (
-    // <div className="container student-dashboard-container mt-4">
-    <div className="student-dashboard mt-4">
+    <div className="student-home-page">
       {loading ? (
-        <p>Loading...</p>
+        <p className="student-home-state">Loading...</p>
       ) : userEmail ? (
         <>
-          {/* Centered Title */}
-          <div className="text-center">
-            <h1 className="dashboard-title center-title mb-4">
-              <i className="bi bi-person-badge"></i> Student's Dashboard
-            </h1>
-          </div>
+          <h1 className="student-home-title">
+            <i className="bi bi-person-badge" /> Student Dashboard
+          </h1>
 
-          {/* Classrooms organized by semester */}
           <div className="assigned-classrooms">
             {classrooms.sortedSemesters.length > 0 ? (
               classrooms.sortedSemesters.map((semester) => (
                 <div key={semester} className="semester-section">
-                  <h4>{semester}</h4>
+                  <h2 className="section-title">
+                    {semester === "undefined" ? "No Semester" : semester}
+                  </h2>
+
                   <div className="classrooms-grid">
                     {classrooms.groupedClassrooms[semester].map((classroom) => (
-                      // <div key={classroom.id} className="col-md-4 mb-4">
                       <div
                         key={classroom.id}
                         className="classroom-card"
-                        // onClick={() => navigate(`/classroom/${classroom.id}`)}
                         onClick={() =>
                           navigate(`/classroom/${classroom.id}`, {
                             state: {
@@ -195,26 +139,30 @@ const StudentHome = () => {
                           })
                         }
                       >
-                        <div className="card-body">
-                          <h5 className="card-title">
-                            {classroom.courseID} - {classroom.class_name}
-                          </h5>
-                          <p className="card-text">
-                            Instructor: {classroom.teacherName}
-                          </p>
-                        </div>
+                        <h5 className="card-title">
+                          {classroom.courseID} — {classroom.class_name}
+                        </h5>
+                        <p className="card-instructor">
+                          Instructor: {classroom.teacherName}
+                        </p>
+                        <span className="card-hint">View projects →</span>
                       </div>
                     ))}
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted">No classrooms assigned.</p>
+              <p className="text-muted">
+                No classrooms assigned yet. Contact your instructor if this
+                looks wrong.
+              </p>
             )}
           </div>
         </>
       ) : (
-        <p>No user logged in. Please sign in to continue.</p>
+        <p className="student-home-state">
+          No user logged in. Please sign in to continue.
+        </p>
       )}
     </div>
   );

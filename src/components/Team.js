@@ -1,10 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore";
+import "./Team.css";
 
 const Team = () => {
   const { className, projectName, teamName } = useParams();
-  const [teamMembers, setTeamMembers] = useState([]); 
+  const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -17,38 +24,32 @@ const Team = () => {
         const decodedClassName = decodeURIComponent(className);
         const decodedProjectName = decodeURIComponent(projectName);
         const decodedTeamName = decodeURIComponent(teamName);
-  
-        // Fetch the team members from the 'teams' subcollection
+
         const teamRef = doc(
           db,
-          'classrooms',
+          "classrooms",
           decodedClassName,
-          'Projects',
+          "Projects",
           decodedProjectName,
-          'teams',
+          "teams",
           decodedTeamName
         );
-  
         const teamSnapshot = await getDoc(teamRef);
-  
+
         if (teamSnapshot.exists()) {
           const members = [];
           const teamData = teamSnapshot.data();
-  
-          // Loop through each LSUID in the team
-          for (const [LSUID, _] of Object.entries(teamData)) {
-            // Fetch student details from the 'users' collection
-            const userRef = doc(db, 'users', LSUID);
-            const userSnapshot = await getDoc(userRef);
-  
+
+          for (const [LSUID] of Object.entries(teamData)) {
+            const userSnapshot = await getDoc(doc(db, "users", LSUID));
             if (userSnapshot.exists()) {
               const userData = userSnapshot.data();
               members.push({
-                LSUID: LSUID,
-                name: userData.name || "Unknown Name", // Get name in "Last, First" format
+                LSUID,
+                name: userData.name || "Unknown",
               });
             } else {
-              members.push({ LSUID: LSUID, name: "Unknown Name" });
+              members.push({ LSUID, name: "Unknown" });
             }
           }
           setTeamMembers(members);
@@ -62,12 +63,20 @@ const Team = () => {
         setLoading(false);
       }
     };
-  
-    fetchTeamMembers();
-  }, [className, projectName, teamName]);  
 
-  const handleWhiteboardClick = () => {
-    navigate(`/whiteboard/${className}/${projectName}/${teamName}`);
+    fetchTeamMembers();
+  }, [className, projectName, teamName]);
+
+  const getInitial = (name) => {
+    if (!name || name === "Unknown") return "?";
+    const display = typeof name === "object" ? `${name.firstName || ""}` : name;
+    return display.charAt(0).toUpperCase();
+  };
+
+  const getDisplayName = (name) => {
+    if (!name) return "Unknown";
+    if (typeof name === "object") return `${name.lastName}, ${name.firstName}`;
+    return name;
   };
 
   return (
@@ -80,51 +89,44 @@ const Team = () => {
         </div>
       ) : teamMembers.length > 0 ? (
         <>
-          <h1 className="dashboard-title mb-4">
-            <i className="bi bi-person-workspace"></i> Team: {teamName}
+          {/* ── Title ── */}
+          <h1 className="dashboard-title mb-2">
+            <i className="bi bi-person-workspace" /> {teamName}
           </h1>
-          <h3 className="section-title mb-3">Project: {projectName}</h3>
+          <h3 className="section-title mb-4">
+            {projectName} · {decodeURIComponent(className)}
+          </h3>
 
+          {/* ── Members card ── */}
           <div className="team-members mb-4">
-  <h5 className="mb-3">Team Members</h5>
-  {teamMembers.length > 0 ? (
-    <ul>
-      {teamMembers.map((member, idx) => (
-        <li key={idx}>
-          <strong>
-            {typeof member.name === "object"
-              ? `${member.name.lastName}, ${member.name.firstName}`
-              : member.name}
-          </strong>
-          
-        </li>
-      ))}
-    </ul>
-  ) : (
-    <p>No members in this team.</p>
-  )}
-</div>
-
-
-
-          {/* Whiteboard Button */}
-          <div className="action-buttons mb-4">
-            <button
-              onClick={handleWhiteboardClick}
-              className="btn action-btn" 
-            >
-              <i className="bi bi-tv"></i> Open Whiteboard
-            </button>
+            <h5>Team Members</h5>
+            <ul>
+              {teamMembers.map((member, idx) => (
+                <li key={idx} data-initial={getInitial(member.name)}>
+                  <strong>{getDisplayName(member.name)}</strong>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <div className="action-buttons mb-4">
-          <button
-            type="button"
-            className="btn back-btn"
-            onClick={() => navigate(`/classroom/${className}/project/${projectName}`)}
-          >
-            <i className="bi bi-arrow-left me-2"></i> Back to Project
-          </button>
+          {/* ── Actions ── */}
+          <div className="action-buttons mb-2">
+            <button
+              className="btn action-btn"
+              onClick={() =>
+                navigate(`/whiteboard/${className}/${projectName}/${teamName}`)
+              }
+            >
+              <i className="bi bi-tv me-2" /> Open Whiteboard
+            </button>
+            <button
+              className="btn back-btn"
+              onClick={() =>
+                navigate(`/classroom/${className}/project/${projectName}`)
+              }
+            >
+              <i className="bi bi-arrow-left me-2" /> Back to Project
+            </button>
           </div>
         </>
       ) : (

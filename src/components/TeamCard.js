@@ -36,7 +36,7 @@ export default function TeamCard({
         </h5>
       </div>
 
-      <div className="card-footer d-flex gap-2 justify-content-center">
+      <div className="card-footer">
         <Link
           to={`/classroom/${className}/project/${projectName}/team/${team.name}`}
           className="btn btn-whiteboard"
