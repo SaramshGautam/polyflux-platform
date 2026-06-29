@@ -1,423 +1,491 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { doc, deleteDoc } from "firebase/firestore";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
+import "./ManageTeam.css";
 
-// Sort teams by teamName
-const ncmp = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
-const sortTeamsByName = (arr) => [...arr].sort((t1, t2) => ncmp(t1.teamName, t2.teamName));
+const ncmp = (a, b) =>
+  a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+const sortTeams = (arr) =>
+  [...arr].sort((a, b) => ncmp(a.teamName, b.teamName));
+
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+const nextTeamName = (names) => {
+  const set = new Set(names);
+  let n = 1;
+  while (set.has(`Team ${n}`)) n++;
+  return `Team ${n}`;
+};
 
 const ManageTeams = () => {
   const { className, projectName } = useParams();
   const navigate = useNavigate();
+
   const [teamName, setTeamName] = useState("");
   const [students, setStudents] = useState([]);
   const [teams, setTeams] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [teamSize, setTeamSize] = useState(3);
   const [reassignAll, setReassignAll] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // teamName to confirm
+  const [dragOver, setDragOver] = useState(null); // teamName being dragged over
 
+  // ── Toast helpers ──────────────────────────────────────────────────────────
+  const showToast = (type, msg) => {
+    const id = Date.now() + Math.random();
+    setToasts((p) => [...p, { id, type, msg }]);
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 4500);
+  };
+  const toastIcon = (t) => (t === "success" ? "✓" : t === "danger" ? "✕" : "⚠");
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchTeamsAndStudents = async () => {
+    const fetch_ = async () => {
       try {
         const db = getFirestore();
-
-        // Fetch students
-        const studentsRef = collection(db, "classrooms", className, "students");
-        const studentsSnapshot = await getDocs(studentsRef);
-        const studentsList = studentsSnapshot.docs.map((doc) => ({
-          email: doc.id,
+        const studSnap = await getDocs(
+          collection(db, "classrooms", className, "students")
+        );
+        const allStudents = studSnap.docs.map((d) => ({
+          email: d.id,
           name:
-            `${doc.data()?.firstName || ""} ${
-              doc.data()?.lastName || ""
-            }`.trim() || doc.id,
+            `${d.data()?.firstName || ""} ${d.data()?.lastName || ""}`.trim() ||
+            d.id,
         }));
-        console.log("Fetched students:", studentsList);
 
-        // Fetch teams
-        const teamsRef = collection(
-          db,
+        const teamsSnap = await getDocs(
+          collection(
+            db,
+            "classrooms",
+            className,
+            "Projects",
+            projectName,
+            "teams"
+          )
+        );
+        const teamsList = teamsSnap.docs.map((d) => ({
+          teamName: d.id,
+          students: Object.keys(d.data()).map((email) => {
+            const s = allStudents.find((s) => s.email === email);
+            return { email, name: s ? s.name : email };
+          }),
+        }));
+
+        const assignedEmails = new Set(
+          teamsList.flatMap((t) => t.students.map((s) => s.email))
+        );
+        const unassigned = allStudents
+          .filter((s) => !assignedEmails.has(s.email))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setStudents(unassigned);
+        setTeams(sortTeams(teamsList));
+      } catch (err) {
+        console.error(err);
+        showToast("danger", "Failed to load teams and students.");
+      }
+    };
+    fetch_();
+  }, [className, projectName]);
+
+  // ── Create team ────────────────────────────────────────────────────────────
+  const handleCreateTeam = () => {
+    const name = teamName.trim();
+    if (!name) return;
+    if (teams.some((t) => t.teamName === name)) {
+      showToast("warning", `Team "${name}" already exists.`);
+      return;
+    }
+    setTeams((p) => sortTeams([...p, { teamName: name, students: [] }]));
+    setTeamName("");
+  };
+
+  // ── Save ───────────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch(
+        "https://flask-app-l7rilyhu2a-uc.a.run.app/save-teams",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            teams: teams.map((t) => ({
+              teamName: t.teamName,
+              students: t.students.map((s) => s.email),
+            })),
+            class_name: className,
+            project_name: projectName,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data.error) showToast("danger", data.error);
+      else showToast("success", data.message || "Teams saved.");
+    } catch {
+      showToast("danger", "An error occurred while saving teams.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ── Delete team ────────────────────────────────────────────────────────────
+  const confirmDelete = (name) => setDeleteConfirm(name);
+
+  const handleDeleteTeam = async () => {
+    const name = deleteConfirm;
+    setDeleteConfirm(null);
+    const team = teams.find((t) => t.teamName === name);
+    setTeams((p) => sortTeams(p.filter((t) => t.teamName !== name)));
+    if (team) setStudents((p) => [...p, ...team.students]);
+    try {
+      await deleteDoc(
+        doc(
+          getFirestore(),
           "classrooms",
           className,
           "Projects",
           projectName,
-          "teams"
-        );
-        const teamsSnapshot = await getDocs(teamsRef);
-        const teamsList = teamsSnapshot.docs.map((doc) => ({
-          teamName: doc.id,
-          students: Object.entries(doc.data()).map(([email, _]) => {
-            const student = studentsList.find(
-              (student) => student.email === email
-            );
-            return {
-              email,
-              name: student ? student.name : email,
-            };
-          }),
-        }));
-
-        // Get a list of all assigned students by email
-        const assignedEmails = teamsList.flatMap((team) =>
-          team.students.map((student) => student.email)
-        );
-
-        // Filter unassigned students
-        const unassignedStudents = studentsList.filter(
-          (student) => !assignedEmails.includes(student.email)
-        );
-
-        setStudents(
-        [...unassignedStudents].sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+          "teams",
+          name
         )
       );
-      setTeams(sortTeamsByName(teamsList));
-      } catch (error) {
-        console.error("Error fetching teams or students:", error);
-      }
-    };
-
-    fetchTeamsAndStudents();
-  }, [className, projectName]);
-
-  const handleCreateTeam = () => {
-    if (teamName && !teams.some((team) => team.teamName === teamName)) {
-      setTeams((prev) => sortTeamsByName([...prev, { teamName, students: [] }]));
-      setTeamName("");
+      showToast("success", `Team "${name}" deleted.`);
+    } catch {
+      showToast("danger", `Failed to delete "${name}" from database.`);
     }
   };
 
-  const handleSaveChanges = () => {
-    const teamsData = teams.map((team) => ({
-      teamName: team.teamName,
-      students: team.students.map((student) => student.email),
-    }));
-
-    // fetch("http://localhost:5000/save-teams", {
-    fetch("https://flask-app-l7rilyhu2a-uc.a.run.app/save-teams", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        teams: teamsData,
-        class_name: className,
-        project_name: projectName,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.error) {
-          alert(data.error);
-        } else {
-          alert(data.message);
-        }
-      })
-      .catch((error) => alert("An error occurred while saving teams."));
-  };
-
-  const handleDragStart = (event, student) => {
-    event.dataTransfer.setData("email", student.email);
-    event.dataTransfer.setData("name", student.name);
-  };
-
-  const handleDrop = (event, teamName) => {
-    event.preventDefault();
-    const email = event.dataTransfer.getData("email");
-    const name = event.dataTransfer.getData("name");
-
-    if (email && name) {
-      // Add the student to the selected team
-      const updatedTeams = teams.map((team) => {
-        if (team.teamName === teamName) {
-          if (!team.students.some((student) => student.email === email)) {
-            return { ...team, students: [...team.students, { email, name }] };
-          }
-        }
-        return team;
-      });
-
-      // Remove the student from the unassigned list
-      const updatedStudents = students.filter(
-        (student) => student.email !== email
-      );
-
-      setStudents(updatedStudents);
-      setTeams(sortTeamsByName(updatedTeams));
-    }
-  };
-
-  const handleDeleteTeam = async (teamName) => {
-    // Find the team that is being deleted
-    const teamToDelete = teams.find((team) => team.teamName === teamName);
-    const studentsInDeletedTeam = teamToDelete ? teamToDelete.students : [];
-
-    // Remove the deleted team from the teams list in state
-    const updatedTeams = teams.filter((team) => team.teamName !== teamName);
-    setTeams(sortTeamsByName(updatedTeams));
-
-    // Add the students from the deleted team back to the unassigned list
-    const updatedStudents = [...students, ...studentsInDeletedTeam];
-    setStudents(updatedStudents);
-
-    // Also delete the team from the Firebase database
-    const db = getFirestore();
-    const teamRef = doc(
-      db,
-      "classrooms",
-      className,
-      "Projects",
-      projectName,
-      "teams",
-      teamName
-    );
-
-    try {
-      await deleteDoc(teamRef);
-      alert(`Team "${teamName}" deleted successfully!`);
-    } catch (error) {
-      console.error("Error deleting team:", error);
-      alert("Error deleting team.");
-    }
-  };
-
+  // ── Remove student from team ───────────────────────────────────────────────
   const handleRemoveStudent = (email, teamName) => {
-    const updatedTeams = teams.map((team) => {
-      if (team.teamName === teamName) {
-        return {
-          ...team,
-          students: team.students.filter((student) => student.email !== email),
-        };
-      }
-      return team;
-    });
-
-    const studentToRemove = teams
-      .flatMap((team) => team.students)
-      .find((student) => student.email === email);
-
-    if (studentToRemove) {
-      setStudents((prevStudents) => {
-        if (!prevStudents.some((student) => student.email === email)) {
-          return [...prevStudents, studentToRemove];
-        }
-        return prevStudents;
-      });
-    }
-
-    setTeams(sortTeamsByName(updatedTeams));
+    const student = teams
+      .flatMap((t) => t.students)
+      .find((s) => s.email === email);
+    setTeams((p) =>
+      sortTeams(
+        p.map((t) =>
+          t.teamName === teamName
+            ? { ...t, students: t.students.filter((s) => s.email !== email) }
+            : t
+        )
+      )
+    );
+    if (student)
+      setStudents((p) =>
+        p.some((s) => s.email === email) ? p : [...p, student]
+      );
   };
 
-  // ADD:
-  const shuffle = (arr) => {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
+  // ── Drag & drop ────────────────────────────────────────────────────────────
+  const handleDragStart = (e, student) => {
+    e.dataTransfer.setData("email", student.email);
+    e.dataTransfer.setData("name", student.name);
   };
 
-  // generate "Team 1", "Team 2", ... without clashing
-  const nextTeamName = (existingNames) => {
-    const set = new Set(existingNames);
-    let n = 1;
-    while (set.has(`Team ${n}`)) n++;
-    return `Team ${n}`;
+  const handleDrop = (e, teamName) => {
+    e.preventDefault();
+    setDragOver(null);
+    const email = e.dataTransfer.getData("email");
+    const name = e.dataTransfer.getData("name");
+    if (!email || !name) return;
+    setTeams((p) =>
+      sortTeams(
+        p.map((t) =>
+          t.teamName === teamName && !t.students.some((s) => s.email === email)
+            ? { ...t, students: [...t.students, { email, name }] }
+            : t
+        )
+      )
+    );
+    setStudents((p) => p.filter((s) => s.email !== email));
   };
 
+  // ── Randomize ──────────────────────────────────────────────────────────────
   const randomizeIntoTeams = () => {
     const size = Math.max(1, Number(teamSize) || 1);
-
     if (reassignAll) {
-      // everyone (assigned + unassigned)
-      const pool = [...students, ...teams.flatMap((t) => t.students)];
+      const pool = shuffle([...students, ...teams.flatMap((t) => t.students)]);
       if (!pool.length) return;
-
-      const shuffled = shuffle(pool);
-      const numTeams = Math.max(1, Math.ceil(shuffled.length / size));
-
-      // reuse existing names if available, then auto-generate more
+      const numTeams = Math.max(1, Math.ceil(pool.length / size));
       let names = [...teams.map((t) => t.teamName)];
       while (names.length < numTeams) names.push(nextTeamName(names));
       names = names.slice(0, numTeams);
-
-      const buckets = names.map((name) => ({ teamName: name, students: [] }));
-      shuffled.forEach((s, i) => buckets[i % numTeams].students.push(s));
-
-      setTeams(sortTeamsByName(buckets));
-      setStudents([]); // all assigned now
-      return;
+      const buckets = names.map((n) => ({ teamName: n, students: [] }));
+      pool.forEach((s, i) => buckets[i % numTeams].students.push(s));
+      setTeams(sortTeams(buckets));
+      setStudents([]);
+    } else {
+      if (!students.length) return;
+      const shuffled = shuffle(students);
+      const current = teams.length
+        ? teams.map((t) => ({ ...t, students: [...t.students] }))
+        : [{ teamName: "Team 1", students: [] }];
+      shuffled.forEach((s) => {
+        let idx = current.findIndex((t) => t.students.length < size);
+        if (idx === -1) {
+          current.push({
+            teamName: nextTeamName(current.map((t) => t.teamName)),
+            students: [],
+          });
+          idx = current.length - 1;
+        }
+        current[idx].students.push(s);
+      });
+      setTeams(sortTeams(current));
+      setStudents([]);
     }
-
-    // only place currently unassigned students into existing teams up to the size
-    if (!students.length) return;
-
-    const shuffled = shuffle(students);
-    const current = teams.length
-      ? teams.map((t) => ({ ...t, students: [...t.students] }))
-      : [{ teamName: "Team 1", students: [] }];
-
-    shuffled.forEach((stu) => {
-      // find a team with capacity, or create a new one
-      let idx = current.findIndex((t) => t.students.length < size);
-      if (idx === -1) {
-        current.push({
-          teamName: nextTeamName(current.map((t) => t.teamName)),
-          students: [],
-        });
-        idx = current.length - 1;
-      }
-      current[idx].students.push(stu);
-    });
-
-    setTeams(sortTeamsByName(current));
-    setStudents([]); // all unassigned placed
   };
 
+  const totalStudents =
+    students.length + teams.reduce((n, t) => n + t.students.length, 0);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="manage-teams-wrapper">
-      <h1>
-        <i className="bi bi-people-fill"></i> Manage Teams
-      </h1>
-      <div className="mt-3 d-flex justify-content-between">
-        <div className="d-flex">
-          <input
-            type="text"
-            id="team_name"
-            className="form-input"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            placeholder="Enter Team Name"
-          />
-          <button className="action-btn" onClick={handleCreateTeam}>
-            <i className="bi bi-plus-circle"></i> Create Team
-          </button>
-          {/* ADD: randomizer controls */}
-          <div className="mt-3 d-flex align-items-center">
-            <label className="d-flex align-items-center">
-              Team size:&nbsp;
-              <input
-                type="number"
-                min="1"
-                style={{ width: 90 }}
-                value={teamSize}
-                onChange={(e) => setTeamSize(e.target.value)}
-              />
-            </label>
-
-            <label
-              className="d-flex align-items-center"
-              style={{ marginLeft: 16 }}
-            >
-              <input
-                type="checkbox"
-                checked={reassignAll}
-                onChange={(e) => setReassignAll(e.target.checked)}
-              />
-              <span style={{ marginLeft: 6 }}>Reassign all students</span>
-            </label>
-
+    <div className="mt-page">
+      {/* ── Toasts ── */}
+      <div className="lsu-toast-container" aria-live="polite">
+        {toasts.map(({ id, type, msg }) => (
+          <div key={id} className={`lsu-toast lsu-toast--${type}`} role="alert">
+            <span className="lsu-toast-icon" aria-hidden="true">
+              {toastIcon(type)}
+            </span>
+            <span className="lsu-toast-msg">{msg}</span>
             <button
-              type="button"
-              className="btn action-btn"
-              style={{ marginLeft: 16 }}
-              onClick={randomizeIntoTeams}
+              className="lsu-toast-close"
+              onClick={() => setToasts((p) => p.filter((t) => t.id !== id))}
+              aria-label="Dismiss"
             >
-              <i className="bi bi-shuffle"></i> Randomize
+              ✕
             </button>
           </div>
+        ))}
+      </div>
+
+      {/* ── Delete confirm modal ── */}
+      {deleteConfirm && (
+        <div className="mt-overlay" role="dialog" aria-modal="true">
+          <div className="mt-confirm">
+            <div className="mt-confirm-icon" aria-hidden="true">
+              ⚠
+            </div>
+            <h3>Delete "{deleteConfirm}"?</h3>
+            <p>
+              Students in this team will be moved back to unassigned. This also
+              removes the team from the database.
+            </p>
+            <div className="mt-confirm-actions">
+              <button className="mt-btn-danger" onClick={handleDeleteTeam}>
+                Delete team
+              </button>
+              <button
+                className="mt-btn-ghost"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Header ── */}
+      <div className="mt-header">
+        <button
+          className="mt-back-btn"
+          onClick={() =>
+            navigate(`/classroom/${className}/project/${projectName}`)
+          }
+        >
+          ← Back to project
+        </button>
+        <h1 className="mt-title">Manage teams</h1>
+        <p className="mt-subtitle">
+          {projectName} · {totalStudents} student
+          {totalStudents !== 1 ? "s" : ""} total
+        </p>
+      </div>
+
+      {/* ── Toolbar ── */}
+      <div className="mt-toolbar">
+        {/* Create team */}
+        <div className="mt-toolbar-group">
+          <input
+            className="mt-input"
+            type="text"
+            placeholder="New team name"
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreateTeam()}
+          />
+          <button className="mt-btn-primary" onClick={handleCreateTeam}>
+            + Create team
+          </button>
+        </div>
+
+        {/* Randomizer */}
+        <div className="mt-toolbar-group mt-randomizer">
+          <label className="mt-label-inline">
+            Team size
+            <input
+              className="mt-input mt-input--sm"
+              type="number"
+              min="1"
+              value={teamSize}
+              onChange={(e) => setTeamSize(e.target.value)}
+            />
+          </label>
+          <label className="mt-checkbox-label">
+            <input
+              type="checkbox"
+              checked={reassignAll}
+              onChange={(e) => setReassignAll(e.target.checked)}
+            />
+            Reassign all
+          </label>
+          <button className="mt-btn-secondary" onClick={randomizeIntoTeams}>
+            ⇄ Randomize
+          </button>
         </div>
       </div>
-      <div className="manage-teams-container">
-        <div className="manage-unassigned-students">
-          <h4>Unassigned Students</h4>
-          <ul className="manage-student-list">
+
+      {/* ── Main board ── */}
+      <div className="mt-board">
+        {/* Unassigned column */}
+        <div className="mt-column mt-column--unassigned">
+          <div className="mt-column-header">
+            <span className="mt-column-title">Unassigned</span>
+            <span className="mt-badge">{students.length}</span>
+          </div>
+          <ul className="mt-student-list">
             {students.length === 0 ? (
-              <li className="manage-no-students">All students assigned</li>
+              <li className="mt-empty">All students assigned ✓</li>
             ) : (
-              students.map((student) => (
+              students.map((s) => (
                 <li
-                  key={student.email}
-                  className="manage-student-item"
+                  key={s.email}
+                  className="mt-student-chip"
                   draggable
-                  onDragStart={(e) => handleDragStart(e, student)}
+                  onDragStart={(e) => handleDragStart(e, s)}
+                  title={s.email}
                 >
-                  {student.name}
+                  <span className="mt-student-avatar">
+                    {s.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="mt-student-name">{s.name}</span>
+                  <span className="mt-drag-handle" aria-hidden="true">
+                    ⠿
+                  </span>
                 </li>
               ))
             )}
           </ul>
         </div>
-        <div className="manage-teams-list">
-          {teams.map((team) => (
-            <div
-              key={team.teamName}
-              className="manage-team-list"
-              onDrop={(e) => handleDrop(e, team.teamName)}
-              onDragOver={(e) => e.preventDefault()}
-            >
-              <h4 className="team-header">
-                {team.teamName}
-                <button
-                  className="btn btn-danger btn-sm ml-2"
-                  onClick={() => handleDeleteTeam(team.teamName)}
-                >
-                  Deleted Team
-                </button>
-              </h4>
-              <ul className="manage-student-list">
-                {team.students.length === 0 ? (
-                  <li className="manage-no-students">No students assigned</li>
-                ) : (
-                  team.students.map((student) => (
-                    <li key={student.email} className="manage-student-item">
-                      {student.name}
 
-                      <button
-                        onClick={() =>
-                          handleRemoveStudent(student.email, team.teamName)
-                        }
-                      >
-                        <i className="bi bi-x-circle"></i>
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
+        {/* Team columns */}
+        <div className="mt-teams-grid">
+          {teams.length === 0 ? (
+            <div className="mt-no-teams">
+              No teams yet — create one above or use Randomize.
             </div>
-          ))}
+          ) : (
+            teams.map((team) => (
+              <div
+                key={team.teamName}
+                className={`mt-column mt-column--team${
+                  dragOver === team.teamName ? " mt-column--dragover" : ""
+                }`}
+                onDrop={(e) => handleDrop(e, team.teamName)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(team.teamName);
+                }}
+                onDragLeave={() => setDragOver(null)}
+              >
+                <div className="mt-column-header">
+                  <span className="mt-column-title">{team.teamName}</span>
+                  <div className="mt-column-header-right">
+                    <span className="mt-badge">{team.students.length}</span>
+                    <button
+                      className="mt-delete-btn"
+                      onClick={() => confirmDelete(team.teamName)}
+                      aria-label={`Delete ${team.teamName}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                <ul className="mt-student-list">
+                  {team.students.length === 0 ? (
+                    <li className="mt-empty mt-empty--drop">
+                      Drop students here
+                    </li>
+                  ) : (
+                    team.students.map((s) => (
+                      <li
+                        key={s.email}
+                        className="mt-student-chip mt-student-chip--assigned"
+                        title={s.email}
+                      >
+                        <span className="mt-student-avatar">
+                          {s.name.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="mt-student-name">{s.name}</span>
+                        <button
+                          className="mt-remove-btn"
+                          onClick={() =>
+                            handleRemoveStudent(s.email, team.teamName)
+                          }
+                          aria-label={`Remove ${s.name}`}
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            ))
+          )}
         </div>
-        <div className="d-flex justify-content-start">
-          <button
-            type="button"
-            className="btn action-btn"
-            onClick={handleSaveChanges}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <span className="spinner-border spinner-border-sm"></span>{" "}
-                Saving...
-              </>
-            ) : (
-              <>
-                <i className="bi bi-save"></i> Save Changes
-              </>
-            )}
-          </button>
-          <button
-            type="button"
-            className="btn back-btn"
-            onClick={() =>
-              navigate(`/classroom/${className}/project/${projectName}`)
-            }
-          >
-            <i className="bi bi-arrow-left"></i> Back to Project
-          </button>
-        </div>
+      </div>
+
+      {/* ── Footer actions ── */}
+      <div className="mt-footer">
+        <button
+          className="mt-btn-primary mt-btn-save"
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <>
+              <span className="mt-spinner" aria-hidden="true" /> Saving…
+            </>
+          ) : (
+            "Save changes"
+          )}
+        </button>
+        <button
+          className="mt-btn-ghost"
+          onClick={() =>
+            navigate(`/classroom/${className}/project/${projectName}`)
+          }
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );

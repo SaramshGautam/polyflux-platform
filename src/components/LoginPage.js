@@ -7,9 +7,14 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { useFlashMessage } from "../FlashMessageContext";
 import { db, auth } from "../firebaseConfig";
 import "./LoginPage.css";
+
+const ROLE_ROUTES = {
+  student: "/students-home",
+  teacher: "/teachers-home",
+  admin: "/admin-home",
+};
 
 const LoginPage = () => {
   const [view, setView] = useState("login"); // "login" | "signup" | "forgot" | "forgot-sent"
@@ -31,15 +36,40 @@ const LoginPage = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
 
+  // Toasts
+  const [toasts, setToasts] = useState([]);
+
   const navigate = useNavigate();
-  const addMessage = useFlashMessage();
 
   useEffect(() => {
     document.body.classList.add("login-page");
     return () => document.body.classList.remove("login-page");
   }, []);
 
+  // ─── Toast helpers ────────────────────────────────────────────────────────
+  const showToast = (type, msg) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, type, msg }]);
+    setTimeout(() => dismissToast(id), 4500);
+  };
+
+  const dismissToast = (id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const toastIcon = (type) => {
+    if (type === "success") return "✓";
+    if (type === "danger") return "✕";
+    return "⚠";
+  };
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   const isLsuEmail = (val) => /^[^\s@]+@lsu\.edu$/i.test(val.trim());
+
+  const switchTo = (target) => {
+    if (target === "forgot") setResetEmail(email);
+    setView(target);
+  };
 
   // ─── Sign in ─────────────────────────────────────────────────────────────
   const emailPasswordLogin = async (e) => {
@@ -47,7 +77,7 @@ const LoginPage = () => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!isLsuEmail(normalizedEmail)) {
-      addMessage(
+      showToast(
         "danger",
         "Please sign in with your LSU email address (@lsu.edu)."
       );
@@ -64,7 +94,7 @@ const LoginPage = () => {
       const userDoc = await getDoc(doc(db, "users", normalizedEmail));
 
       if (!userDoc.exists()) {
-        addMessage(
+        showToast(
           "danger",
           "Your account is not registered. Please contact your instructor."
         );
@@ -74,9 +104,13 @@ const LoginPage = () => {
 
       const userData = userDoc.data();
       const role = (userData.role || "student").toLowerCase();
+      const destination = ROLE_ROUTES[role];
 
-      if (role !== "student") {
-        addMessage("danger", "This portal is for students only.");
+      if (!destination) {
+        showToast(
+          "danger",
+          "Unrecognised account role. Please contact support."
+        );
         await auth.signOut();
         return;
       }
@@ -89,8 +123,15 @@ const LoginPage = () => {
       );
       if (userData.lsuID) localStorage.setItem("LSUID", userData.lsuID);
 
-      addMessage("success", "Welcome back!");
-      navigate("/students-home");
+      showToast(
+        "success",
+        role === "teacher"
+          ? `Welcome back, ${result.user.displayName || "Professor"}!`
+          : "Welcome back!"
+      );
+
+      // Small delay so the user sees the toast before navigating
+      setTimeout(() => navigate(destination), 600);
     } catch (error) {
       console.error("Login failed:", error);
       const msgs = {
@@ -101,7 +142,7 @@ const LoginPage = () => {
         "auth/too-many-requests":
           "Too many attempts. Please wait and try again.",
       };
-      addMessage(
+      showToast(
         "danger",
         msgs[error.code] || "Sign in failed. Please check your credentials."
       );
@@ -118,32 +159,31 @@ const LoginPage = () => {
     const trimmedLsuId = signupLsuId.trim();
 
     if (!isLsuEmail(normalizedEmail)) {
-      addMessage("danger", "Please use your LSU email address (@lsu.edu).");
+      showToast("danger", "Please use your LSU email address (@lsu.edu).");
       return;
     }
     if (!trimmedName) {
-      addMessage("danger", "Please enter your full name.");
+      showToast("danger", "Please enter your full name.");
       return;
     }
     if (!trimmedLsuId) {
-      addMessage("danger", "Please enter your LSU ID.");
+      showToast("danger", "Please enter your LSU ID.");
       return;
     }
     if (signupPassword.length < 6) {
-      addMessage("danger", "Password must be at least 6 characters.");
+      showToast("danger", "Password must be at least 6 characters.");
       return;
     }
     if (signupPassword !== signupConfirm) {
-      addMessage("danger", "Passwords do not match.");
+      showToast("danger", "Passwords do not match.");
       return;
     }
 
     setSignupLoading(true);
     try {
-      // Check if a Firestore user doc already exists (e.g. pre-registered by instructor)
       const existingDoc = await getDoc(doc(db, "users", normalizedEmail));
       if (existingDoc.exists()) {
-        addMessage(
+        showToast(
           "danger",
           "An account with this email already exists. Please sign in."
         );
@@ -151,7 +191,6 @@ const LoginPage = () => {
         return;
       }
 
-      // Create Firebase Auth account
       const result = await createUserWithEmailAndPassword(
         auth,
         normalizedEmail,
@@ -159,7 +198,6 @@ const LoginPage = () => {
       );
       await updateProfile(result.user, { displayName: trimmedName });
 
-      // Write user doc to Firestore
       await setDoc(doc(db, "users", normalizedEmail), {
         name: trimmedName,
         email: normalizedEmail,
@@ -168,14 +206,13 @@ const LoginPage = () => {
         createdAt: serverTimestamp(),
       });
 
-      // Populate localStorage and navigate
       localStorage.setItem("role", "student");
       localStorage.setItem("userEmail", normalizedEmail);
       localStorage.setItem("userDisplayName", trimmedName);
       localStorage.setItem("LSUID", trimmedLsuId);
 
-      addMessage("success", `Welcome, ${trimmedName}!`);
-      navigate("/students-home");
+      showToast("success", `Welcome, ${trimmedName}!`);
+      setTimeout(() => navigate("/students-home"), 600);
     } catch (error) {
       console.error("Sign-up failed:", error);
       const msgs = {
@@ -185,7 +222,7 @@ const LoginPage = () => {
         "auth/weak-password":
           "Password is too weak. Use at least 6 characters.",
       };
-      addMessage(
+      showToast(
         "danger",
         msgs[error.code] || "Sign-up failed. Please try again."
       );
@@ -200,14 +237,11 @@ const LoginPage = () => {
     const trimmed = resetEmail.trim().toLowerCase();
 
     if (!trimmed) {
-      addMessage("danger", "Please enter your LSU email address.");
+      showToast("danger", "Please enter your LSU email address.");
       return;
     }
     if (!isLsuEmail(trimmed)) {
-      addMessage(
-        "danger",
-        "Please enter a valid LSU email address (@lsu.edu)."
-      );
+      showToast("danger", "Please enter a valid LSU email address (@lsu.edu).");
       return;
     }
 
@@ -223,20 +257,13 @@ const LoginPage = () => {
         "auth/too-many-requests":
           "Too many requests. Please wait before trying again.",
       };
-      addMessage(
+      showToast(
         "danger",
         msgs[error.code] || "Failed to send reset email. Please try again."
       );
     } finally {
       setResetLoading(false);
     }
-  };
-
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-  const switchTo = (target) => {
-    // Pre-fill reset email from login email when switching to forgot
-    if (target === "forgot") setResetEmail(email);
-    setView(target);
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -250,6 +277,33 @@ const LoginPage = () => {
       }}
     >
       <div className="lsu-login-card">
+        {/* ── Toast container ── */}
+        <div
+          className="lsu-toast-container"
+          aria-live="polite"
+          aria-atomic="false"
+        >
+          {toasts.map(({ id, type, msg }) => (
+            <div
+              key={id}
+              className={`lsu-toast lsu-toast--${type}`}
+              role="alert"
+            >
+              <span className="lsu-toast-icon" aria-hidden="true">
+                {toastIcon(type)}
+              </span>
+              <span className="lsu-toast-msg">{msg}</span>
+              <button
+                className="lsu-toast-close"
+                onClick={() => dismissToast(id)}
+                aria-label="Dismiss notification"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+
         {/* ── Header ── */}
         <div className="lsu-login-header">
           {(view === "login" || view === "signup") && (

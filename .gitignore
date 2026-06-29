@@ -21,6 +21,16 @@
 app.py
 Dockerfile
 
+ai-backend/*
+ai-backend/__pycache__/
+ai-backend/ai/__pycache__/
+ai-backend/routers/__pycache__/
+ai-backend/venv/
+ai-backend/venv/*
+ai-backend/test_*.pdf
+ai-backend/chroma_data/
+backend/app.py
+
 shapes_dump
 venv
 venv/*

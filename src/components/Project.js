@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import defaultTeamPreview from "../utils/teamA.png";
 import TeamCard from "./TeamCard";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
@@ -12,20 +11,33 @@ import {
 import "./Project.css";
 
 const Project = () => {
-  const { className, projectName, teamName } = useParams();
+  const { className, projectName } = useParams();
   const [projectDetails, setProjectDetails] = useState({});
   const [teams, setTeams] = useState([]);
   const [studentTeamAssigned, setStudentTeamAssigned] = useState(null);
   const [role] = useState(localStorage.getItem("role"));
   const [notifying, setNotifying] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const navigate = useNavigate();
 
+  // ─── Toast helpers ──────────────────────────────────────────────────────
+  const showToast = (type, msg) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, type, msg }]);
+    setTimeout(() => dismissToast(id), 4500);
+  };
+  const dismissToast = (id) =>
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const toastIcon = (type) =>
+    type === "success" ? "✓" : type === "danger" ? "✕" : "⚠";
+
+  // ─── Fetch project + teams ──────────────────────────────────────────────
   useEffect(() => {
     const fetchProjectDetails = async () => {
       try {
         const db = getFirestore();
 
-        // Fetch project details
         const projectRef = doc(
           db,
           "classrooms",
@@ -36,14 +48,13 @@ const Project = () => {
         const projectDoc = await getDoc(projectRef);
 
         if (projectDoc.exists()) {
-          const projectData = projectDoc.data();
-          if (projectData.dueDate) {
-            const due = projectData.dueDate.toDate
-              ? projectData.dueDate.toDate()
-              : new Date(projectData.dueDate);
+          const data = projectDoc.data();
+          if (data.dueDate) {
+            const due = data.dueDate.toDate
+              ? data.dueDate.toDate()
+              : new Date(data.dueDate);
             setProjectDetails({
-              description:
-                projectData.description || "No description provided.",
+              description: data.description || "No description provided.",
               dueDate: due.toLocaleDateString(),
               dueTime: due.toLocaleTimeString([], {
                 hour: "2-digit",
@@ -52,15 +63,13 @@ const Project = () => {
             });
           } else {
             setProjectDetails({
-              description:
-                projectData.description || "No description provided.",
+              description: data.description || "No description provided.",
               dueDate: "No due date set.",
               dueTime: "",
             });
           }
         }
 
-        // Fetch teams
         const teamsRef = collection(
           db,
           "classrooms",
@@ -71,13 +80,10 @@ const Project = () => {
         );
         const teamsSnapshot = await getDocs(teamsRef);
 
-        const teamsData = [];
-        teamsSnapshot.forEach((teamDoc) => {
-          teamsData.push({
-            name: teamDoc.id,
-            members: Object.keys(teamDoc.data()),
-          });
-        });
+        const teamsData = teamsSnapshot.docs.map((d) => ({
+          name: d.id,
+          members: Object.keys(d.data()),
+        }));
 
         teamsData.sort((a, b) =>
           a.name.localeCompare(b.name, undefined, {
@@ -87,18 +93,18 @@ const Project = () => {
         );
         setTeams(teamsData);
 
-        // Check student's assigned team
         if (role === "student") {
           const studentEmail = localStorage.getItem("userEmail");
           if (studentEmail) {
-            const assignedTeam = teamsData.find((team) =>
-              team.members.includes(studentEmail)
+            const assignedTeam = teamsData.find((t) =>
+              t.members.includes(studentEmail)
             );
             setStudentTeamAssigned(assignedTeam ? assignedTeam.name : null);
           }
         }
       } catch (error) {
         console.error("Error fetching project details or teams:", error);
+        showToast("danger", "Couldn't load project details. Please refresh.");
       }
     };
 
@@ -109,31 +115,28 @@ const Project = () => {
     navigate(`/whiteboard/${className}/${projectName}/${teamName}`);
   };
 
+  // ─── Notify students ────────────────────────────────────────────────────
   const handleNotifyStudents = async () => {
-    const yes = window.confirm(
-      "Notify all students now? They'll receive an email to log in and set their passwords."
-    );
-    if (!yes) return;
-
+    setConfirmOpen(false);
     setNotifying(true);
     try {
-      const payload = {
-        role: localStorage.getItem("role") || "",
-        userEmail: localStorage.getItem("userEmail") || "",
-      };
       const res = await fetch(
         `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/notify_students`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            role: localStorage.getItem("role") || "",
+            userEmail: localStorage.getItem("userEmail") || "",
+          }),
           credentials: "include",
         }
       );
 
       if (!res.ok) {
         const errText = await res.text();
-        console.error("Request failed:", res.status, errText);
+        console.error("Notify failed:", res.status, errText);
+        showToast("danger", "Failed to send notifications. Please try again.");
         return;
       }
 
@@ -141,19 +144,64 @@ const Project = () => {
       const data = contentType.includes("application/json")
         ? await res.json()
         : await res.text();
-
       const sent = (data.results || []).filter((r) => r.sent).length;
       const total = (data.results || []).length;
-      alert(`Emails sent: ${sent}/${total}`);
+      showToast("success", `Emails sent to ${sent} of ${total} students.`);
     } catch (err) {
-      alert(`Notify failed: ${err.message}`);
+      showToast("danger", `Notify failed: ${err.message}`);
     } finally {
       setNotifying(false);
     }
   };
 
+  // ─── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="classroom-page">
+      {/* ── Toasts ── */}
+      <div className="lsu-toast-container" aria-live="polite">
+        {toasts.map(({ id, type, msg }) => (
+          <div key={id} className={`lsu-toast lsu-toast--${type}`} role="alert">
+            <span className="lsu-toast-icon" aria-hidden="true">
+              {toastIcon(type)}
+            </span>
+            <span className="lsu-toast-msg">{msg}</span>
+            <button
+              className="lsu-toast-close"
+              onClick={() => dismissToast(id)}
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Confirm modal ── */}
+      {confirmOpen && (
+        <div
+          className="proj-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-title"
+        >
+          <div className="proj-confirm">
+            <h3 id="confirm-title">Notify all students?</h3>
+            <p>They'll receive an email to log in and set their passwords.</p>
+            <div className="proj-confirm-actions">
+              <button className="btn action-btn" onClick={handleNotifyStudents}>
+                Send emails
+              </button>
+              <button
+                className="btn back-btn"
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Title ── */}
       <h1 className="project-title">{projectName}</h1>
 
@@ -164,7 +212,7 @@ const Project = () => {
           <p>{projectDetails.description}</p>
         </div>
         <div className="info-item">
-          <strong>Due Date</strong>
+          <strong>Due date</strong>
           <p>
             {projectDetails.dueDate}
             {projectDetails.dueTime && ` at ${projectDetails.dueTime}`}
@@ -183,7 +231,7 @@ const Project = () => {
               })
             }
           >
-            <i className="bi bi-pencil-fill me-2" /> Edit Project
+            <i className="bi bi-pencil-fill" /> Edit project
           </button>
           <button
             className="btn action-btn"
@@ -193,15 +241,15 @@ const Project = () => {
               )
             }
           >
-            <i className="bi bi-people me-2" /> Manage Teams
+            <i className="bi bi-people" /> Manage teams
           </button>
           <button
             className="btn action-btn"
-            onClick={handleNotifyStudents}
+            onClick={() => setConfirmOpen(true)}
             disabled={notifying}
           >
-            <i className="bi bi-envelope me-2" />
-            {notifying ? "Notifying…" : "Notify Students"}
+            <i className="bi bi-envelope" />
+            {notifying ? "Notifying…" : "Notify students"}
           </button>
         </div>
       )}
@@ -225,7 +273,7 @@ const Project = () => {
                 />
               ) : (
                 <p className="text-muted">
-                  You are not assigned to any team yet.
+                  You haven't been assigned to a team yet.
                 </p>
               )
             ) : (
@@ -244,13 +292,13 @@ const Project = () => {
             )}
           </div>
         ) : (
-          <p className="text-muted">No teams available.</p>
+          <p className="text-muted">No teams yet.</p>
         )}
       </section>
 
       {/* ── Back button ── */}
       <Link to={`/classroom/${className}`} className="btn back-btn mt-3">
-        <i className="bi bi-arrow-left me-2" /> Back to Classroom
+        <i className="bi bi-arrow-left" /> Back to classroom
       </Link>
     </div>
   );

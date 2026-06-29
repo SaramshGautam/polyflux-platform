@@ -1,0 +1,629 @@
+/* ─── Page ───────────────────────────────────────────────────────────────── */
+.ep-page {
+  min-height: 100vh;
+  background: #f8f7f4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1rem 4rem;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+.ep-card {
+  background: #ffffff;
+  border: 1px solid #e8e4dd;
+  border-radius: 14px;
+  padding: 2.25rem 2rem 2rem;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.ep-header {
+  margin-bottom: 1.75rem;
+}
+
+.ep-back-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #78716c;
+  margin-bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+  font-family: inherit;
+}
+.ep-back-btn:hover {
+  color: #4a1d8f;
+}
+
+.ep-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1c1917;
+  letter-spacing: -0.3px;
+  margin: 0 0 0.35rem;
+}
+
+.ep-subtitle {
+  font-size: 0.85rem;
+  color: #78716c;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ─── Error banner ───────────────────────────────────────────────────────── */
+.ep-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 0.7rem 0.9rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #7f1d1d;
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-bottom: 1.5rem;
+  animation: ep-fade-in 0.2s ease;
+}
+.ep-error span:first-child {
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 13px;
+}
+.ep-error span:nth-child(2) {
+  flex: 1;
+}
+.ep-error-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7f1d1d;
+  opacity: 0.55;
+  font-size: 13px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.ep-error-close:hover {
+  opacity: 1;
+}
+
+@keyframes ep-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Section divider + label ────────────────────────────────────────────── */
+.ep-section-divider {
+  border: none;
+  border-top: 1px solid #e8e4dd;
+  margin: 1.5rem 0 1.25rem;
+}
+
+.ep-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #78716c;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ep-section-hint {
+  font-size: 12.5px;
+  color: #a09890;
+  line-height: 1.55;
+  margin: 0 0 1rem;
+}
+
+/* ─── Form layout ────────────────────────────────────────────────────────── */
+.ep-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ep-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.1rem;
+}
+
+.ep-field > label:first-child {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ep-required {
+  color: #e24b4a;
+  font-size: 13px;
+}
+.ep-optional {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #a09890;
+}
+
+.ep-field input,
+.ep-field select,
+.ep-field textarea {
+  padding: 0.6rem 0.8rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1c1917;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  resize: vertical;
+}
+
+.ep-field input:focus,
+.ep-field select:focus,
+.ep-field textarea:focus {
+  border-color: #4a1d8f;
+  box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
+}
+
+.ep-field input::placeholder,
+.ep-field textarea::placeholder {
+  color: #9ca3af;
+}
+
+.ep-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+/* ─── File upload ────────────────────────────────────────────────────────── */
+.ep-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ep-file-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.65rem 0.9rem;
+  border: 1.5px dashed #c9c4bc;
+  border-radius: 8px;
+  background: #faf9f7;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 44px;
+}
+.ep-file-label:hover {
+  border-color: #4a1d8f;
+  background: #f5f0ff;
+}
+
+.ep-file-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: #4a1d8f;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ep-file-label--pdf:hover {
+  border-color: #9d174d;
+  background: #fdf2f8;
+}
+.ep-file-icon--pdf {
+  background: #fce7f3;
+  color: #9d174d;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  border-radius: 5px;
+}
+
+.ep-file-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1c1917;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ep-file-hint {
+  font-size: 11.5px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* ─── PDF pill ───────────────────────────────────────────────────────────── */
+.ep-pdf-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.55rem 0.8rem;
+  background: #faf9f7;
+  border: 1px solid #e8e4dd;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  animation: ep-fade-in 0.18s ease;
+}
+
+.ep-pdf-pill-icon {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: #fce7f3;
+  color: #9d174d;
+  border-radius: 5px;
+  padding: 3px 5px;
+  flex-shrink: 0;
+}
+.ep-pdf-pill-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1c1917;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.ep-pdf-pill-size {
+  font-size: 11.5px;
+  color: #a09890;
+  flex-shrink: 0;
+}
+.ep-pdf-pill-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #a09890;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+.ep-pdf-pill-remove:hover {
+  color: #7f1d1d;
+  background: #fef2f2;
+}
+
+.ep-notes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.ep-note-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0.6rem 0.85rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  color: #78350f;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 0.85rem;
+  animation: ep-fade-in 0.18s ease;
+}
+
+/* ─── Actions ────────────────────────────────────────────────────────────── */
+.ep-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.ep-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.65rem 1.5rem;
+  background: #4a1d8f;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 42px;
+  min-width: 140px;
+  transition: background 0.15s, opacity 0.15s;
+  font-family: inherit;
+}
+.ep-btn-primary:hover:not(:disabled) {
+  background: #3b1772;
+}
+.ep-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.ep-btn-ghost {
+  padding: 0.65rem 1rem;
+  background: none;
+  border: 1.5px solid #e8e4dd;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  min-height: 42px;
+  transition: border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.ep-btn-ghost:hover:not(:disabled) {
+  border-color: #c9c4bc;
+  color: #374151;
+}
+.ep-btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Delete — outlined red, pushed to the right */
+.ep-btn-danger-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.65rem 1rem;
+  background: none;
+  border: 1.5px solid #fecaca;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #b91c1c;
+  cursor: pointer;
+  min-height: 42px;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+  margin-left: auto;
+}
+.ep-btn-danger-outline:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+.ep-btn-danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Solid red — used inside the confirm modal only */
+.ep-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 42px;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.ep-btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* ─── Spinner ────────────────────────────────────────────────────────────── */
+.ep-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ep-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.ep-spinner--danger {
+  border-color: rgba(185, 28, 28, 0.25);
+  border-top-color: #b91c1c;
+}
+@keyframes ep-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Delete confirm overlay ─────────────────────────────────────────────── */
+.ep-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 1rem;
+}
+
+.ep-confirm {
+  background: #ffffff;
+  border: 1px solid #e8e4dd;
+  border-radius: 14px;
+  padding: 1.75rem 1.75rem 1.5rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+.ep-confirm-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+.ep-confirm h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1917;
+  margin: 0 0 0.6rem;
+}
+
+.ep-confirm p {
+  font-size: 0.875rem;
+  color: #78716c;
+  margin: 0 0 1.25rem;
+  line-height: 1.55;
+}
+
+.ep-confirm p strong {
+  color: #1c1917;
+}
+
+.ep-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .ep-page {
+    padding: 1.5rem 0.75rem 3rem;
+  }
+  .ep-card {
+    padding: 1.5rem 1.25rem 1.5rem;
+    border-radius: 12px;
+  }
+  .ep-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .ep-actions {
+    flex-direction: column;
+  }
+  .ep-btn-primary,
+  .ep-btn-ghost,
+  .ep-btn-danger-outline {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .ep-confirm-actions {
+    flex-direction: column;
+  }
+  .ep-btn-danger,
+  .ep-confirm .ep-btn-ghost {
+    width: 100%;
+  }
+}
+
+/* ─── Loading row ─────────────────────────────────────────────────────────── */
+.ep-loading-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #a09890;
+  padding: 0.6rem 0;
+  margin-bottom: 0.75rem;
+}
+
+.ep-loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e8e4dd;
+  border-top-color: #4a1d8f;
+  border-radius: 50%;
+  animation: ep-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ─── Saved PDF pill variant ─────────────────────────────────────────────── */
+.ep-pdf-pill--saved {
+  border-color: #c4b5e8;
+  background: #f5f0ff;
+}
+
+.ep-pdf-pill-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ep-pdf-pill-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4a1d8f;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ep-pdf-pill-link:hover {
+  text-decoration: underline;
+}
+
+.ep-pdf-pill-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: #ede9fe;
+  color: #4a1d8f;
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+/* ─── Empty hint ─────────────────────────────────────────────────────────── */
+.ep-empty-hint {
+  font-size: 13px;
+  color: #a09890;
+  margin: 0 0 0.75rem;
+  font-style: italic;
+}

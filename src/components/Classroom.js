@@ -170,7 +170,7 @@ const Classroom = () => {
           navigate(role === "teacher" ? "/teachers-home" : "/students-home")
         }
       >
-        <i className="bi bi-arrow-left"></i> Back to Dashboard
+        <i className="bi bi-arrow-left"></i> ← Back to Dashboard
       </button>
     </div>
   );
