@@ -44,6 +44,9 @@ import CustomActionsMenu from "./CustomActionsMenu";
 import { createToggleRecorder } from "../utils/audioRecorder";
 import { useCanvasActionHistory } from "./useCanvasActionHistory";
 
+import AIChatPanel from "./AIChatPanel";
+import SocraticChecker from "./SocraticChecker";
+
 const CUSTOM_TOOLS = [MicrophoneTool];
 const SHAPE_UTILS = [...defaultShapeUtils, AudioShapeUtil];
 const BINDING_UTILS = [...defaultBindingUtils];
@@ -681,6 +684,21 @@ const CollaborativeWhiteboard = () => {
   return (
     <>
       <Navbar />
+      {/* AI Chat Panel */}
+      <AIChatPanel
+        courseId={`${className}-${projectName}`}
+        isCollapsed={isPanelCollapsed}
+        onToggle={togglePanelStable}
+      />
+
+      {/* Socratic Checker — only runs when editor is ready */}
+      {editorReady && (
+        <SocraticChecker
+          editor={editorInstance.current}
+          assignmentId={`${className}-${projectName}`}
+        />
+      )}
+
       <div className="main-container" style={{ position: "fixed", inset: 0 }}>
         <Tldraw
           onMount={(editor) => {

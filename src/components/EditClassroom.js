@@ -8,6 +8,16 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
+import "./EditClassroom.css";
+
+const SEMESTERS = [
+  "Spring 2025",
+  "Summer 2025",
+  "Fall 2025",
+  "Spring 2026",
+  "Summer 2026",
+  "Fall 2026",
+];
 
 const EditClassroom = () => {
   const { className } = useParams();
@@ -19,64 +29,71 @@ const EditClassroom = () => {
     courseId: "",
     semester: "",
   });
-
   const [studentFile, setStudentFile] = useState(null);
+  const [fileName, setFileName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
+  // ── Fetch classroom data ──────────────────────────────────────────────────
   useEffect(() => {
-    const fetchClassroomDetails = async () => {
+    const fetch_ = async () => {
       try {
-        const docRef = doc(db, "classrooms", className);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
+        const snap = await getDoc(doc(db, "classrooms", className));
+        if (snap.exists()) {
+          const d = snap.data();
           setClassroomData({
-            className: docSnap.data().class_name,
-            courseId: docSnap.data().courseID,
-            semester: docSnap.data().semester,
+            className: d.class_name || "",
+            courseId: d.courseID || "",
+            semester: d.semester || "",
           });
         } else {
           setError("Classroom not found.");
         }
-      } catch (err) {
+      } catch {
         setError("Failed to fetch classroom details.");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchClassroomDetails();
+    fetch_();
   }, [className, db]);
 
+  // ── File change ───────────────────────────────────────────────────────────
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const fileExtension = file.name
-        .slice(file.name.lastIndexOf("."))
-        .toLowerCase();
-      if (![".csv", ".xls", ".xlsx"].includes(fileExtension)) {
-        setError("Invalid file format. Please upload a CSV or Excel file.");
-        setStudentFile(null);
-      } else {
-        setError("");
-        setStudentFile(file);
-      }
+    if (!file) return;
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    if (![".csv", ".xls", ".xlsx"].includes(ext)) {
+      setError("Invalid file format. Please upload a CSV or Excel file.");
+      setStudentFile(null);
+      setFileName("");
+      return;
     }
+    setError("");
+    setStudentFile(file);
+    setFileName(file.name);
   };
 
+  // ── Update ────────────────────────────────────────────────────────────────
   const handleUpdate = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (
       !classroomData.className ||
       !classroomData.courseId ||
       !classroomData.semester
     ) {
-      setError("Please provide all required details.");
+      setError("Please fill in all required fields.");
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      const docRef = doc(db, "classrooms", className);
-      await updateDoc(docRef, {
+      await updateDoc(doc(db, "classrooms", className), {
         class_name: classroomData.className,
         courseID: classroomData.courseId,
         semester: classroomData.semester,
@@ -85,11 +102,6 @@ const EditClassroom = () => {
       if (studentFile) {
         const formData = new FormData();
         formData.append("student_file", studentFile);
-
-        // await axios.post(
-        //   `http://localhost:5000/update-students/${className}`,
-        //   formData,
-        //   {
         await axios.post(
           `https://flask-app-l7rilyhu2a-uc.a.run.app/update-students/${className}`,
           formData,
@@ -100,144 +112,240 @@ const EditClassroom = () => {
         );
       }
 
-      setIsSubmitting(false);
+      localStorage.setItem("flashMessage", "Classroom updated successfully.");
+      localStorage.setItem("flashMessageType", "success");
       navigate(`/classroom/${className}`);
-    } catch (error) {
+    } catch {
       setError("Failed to update classroom. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this classroom? This action cannot be undone."
-    );
-    if (!confirmDelete) return;
-
+    setDeleteOpen(false);
+    setIsDeleting(true);
     try {
       await deleteDoc(doc(db, "classrooms", className));
+      localStorage.setItem("flashMessage", "Classroom deleted.");
+      localStorage.setItem("flashMessageType", "success");
       navigate("/teachers-home");
-    } catch (error) {
+    } catch {
       setError("Failed to delete classroom. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
+  const set = (key) => (e) =>
+    setClassroomData((p) => ({ ...p, [key]: e.target.value }));
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="container mt-4 d-flex justify-content-center">
-      <div className="form-container">
-        <h1 className="form-title">Edit Classroom</h1>
+    <div className="ec-page">
+      {/* ── Delete confirm modal ── */}
+      {deleteOpen && (
+        <div
+          className="ec-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ec-del-title"
+        >
+          <div className="ec-confirm">
+            <div className="ec-confirm-icon" aria-hidden="true">
+              ⚠
+            </div>
+            <h3 id="ec-del-title">Delete this classroom?</h3>
+            <p>
+              <strong>{classroomData.className}</strong> and all its projects,
+              teams, and student data will be permanently removed. This cannot
+              be undone.
+            </p>
+            <div className="ec-confirm-actions">
+              <button className="ec-btn-danger" onClick={handleDelete}>
+                Yes, delete classroom
+              </button>
+              <button
+                className="ec-btn-ghost"
+                onClick={() => setDeleteOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-        {error && <div className="alert alert-danger">{error}</div>}
+      <div className="ec-card">
+        {/* ── Header ── */}
+        <div className="ec-header">
+          <button
+            className="ec-back-btn"
+            type="button"
+            onClick={() => navigate("/teachers-home")}
+          >
+            ← Back to dashboard
+          </button>
+          <h1 className="ec-title">Edit classroom</h1>
+          <p className="ec-subtitle">
+            {loading
+              ? "Loading…"
+              : `${classroomData.courseId} · ${classroomData.semester}`}
+          </p>
+        </div>
 
-        <form onSubmit={handleUpdate} encType="multipart/form-data">
-          <div className="row">
-            <div className="col-md-6 form-group">
-              <label htmlFor="class_name" className="form-label">
-                Class Name
+        {/* ── Inline error ── */}
+        {error && (
+          <div className="ec-error" role="alert">
+            <span aria-hidden="true">✕</span>
+            <span>{error}</span>
+            <button
+              className="ec-error-close"
+              onClick={() => setError("")}
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* ── Form ── */}
+        <form onSubmit={handleUpdate} encType="multipart/form-data" noValidate>
+          <div className="ec-section-label">Classroom details</div>
+
+          <div className="ec-row">
+            <div className="ec-field">
+              <label htmlFor="ec-classname">
+                Class name{" "}
+                <span className="ec-required" aria-hidden="true">
+                  *
+                </span>
               </label>
               <input
+                id="ec-classname"
                 type="text"
-                id="class_name"
-                className="form-control"
+                placeholder="e.g. Intro to Fluid Mechanics"
                 value={classroomData.className}
-                onChange={(e) =>
-                  setClassroomData({
-                    ...classroomData,
-                    className: e.target.value,
-                  })
-                }
+                onChange={set("className")}
                 required
+                autoFocus
+                disabled={loading}
               />
             </div>
 
-            <div className="col-md-6 form-group">
-              <label htmlFor="course_id" className="form-label">
-                Course ID
+            <div className="ec-field">
+              <label htmlFor="ec-courseid">
+                Course ID{" "}
+                <span className="ec-required" aria-hidden="true">
+                  *
+                </span>
               </label>
               <input
+                id="ec-courseid"
                 type="text"
-                id="course_id"
-                className="form-control"
+                placeholder="e.g. ME 3333"
                 value={classroomData.courseId}
-                onChange={(e) =>
-                  setClassroomData({
-                    ...classroomData,
-                    courseId: e.target.value,
-                  })
-                }
+                onChange={set("courseId")}
                 required
+                disabled={loading}
               />
             </div>
           </div>
 
-          <div className="row">
-            <div className="col-md-6 form-group">
-              <label htmlFor="semester" className="form-label">
-                Semester
+          <div className="ec-row">
+            <div className="ec-field">
+              <label htmlFor="ec-semester">
+                Semester{" "}
+                <span className="ec-required" aria-hidden="true">
+                  *
+                </span>
               </label>
               <select
-                id="semester"
-                className="form-control"
+                id="ec-semester"
                 value={classroomData.semester}
-                onChange={(e) =>
-                  setClassroomData({
-                    ...classroomData,
-                    semester: e.target.value,
-                  })
-                }
+                onChange={set("semester")}
                 required
+                disabled={loading}
               >
-                <option value="">Select Semester</option>
-                <option value="Spring 2025">Spring 2025</option>
-                <option value="Summer 2025">Summer 2025</option>
-                <option value="Fall 2025">Fall 2025</option>
+                <option value="">Select a semester</option>
+                {SEMESTERS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <div className="col-md-6 form-group">
-              <label htmlFor="student_file" className="form-label">
-                Update Student File (CSV or Excel)
+            <div className="ec-field">
+              <label>
+                Student roster{" "}
+                <span className="ec-optional">
+                  optional · replaces existing
+                </span>
+              </label>
+              <label htmlFor="ec-file" className="ec-file-label">
+                <span className="ec-file-icon" aria-hidden="true">
+                  ↑
+                </span>
+                <span className="ec-file-text">
+                  {fileName || "Upload updated roster"}
+                </span>
+                <span className="ec-file-hint">
+                  {fileName ? "Click to change" : ".csv .xls .xlsx"}
+                </span>
               </label>
               <input
+                id="ec-file"
                 type="file"
-                id="student_file"
-                className="form-control"
-                accept=".csv, .xls, .xlsx"
+                accept=".csv,.xls,.xlsx"
                 onChange={handleFileChange}
+                className="ec-file-input"
+                disabled={loading}
               />
             </div>
           </div>
 
-          <div className="d-flex justify-content-start gap-3 mt-3">
+          {/* ── Actions ── */}
+          <div className="ec-actions">
             <button
               type="submit"
-              className="btn action-btn"
-              disabled={isSubmitting}
+              className="ec-btn-primary"
+              disabled={isSubmitting || isDeleting || loading}
             >
               {isSubmitting ? (
                 <>
-                  <span className="spinner-border spinner-border-sm"></span>{" "}
-                  Uploading...
+                  <span className="ec-spinner" aria-hidden="true" /> Saving…
                 </>
               ) : (
-                <>
-                  <i className="bi bi-upload"></i> Update
-                </>
+                "Save changes"
               )}
             </button>
             <button
               type="button"
-              className="btn back-btn"
+              className="ec-btn-ghost"
               onClick={() => navigate("/teachers-home")}
+              disabled={isSubmitting || isDeleting}
             >
-              <i className="bi bi-arrow-left"></i> Back to Home
+              Cancel
             </button>
             <button
               type="button"
-              className="btn delete-btn"
-              onClick={handleDelete}
+              className="ec-btn-danger-outline"
+              onClick={() => setDeleteOpen(true)}
+              disabled={isSubmitting || isDeleting || loading}
             >
-              Delete Classroom
+              {isDeleting ? (
+                <>
+                  <span
+                    className="ec-spinner ec-spinner--danger"
+                    aria-hidden="true"
+                  />{" "}
+                  Deleting…
+                </>
+              ) : (
+                "🗑 Delete classroom"
+              )}
             </button>
           </div>
         </form>

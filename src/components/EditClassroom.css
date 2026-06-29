@@ -1,0 +1,452 @@
+/* ─── Page ───────────────────────────────────────────────────────────────── */
+.ec-page {
+  min-height: 100vh;
+  background: #f8f7f4;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5rem 1rem 4rem;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+.ec-card {
+  background: #ffffff;
+  border: 1px solid #e8e4dd;
+  border-radius: 14px;
+  padding: 2.25rem 2rem 2rem;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.ec-header {
+  margin-bottom: 1.75rem;
+}
+
+.ec-back-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #78716c;
+  margin-bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+  font-family: inherit;
+}
+.ec-back-btn:hover {
+  color: #4a1d8f;
+}
+
+.ec-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1c1917;
+  letter-spacing: -0.3px;
+  margin: 0 0 0.35rem;
+}
+
+.ec-subtitle {
+  font-size: 0.85rem;
+  color: #78716c;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ─── Error banner ───────────────────────────────────────────────────────── */
+.ec-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 0.7rem 0.9rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #7f1d1d;
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-bottom: 1.5rem;
+  animation: ec-fade-in 0.2s ease;
+}
+.ec-error span:first-child {
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ec-error span:nth-child(2) {
+  flex: 1;
+}
+.ec-error-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7f1d1d;
+  opacity: 0.55;
+  font-size: 13px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.ec-error-close:hover {
+  opacity: 1;
+}
+
+@keyframes ec-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Section label ──────────────────────────────────────────────────────── */
+.ec-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #78716c;
+  margin-bottom: 1rem;
+}
+
+/* ─── Form layout ────────────────────────────────────────────────────────── */
+.ec-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.ec-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.1rem;
+}
+
+.ec-field > label:first-child {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ec-required {
+  color: #e24b4a;
+  font-size: 13px;
+}
+.ec-optional {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: #a09890;
+}
+
+.ec-field input,
+.ec-field select {
+  padding: 0.6rem 0.8rem;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1c1917;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.ec-field input:focus,
+.ec-field select:focus {
+  border-color: #4a1d8f;
+  box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
+}
+.ec-field input:disabled,
+.ec-field select:disabled {
+  background: #f8f7f4;
+  color: #a09890;
+  cursor: not-allowed;
+}
+.ec-field input::placeholder {
+  color: #9ca3af;
+}
+
+.ec-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
+  cursor: pointer;
+}
+
+/* ─── File upload ────────────────────────────────────────────────────────── */
+.ec-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ec-file-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.65rem 0.9rem;
+  border: 1.5px dashed #c9c4bc;
+  border-radius: 8px;
+  background: #faf9f7;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 44px;
+}
+.ec-file-label:hover {
+  border-color: #4a1d8f;
+  background: #f5f0ff;
+}
+
+.ec-file-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: #4a1d8f;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ec-file-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1c1917;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ec-file-hint {
+  font-size: 11.5px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* ─── Actions ────────────────────────────────────────────────────────────── */
+.ec-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 1.75rem;
+  flex-wrap: wrap;
+}
+
+.ec-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.65rem 1.5rem;
+  background: #4a1d8f;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 42px;
+  min-width: 140px;
+  transition: background 0.15s, opacity 0.15s;
+  font-family: inherit;
+}
+.ec-btn-primary:hover:not(:disabled) {
+  background: #3b1772;
+}
+.ec-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.ec-btn-ghost {
+  padding: 0.65rem 1rem;
+  background: none;
+  border: 1.5px solid #e8e4dd;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  min-height: 42px;
+  transition: border-color 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.ec-btn-ghost:hover:not(:disabled) {
+  border-color: #c9c4bc;
+  color: #374151;
+}
+.ec-btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ec-btn-danger-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.65rem 1rem;
+  background: none;
+  border: 1.5px solid #fecaca;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #b91c1c;
+  cursor: pointer;
+  min-height: 42px;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+  margin-left: auto;
+}
+.ec-btn-danger-outline:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+.ec-btn-danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ec-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 42px;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.ec-btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* ─── Spinner ────────────────────────────────────────────────────────────── */
+.ec-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ec-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.ec-spinner--danger {
+  border-color: rgba(185, 28, 28, 0.25);
+  border-top-color: #b91c1c;
+}
+@keyframes ec-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Delete confirm overlay ─────────────────────────────────────────────── */
+.ec-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 1rem;
+}
+
+.ec-confirm {
+  background: #ffffff;
+  border: 1px solid #e8e4dd;
+  border-radius: 14px;
+  padding: 1.75rem 1.75rem 1.5rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+.ec-confirm-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+.ec-confirm h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1917;
+  margin: 0 0 0.6rem;
+}
+.ec-confirm p {
+  font-size: 0.875rem;
+  color: #78716c;
+  margin: 0 0 1.25rem;
+  line-height: 1.55;
+}
+.ec-confirm p strong {
+  color: #1c1917;
+}
+.ec-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .ec-page {
+    padding: 1.5rem 0.75rem 3rem;
+  }
+  .ec-card {
+    padding: 1.5rem 1.25rem 1.5rem;
+    border-radius: 12px;
+  }
+  .ec-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .ec-actions {
+    flex-direction: column;
+  }
+  .ec-btn-primary,
+  .ec-btn-ghost,
+  .ec-btn-danger-outline {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .ec-confirm-actions {
+    flex-direction: column;
+  }
+  .ec-btn-danger,
+  .ec-confirm .ec-btn-ghost {
+    width: 100%;
+  }
+}

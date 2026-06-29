@@ -1,169 +1,341 @@
-/* Navbar layout */
+/* ─── Navbar shell ───────────────────────────────────────────────────────── */
 .navbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background-color: rgb(52, 58, 64);
-  color: white;
-  z-index: 1000;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #1e1e2e;
+  height: 60px;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 60px; /* Adjust navbar height */
+  z-index: 900; /* below ai-sidebar (1000) and ai-toggle (1100) */
+  gap: 12px;
+  font-family: "Inter", system-ui, sans-serif;
 }
-/* Add this to your main content or container class to avoid overlap */
+
 body {
   padding-top: 60px;
 }
 
-/* .content-wrapper {
-  padding-top: 60px; 
-} */
-
-.navbar-left {
+/* ─── Left side ──────────────────────────────────────────────────────────── */
+.nb-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 0; 
-}
-.divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(255, 255, 255, 0.45);
-  margin: 0 8px;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
-.navbar-breadcrumbs {
+.nb-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.nb-brand {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.nb-brand:hover {
+  color: #c4b5e8;
+}
+
+.nb-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.nb-link {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-size: 13.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.nb-link:hover {
+  color: #fff;
+}
+
+/* ─── Page title ─────────────────────────────────────────────────────────── */
+.nb-page-info {
   display: flex;
-  align-items: center;      
+  flex-direction: column;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.nb-page-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.nb-page-sub {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* ─── Breadcrumbs ────────────────────────────────────────────────────────── */
+.nb-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 2px;
   min-width: 0;
   overflow: hidden;
+}
+
+.nb-crumb {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nb-crumb-sep {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  padding: 0 3px;
+  flex-shrink: 0;
+}
+
+.nb-crumb-link {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 140px;
+  transition: color 0.15s;
 }
-
-.breadcrumbs .crumb a,
-.breadcrumbs .crumb span {
-  color: #fff !important;
-  text-decoration: none;
-  font-size: 16px;
-  line-height: 1;          
-  display: inline-block;
-  vertical-align: middle;
-}
-
-.breadcrumbs .crumb a:hover {
-  color: #f1f1f1;
+.nb-crumb-link:hover {
+  color: #fff;
   text-decoration: underline;
 }
 
-.breadcrumbs .crumb-sep {
-  margin: 0 8px;
-  color: #f1f1f1;
-  opacity: 0.8;
-  vertical-align: middle;
+.nb-crumb-current {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  display: inline-block;
 }
 
-.navbar-right {
-  margin-left: auto;
-}
-
-.navbar-title {
-  font-size: 24px;
-  font-weight: bold;
-  margin-right: 20px;
-  cursor: pointer;
-}
-
-.navbar-links {
-  display: flex;
-  gap: 20px;
-}
-
-.navbar-links a {
-  color: white;
-  text-decoration: none;
-  font-size: 16px;
-  transition: color 0.3s ease;
-}
-
-.navbar-links a:hover {
-  color: #f1f1f1; /* Light hover color */
-}
-
-.navbar-right {
+/* ─── Right side ─────────────────────────────────────────────────────────── */
+.nb-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-/* Dropdown toggle */
-.nav-item.dropdown .nav-link.dropdown-toggle {
-  cursor: pointer;
+/* This spacer reserves room for the AI toggle button (fixed, ~180px wide).
+   Without it the avatar slides under the AI pill when the panel is closed. */
+.nb-ai-spacer {
+  width: 172px; /* approximate width of "Study Assistant" pill */
+  flex-shrink: 0;
+}
+
+/* ─── Profile avatar row ─────────────────────────────────────────────────── */
+.nb-avatar-row {
   display: flex;
   align-items: center;
-}
-
-/* Profile icon */
-.bi-person {
-  font-size: 24px;
-  color: white;
-}
-
-/* Profile dropdown menu (Bootstrap style) */
-.dropdown-menu {
-  display: none;
-  position: absolute;
-  top: 60px;
-  right: 20px;
-  background-color: #000000; /* Ash background for dropdown */
-  border-radius: 5px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-  z-index: 1001;
-}
-
-.dropdown-menu .dropdown-item {
-  color: white;
-  font-size: 1rem;
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-}
-
-.dropdown-menu .dropdown-item i {
-  font-size: 18px;
-}
-
-.dropdown-menu .dropdown-item:hover {
-  background-color: #030303; /* Slightly lighter ash color */
-}
-
-/* Show the dropdown when active */
-.dropdown-menu.show {
-  display: block;
-}
-
-/* Improved logout button styled like the 'Add Classroom' button */
-.dropdown-menu .dropdown-item {
-  font-weight: 600;
-  background-color: transparent;
+  gap: 8px;
+  background: none;
   border: none;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  padding: 0;
+  font-family: inherit;
+}
+.nb-avatar-row:hover .nb-avatar {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: #fff;
 }
 
-.dropdown-menu {
-  background-color: rgb(52, 58, 64, 255); /* Slate Blue */
+.nb-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 0;
 }
 
-.dropdown-menu .dropdown-item:hover {
-  background-color: rgb(52, 58, 64, 255); /* Darker Slate Blue */
+.nb-user-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
 }
 
-/* Use the btn-dark for the logout button */
-.dropdown-menu .btn-sm {
-  font-size: 0.875rem; /* Smaller size */
-  padding: 5px 10px; /* Adjust the padding to make it smaller */
-  width: auto; /* Ensure the button doesn't stretch */
+.nb-user-email {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+/* ─── Profile avatar ─────────────────────────────────────────────────────── */
+.nb-profile-wrap {
+  position: relative;
+}
+
+.nb-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: inherit;
+  flex-shrink: 0;
+  user-select: none;
+}
+.nb-avatar:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: #fff;
+}
+
+/* ─── Dropdown ───────────────────────────────────────────────────────────── */
+.nb-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: #2a2a3e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  list-style: none;
+  padding: 6px 0;
+  margin: 0;
+  z-index: 1200; /* above everything including AI sidebar */
+  animation: nb-drop-in 0.15s ease;
+}
+
+@keyframes nb-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nb-dropdown-name {
+  padding: 10px 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.nb-dropdown-name span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nb-dropdown-role {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: capitalize;
+}
+
+.nb-dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+.nb-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.nb-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.nb-dropdown-item--danger {
+  color: #f87171;
+}
+.nb-dropdown-item--danger:hover {
+  background: rgba(248, 113, 113, 0.1);
+  color: #fca5a5;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .nb-page-info {
+    display: none;
+  }
+  .nb-breadcrumbs {
+    display: none;
+  }
+  .nb-user-info {
+    display: none;
+  }
+  .nb-ai-spacer {
+    width: 48px;
+  }
 }

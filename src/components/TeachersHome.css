@@ -1,0 +1,244 @@
+/* ─── Reset & base ───────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ─── Page ───────────────────────────────────────────────────────────────── */
+.teacher-dashboard {
+  background-color: #f8f7f4;
+  min-height: 100vh;
+  padding: 3.5rem 2rem 4rem;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  color: #1c1917;
+}
+
+/* ─── Dashboard title ────────────────────────────────────────────────────── */
+.dashboard-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1c1917;
+  letter-spacing: -0.3px;
+  margin-bottom: 2rem;
+}
+
+.dashboard-title.center-title {
+  text-align: center;
+}
+
+/* ─── Flash / alert ──────────────────────────────────────────────────────── */
+.alert-wrapper {
+  margin-bottom: 1.5rem;
+  transition: opacity 0.3s ease;
+}
+
+.alert-wrapper.fade-in {
+  opacity: 1;
+}
+.alert-wrapper.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #14532d;
+}
+
+.alert.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #7f1d1d;
+}
+
+.alert .btn-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.alert .btn-close:hover {
+  opacity: 1;
+}
+
+/* ─── Semester section ───────────────────────────────────────────────────── */
+.semester-section {
+  margin-bottom: 2.5rem;
+}
+
+.semester-section > h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #78716c;
+  margin: 0 0 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid #e8e4dd;
+  width: 100%;
+}
+
+/* Accent stripe for the active/current semester */
+.semester-section > h4.fall-2025 {
+  color: #4a1d8f;
+  border-bottom-color: #4a1d8f;
+}
+
+/* ─── Grid ───────────────────────────────────────────────────────────────── */
+.classrooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* ─── Classroom card ─────────────────────────────────────────────────────── */
+.classroom-card {
+  position: relative;
+  cursor: pointer;
+  background: #ffffff;
+  border: 1px solid #e8e4dd;
+  border-radius: 10px;
+  padding: 1.1rem 1.1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 130px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+/* Top accent line — purple by default */
+.classroom-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #4a1d8f;
+  border-radius: 10px 10px 0 0;
+}
+
+.classroom-card:hover {
+  border-color: #c4b5e8;
+  box-shadow: 0 4px 16px rgba(74, 29, 143, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ─── Card content ───────────────────────────────────────────────────────── */
+.classroom-card .card-title {
+  margin: 0 0 auto;
+}
+
+.classroom-card .card-title h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1c1917;
+  line-height: 1.35;
+  margin: 0;
+  /* Course ID portion styled differently via JS split if desired */
+}
+
+/* Mono course code feel */
+.classroom-card .card-title h4 {
+  font-variant-numeric: tabular-nums;
+}
+
+.classroom-card .card-text {
+  font-size: 0.775rem;
+  color: #78716c;
+  margin-top: 0.6rem;
+  line-height: 1.4;
+}
+
+/* ─── Add classroom card ─────────────────────────────────────────────────── */
+.classroom-card.add-classroom-card {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1.5px dashed #c9c4bc;
+  background: transparent;
+  color: #a09890;
+  min-height: 130px;
+}
+
+.classroom-card.add-classroom-card::before {
+  display: none;
+}
+
+.classroom-card.add-classroom-card h4 {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #a09890;
+  margin: 0;
+}
+
+.classroom-card.add-classroom-card:hover {
+  border-color: #4a1d8f;
+  background: #f5f0ff;
+  color: #4a1d8f;
+  box-shadow: none;
+  transform: none;
+}
+
+.classroom-card.add-classroom-card:hover h4 {
+  color: #4a1d8f;
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────── */
+.classrooms-list .row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* ─── Loading / signed-out state ─────────────────────────────────────────── */
+.teacher-dashboard > p {
+  text-align: center;
+  color: #78716c;
+  font-size: 0.9rem;
+  padding: 4rem 0;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .teacher-dashboard {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .classrooms-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .classroom-card {
+    min-height: 110px;
+  }
+}
+
+@media (max-width: 380px) {
+  .classrooms-grid {
+    grid-template-columns: 1fr;
+  }
+}
