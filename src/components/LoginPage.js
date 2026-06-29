@@ -403,7 +403,7 @@ const LoginPage = () => {
 
             <p className="lsu-help-text">
               Having trouble? Contact your instructor or{" "}
-              <a href="mailto:helpdesk@lsu.edu">LSU Help Desk</a>.
+              <a href="mailto:sgauta4@lsu.edu">Help Desk</a>.
             </p>
           </form>
         )}
