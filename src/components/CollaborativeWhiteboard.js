@@ -685,19 +685,19 @@ const CollaborativeWhiteboard = () => {
     <>
       <Navbar />
       {/* AI Chat Panel */}
-      <AIChatPanel
+      {/* <AIChatPanel
         courseId={`${className}-${projectName}`}
         isCollapsed={isPanelCollapsed}
         onToggle={togglePanelStable}
-      />
+      /> */}
 
       {/* Socratic Checker — only runs when editor is ready */}
-      {editorReady && (
+      {/* {editorReady && (
         <SocraticChecker
           editor={editorInstance.current}
           assignmentId={`${className}-${projectName}`}
         />
-      )}
+      )} */}
 
       <div className="main-container" style={{ position: "fixed", inset: 0 }}>
         <Tldraw

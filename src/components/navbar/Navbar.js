@@ -242,7 +242,7 @@ const Navbar = () => {
         </div>
 
         {/* Spacer only on whiteboard — reserves room for the fixed AI toggle pill */}
-        {isInWhiteboard && <div className="nb-ai-spacer" aria-hidden="true" />}
+        {/* {isInWhiteboard && <div className="nb-ai-spacer" aria-hidden="true" />} */}
       </div>
     </nav>
   );

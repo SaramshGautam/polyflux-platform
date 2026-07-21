@@ -14,7 +14,10 @@ import {
   faClockRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 
-const ChatBot = ({ messages, setMessages, toggleSidebar }) => {
+const AI_BACKEND_URL =
+  "https://flask-app-l7rilyhu2a-uc.a.run.app" || "http://127.0.0.1:8080";
+
+const ChatBot = ({ messages, setMessages, toggleSidebar, courseId }) => {
   const [userInput, setUserInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -64,21 +67,41 @@ const ChatBot = ({ messages, setMessages, toggleSidebar }) => {
     setUserInput("");
     setLoading(true);
 
+    // Fold any attached text clips (selected whiteboard content) into the
+    // question so the assistant has extra context. Image clips (data URLs)
+    // aren't sent — the RAG backend only accepts text.
+    const textClips = clipNotes
+      .map((clip) => clip.snip)
+      .filter((snip) => typeof snip === "string" && !snip.startsWith("data"));
+    const question = textClips.length
+      ? `Context from the whiteboard:\n${textClips.join(
+          "\n"
+        )}\n\nQuestion: ${userInput}`
+      : userInput;
+
     try {
-      const response = await fetch("http://127.0.0.1:5000/api/chatgpt-helper", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userInput }),
-      });
+      const response = await fetch(
+        `${AI_BACKEND_URL}/api/chatbot/ask/${encodeURIComponent(
+          courseId || "default"
+        )}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        }
+      );
 
       const data = await response.json();
-      if (data.reply) {
+      if (data.answer) {
+        const sourceNote =
+          data.sources && data.sources.length
+            ? `\n\nSource: ${data.sources.join(", ")}`
+            : "";
         setMessages([
           ...newMessages,
           {
             sender: "bot",
-            text: formatBotReply(data.reply),
-            image_urls: data.image_urls || null,
+            text: formatBotReply(data.answer + sourceNote),
           },
         ]);
       } else {
@@ -91,7 +114,7 @@ const ChatBot = ({ messages, setMessages, toggleSidebar }) => {
       console.error(error);
       setMessages([
         ...newMessages,
-        { sender: "bot", text: "Error connecting to server." },
+        { sender: "bot", text: "Error connecting to the study assistant." },
       ]);
     } finally {
       setLoading(false);
