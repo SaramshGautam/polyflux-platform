@@ -17,3 +17,4 @@ python-dotenv
 werkzeug
 openpyxl
 sendgrid
+requests

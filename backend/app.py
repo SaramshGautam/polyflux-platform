@@ -1,9 +1,9 @@
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 from firebase_admin import auth as fb_auth
 from flask import Flask, request, jsonify, session
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import pandas as pd
 from flask_cors import CORS, cross_origin
 from flask import jsonify, request, redirect, url_for, flash
@@ -14,77 +14,75 @@ from dotenv import load_dotenv
 import base64
 import secrets
 import string
+import uuid
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from python_http_client.exceptions import HTTPError
+import requests
 
 
-
-# Initialize Flask App
+# ── Flask init ────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = 'secret_key' 
+app.secret_key = 'secret_key'
 load_dotenv()
 
+# ── Firebase init ─────────────────────────────────────────────────────────────
 firebase_key_base64 = os.getenv("FIREBASE_KEY_BASE64")
 if firebase_key_base64:
     firebase_key_json = base64.b64decode(firebase_key_base64).decode('utf-8')
-    firebase_key = json.loads(firebase_key_json)
-    cred = credentials.Certificate(firebase_key)
-    firebase_admin.initialize_app(cred)
+    firebase_key      = json.loads(firebase_key_json)
+    cred              = credentials.Certificate(firebase_key)
 
-MAIL_FROM = os.getenv("MAIL_FROM", "lsu.ntotaro2@gmail.com")
-# MAIL_FROM = os.getenv("MAIL_FROM", "sgauta4@lsu.edu")
-APP_SIGNIN_URL = os.getenv("APP_SIGNIN_URL", "https://polyflux-platform.vercel.app/")
+    # storageBucket must match your Firebase project's default bucket name
+    # e.g. "your-project-id.appspot.com"
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': os.getenv("FIREBASE_STORAGE_BUCKET")  
+    })
 
-# Initialize Firebase
-# firebase_key = json.loads(os.getenv("FIREBASE_KEY"))
-# cred = credentials.Certificate("firebase-key.json")
-# cred = credentials.Certificate(firebase_key)
-# firebase_admin.initialize_app(cred)
-# CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:3000"}})
-# CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "*"}})
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": ["http://localhost:3000", "https://polyflux-platform.vercel.app"]}})
+MAIL_FROM       = os.getenv("MAIL_FROM", "lsu.ntotaro2@gmail.com")
+APP_SIGNIN_URL  = os.getenv("APP_SIGNIN_URL", "https://polyflux-platform.vercel.app/")
+# Free, self-hosted RAG chatbot service (FastAPI + local HuggingFace models,
+# see ai-backend/). No paid API keys involved.
+AI_BACKEND_URL  = os.getenv("AI_BACKEND_URL", "http://127.0.0.1:8080")
+
+CORS(app, supports_credentials=True, resources={
+    r"/api/*": {"origins": ["http://localhost:3000", "https://polyflux-platform.vercel.app"]},
+    r"/*":     {"origins": ["http://localhost:3000", "https://polyflux-platform.vercel.app"]},
+})
 
 db = firestore.client()
 
-# Ensure uploads directory exists
-# UPLOAD_FOLDER = 'uploads'
 UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/tmp/uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}  # You can add other file extensions here
+ALLOWED_EXTENSIONS = {'csv', 'xls', 'xlsx'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config.update(
     SESSION_COOKIE_SAMESITE='None',
-    SESSION_COOKIE_SECURE=True  # required for SameSite=None on HTTPS (Cloud Run)
+    SESSION_COOKIE_SECURE=True,
 )
 
 
-
-@app.route('/test_cors', methods=['GET'])
-def test_cors():
-    return jsonify({"message": "CORS is working!"}), 200
-    
-def is_authenticated():
-    return 'user' in session and 'role' in session  # Check if user is logged in
-
+# ── CORS headers ──────────────────────────────────────────────────────────────
 @app.after_request
 def after_request(response):
     allowed_origins = ["http://localhost:3000", "https://polyflux-platform.vercel.app"]
     origin = request.headers.get("Origin")
-
     if origin in allowed_origins:
         response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Vary', 'Origin')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')  
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
         response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        # response.headers.add('Cross-Origin-Opener-Policy', 'same-origin')
-        # response.headers.add('Cross-Origin-Embedder-Policy', 'require-corp')
     return response
 
 
-# sign in link sending
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def is_authenticated():
+    return 'user' in session and 'role' in session
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def gen_password(length=12):
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
     return "".join(secrets.choice(alphabet) for _ in range(length))
@@ -92,241 +90,463 @@ def gen_password(length=12):
 def send_email(to_email: str, subject: str, html: str):
     api_key = os.getenv("SENDGRID_API_KEY")
     if not api_key:
-        print("WARN: SENDGRID_API_KEY is not set; skipping email to", to_email)
+        print("WARN: SENDGRID_API_KEY not set; skipping email to", to_email)
         return False
-
-    message = Mail(
-        from_email=MAIL_FROM,
-        to_emails=to_email,
-        subject=subject,
-        html_content=html
-    )
+    message = Mail(from_email=MAIL_FROM, to_emails=to_email,
+                   subject=subject, html_content=html)
     try:
-        sg = SendGridAPIClient(api_key)
+        sg   = SendGridAPIClient(api_key)
         resp = sg.send(message)
-        print("SendGrid OK:",
-              resp.status_code,
-              "x-message-id:", getattr(resp, "headers", {}).get("X-Message-Id"))
+        print("SendGrid OK:", resp.status_code)
         return 200 <= resp.status_code < 300
     except HTTPError as e:
-        # e.body contains SendGrid's JSON error with the real reason
-        try:
-            print("SendGrid HTTPError:", e.status_code, e.body.decode() if hasattr(e.body, "decode") else e.body)
-        except Exception:
-            print("SendGrid HTTPError (no body):", repr(e))
+        print("SendGrid HTTPError:", getattr(e, 'status_code', '?'),
+              getattr(e, 'body', repr(e)))
         return False
     except Exception as e:
         print(f"Email send failed to {to_email}: {e}")
         return False
 
+
+# ── Cloud Storage PDF helpers ─────────────────────────────────────────────────
+def upload_pdf(file_obj, destination_path: str) -> dict:
+    """
+    Upload a PDF file-object to Firebase Cloud Storage.
+    Returns a metadata dict ready to store in Firestore:
+      { name, url, size, uploadedAt }
+    """
+    bucket = storage.bucket()
+    blob   = bucket.blob(destination_path)
+    file_obj.seek(0)
+    blob.upload_from_file(file_obj, content_type="application/pdf")
+    blob.make_public()          # remove this line if your bucket is private;
+                                # use signed URLs instead (see note below)
+    return {
+        "name":       file_obj.filename,
+        "url":        blob.public_url,
+        "size":       blob.size,
+        "uploadedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def delete_pdf(url: str):
+    """
+    Delete a PDF from Cloud Storage given its public URL.
+    Safe to call — logs a warning if deletion fails.
+    """
+    try:
+        bucket    = storage.bucket()
+        # Extract blob path from URL:
+        # https://storage.googleapis.com/<bucket>/<path>  OR
+        # https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<encoded-path>
+        if "firebasestorage.googleapis.com" in url:
+            import urllib.parse
+            blob_name = urllib.parse.unquote(url.split("/o/")[1].split("?")[0])
+        else:
+            blob_name = url.split(f"{bucket.name}/")[1].split("?")[0]
+        bucket.blob(blob_name).delete()
+    except Exception as e:
+        print(f"Warning: could not delete PDF at {url}: {e}")
+
+
+# ── Study assistant ingestion ─────────────────────────────────────────────────
+def project_course_id(class_name: str, project_name: str) -> str:
+    """Shared key so the frontend's chat widget and this ingest call always
+    point at the same ai-backend collection for a given project."""
+    return f"{class_name}__{project_name}"
+
+
+def ingest_course_materials(course_id: str, documents: list):
+    """
+    Best-effort call to the ai-backend RAG service so newly uploaded PDFs
+    become searchable by the study assistant widget. Never raises — a
+    failure here (e.g. ai-backend not running locally) must not block
+    project creation/editing.
+    """
+    documents = [d for d in documents if d.get("url") and d.get("name")]
+    if not documents:
+        return
+    try:
+        resp = requests.post(
+            f"{AI_BACKEND_URL}/api/chatbot/ingest",
+            json={"course_id": course_id, "documents": documents},
+            timeout=15,
+        )
+        if resp.status_code >= 300:
+            print(f"WARN: ai-backend ingest failed ({resp.status_code}): {resp.text}")
+    except Exception as e:
+        print(f"WARN: could not reach ai-backend for ingest: {e}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/test_cors', methods=['GET'])
+def test_cors():
+    return jsonify({"message": "CORS is working!"}), 200
+
 @app.route('/')
 def home():
     return "Welcome to the home page!"
 
-# Check if file extension is allowed
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# Create the 'uploads' folder if it doesn't exist
-# if not os.path.exists(UPLOAD_FOLDER):
-#     os.makedirs(UPLOAD_FOLDER)
-
 @app.route('/login', methods=['POST'])
 def login():
-    role = request.form.get('role')
+    role       = request.form.get('role')
     user_email = request.form.get('userEmail')
-
-    # Example check (replace with your actual user validation logic)
     if user_email and role:
         session['user'] = user_email
         session['role'] = role
-
-        print(f"Login: Session User: {session.get('user')}, Session Role: {session.get('role')}")
-        
         return jsonify({'message': 'Logged in successfully'}), 200
     return jsonify({'error': 'Invalid credentials'}), 401
 
+
+# ── Add classroom ─────────────────────────────────────────────────
 @app.route('/addclassroom', methods=['POST'])
 def addclassroom():
-    print(request.headers)
-    role = request.form.get('role')
+    role       = request.form.get('role')
     user_email = request.form.get('userEmail')
-    print(f"Received request from user with role: {role}, email: {user_email}")
 
-    # Ensure user is authenticated (check role)
     if not role or not user_email:
         return jsonify({"error": "Role or user email not provided."}), 400
-
-    if role != 'teacher': 
+    if role != 'teacher':
         return jsonify({"error": "Access forbidden: User is not a teacher"}), 403
 
-    if request.method == 'POST':
-        class_name = request.form.get('class_name')
-        course_id = request.form.get('course_id') 
-        semester = request.form.get('semester') 
-        file = request.files.get('student_file')
+    class_name = request.form.get('class_name')
+    course_id  = request.form.get('course_id')
+    semester   = request.form.get('semester')
+    file       = request.files.get('student_file')
 
-        # if not class_name or not course_id or not semester or not file:
-            # return jsonify({"error": "Class name, course ID, semester, and file are required."}), 400
+    if not class_name.strip():
+        return jsonify({"error": "Class name cannot be empty."}), 400
+    if not course_id.strip():
+        return jsonify({"error": "Course ID cannot be empty."}), 400
+    if not semester.strip():
+        return jsonify({"error": "Semester cannot be empty."}), 400
+    if file.filename == '':
+        return jsonify({"error": "No selected file."}), 400
 
-        if not class_name.strip():
-            return jsonify({"error": "Class name cannot be empty."}), 400
-        if not course_id.strip():
-            return jsonify({"error": "Course ID cannot be empty."}), 400
-        if not semester.strip():
-            return jsonify({"error": "Semester cannot be empty."}), 400
-        if file.filename == '':
-            return jsonify({"error": "No selected file."}), 400
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    if file_ext not in ['.csv', '.xlsx']:
+        return jsonify({"error": "Invalid file format. Please upload a CSV or Excel file."}), 400
 
-        file_ext = os.path.splitext(file.filename)[1].lower()
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)
 
-        # Check for allowed file formats
-        if file_ext not in ['.csv', '.xlsx']:
-            return jsonify({"error": "Invalid file format. Please upload a CSV or Excel file."}), 400
+    try:
+        df = pd.read_csv(file_path) if file_ext == '.csv' else pd.read_excel(file_path)
 
-        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(file_path)
+        if not {'firstname', 'lastname', 'email'}.issubset(df.columns):
+            os.remove(file_path)
+            return jsonify({"error": "File must have columns: firstname, lastname, email"}), 400
 
-        try:
-            # Read file based on its extension
-            if file_ext == '.csv':
-                df = pd.read_csv(file_path)
-            else:
-                df = pd.read_excel(file_path)
+        classroom_ref = db.collection('classrooms').document(course_id)
+        if classroom_ref.get().exists:
+            os.remove(file_path)
+            return jsonify({"error": f"Classroom ID '{course_id}' already exists."}), 400
 
-            # Check if required columns are present
-            # if not {'firstname', 'lastname', 'email', 'lsu_id'}.issubset(df.columns):
-            if not {'firstname', 'lastname', 'email'}.issubset(df.columns):
-                os.remove(file_path)
-                return jsonify({"error": "File must have columns: firstname, lastname, email"}), 400
+        existing = db.collection('classrooms')\
+                     .where('teacherEmail', '==', user_email)\
+                     .where('class_name', '==', class_name).get()
+        if len(existing) > 0:
+            os.remove(file_path)
+            return jsonify({"error": f"Classroom '{class_name}' already exists."}), 400
 
-            # --- NEW: Check if the classroom ID (course_id) is unique ---
-            classroom_ref = db.collection('classrooms').document(course_id)
-            if classroom_ref.get().exists:
-                os.remove(file_path)
-                return jsonify({"error": f"Classroom ID '{course_id}' already exists."}), 400
-            # ----------------------------------------------------------------
+        classroom_ref.set({
+            'classID': course_id, 'courseID': course_id,
+            'semester': semester, 'class_name': class_name,
+            'teacherEmail': user_email,
+        })
 
-            # (Optional) Check if a classroom with the same name exists for this teacher
-            existing_classrooms = db.collection('classrooms')\
-                                    .where('teacherEmail', '==', user_email)\
-                                    .where('class_name', '==', class_name)\
-                                    .get()
-            if len(existing_classrooms) > 0:
-                os.remove(file_path)
-                return jsonify({"error": f"Classroom '{class_name}' already exists."}), 400
-
-            # Create classroom document using course_id as document ID
-            classroom_ref.set({
-                'classID': course_id, 
-                'courseID': course_id,  
-                'semester': semester,   
-                'class_name': class_name, 
-                'teacherEmail': user_email
+        for _, row in df.iterrows():
+            student_email = row['email']
+            classroom_ref.collection('students').document(student_email).set({
+                'firstName': row['firstname'], 'lastName': row['lastname'],
+                'email': student_email, 'assignedAt': firestore.SERVER_TIMESTAMP,
             })
+            user_doc = db.collection('users').document(student_email)
+            if not user_doc.get().exists:
+                user_doc.set({
+                    'email': student_email, 'role': 'student',
+                    'name': f"{row['lastname']}, {row['firstname']}",
+                    'createdAt': firestore.SERVER_TIMESTAMP,
+                })
 
-            # Add students to Firestore
-            for _, row in df.iterrows():
-                student_email = row['email']
-                # lsu_id = str(row['lsu_id'])  # Ensure LSU ID is treated as a string
+        os.remove(file_path)
+        return jsonify({"message": f'Classroom "{class_name}" created successfully!'}), 200
 
-                student_data = {
-                    'firstName': row['firstname'],
-                    'lastName': row['lastname'],
-                    'email': student_email,
-                    # 'lsuID': lsu_id,
-                    'assignedAt': firestore.SERVER_TIMESTAMP
-                }
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return jsonify({"error": f"Error processing file: {e}"}), 500
 
-                # Use student_email as the document ID in the 'students' subcollection
-                classroom_ref.collection('students').document(student_email).set(student_data)
 
-                # Check if user exists; if not, create a new user document
-                user_doc = db.collection('users').document(student_email)
-                if not user_doc.get().exists:
-                    user_doc.set({
-                        'email': student_email,
-                        'role': 'student',
-                        'name': f"{row['lastname']}, {row['firstname']}",
-                        # 'lsuID': lsu_id,
-                        'createdAt': firestore.SERVER_TIMESTAMP
-                    })
+# ── Add project ───────────────────────────────────────────────────────────────
+@app.route('/api/add_project/<class_name>', methods=['POST'])
+def add_project(class_name):
+    try:
+        project_name = request.form.get('project_name')
+        description  = request.form.get('description')
+        due_date_str = request.form.get('due_date')   # optional ISO string
+        team_file    = request.files.get('team_file') # optional CSV/Excel
 
-            os.remove(file_path)  # Remove file after processing
-            return jsonify({"message": f'Classroom "{class_name}" created successfully!'}), 200
+        if not project_name or not description:
+            return jsonify({"message": "Project name and description are required."}), 400
 
-        except Exception as e:
-            os.remove(file_path)  # Ensure the file is removed in case of error
-            return jsonify({"error": f"Error processing file: {e}"}), 500
+        project_ref = (
+            db.collection('classrooms')
+              .document(class_name)
+              .collection('Projects')
+              .document(project_name)
+        )
+
+        # ── Build core payload ────────────────────────────────────────────────
+        payload = {
+            'projectName': project_name,
+            'description': description,
+            'createdAt':   firestore.SERVER_TIMESTAMP,
+        }
+        if due_date_str:
+            try:
+                payload['dueDate'] = datetime.fromisoformat(due_date_str)
+            except ValueError:
+                payload['dueDate'] = due_date_str  # store as-is if parsing fails
+
+        # ── Description PDF ───────────────────────────────────────────────────
+        desc_pdf_file = request.files.get('description_pdf')
+        if desc_pdf_file and desc_pdf_file.filename:
+            dest = f"projects/{class_name}/{project_name}/description_pdf/{uuid.uuid4().hex}.pdf"
+            payload['description_pdf'] = upload_pdf(desc_pdf_file, dest)
+
+        # ── Note PDFs ─────────────────────────────────────────────────────────
+        note_files = request.files.getlist('note_files')
+        note_metas = []
+        for nf in note_files:
+            if nf and nf.filename:
+                dest = (f"projects/{class_name}/{project_name}/notes/"
+                        f"{uuid.uuid4().hex}_{secure_filename(nf.filename)}")
+                note_metas.append(upload_pdf(nf, dest))
+        if note_metas:
+            payload['notes'] = note_metas
+
+        project_ref.set(payload)
+
+        # ── Make uploaded PDFs searchable by the study assistant ──────────────
+        ingest_docs = []
+        if payload.get('description_pdf'):
+            ingest_docs.append({
+                "name": payload['description_pdf']['name'],
+                "url":  payload['description_pdf']['url'],
+            })
+        for note in note_metas:
+            ingest_docs.append({"name": note['name'], "url": note['url']})
+        ingest_course_materials(project_course_id(class_name, project_name), ingest_docs)
+
+        # ── Optional team CSV ─────────────────────────────────────────────────
+        teams_created = False
+        if team_file and allowed_file(team_file.filename):
+            filename  = secure_filename(team_file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            team_file.save(file_path)
+            try:
+                data = pd.read_csv(file_path) if filename.endswith('.csv') else pd.read_excel(file_path)
+                data.columns = data.columns.str.strip().str.lower()
+                required = ['firstname', 'lastname', 'email']
+                missing  = [c for c in required if c not in data.columns]
+                if missing:
+                    return jsonify({"message": f"File missing columns: {', '.join(missing)}"}), 400
+                # (team assignment logic here if needed)
+                teams_created = True
+            except Exception as e:
+                return jsonify({"message": f"Error processing team file: {str(e)}"}), 500
+            finally:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
+        return jsonify({
+            "message":      "Project added successfully.",
+            "teamsCreated": teams_created,
+        }), 200
+
+    except Exception as e:
+        return jsonify({"message": f"An unexpected error occurred: {str(e)}"}), 500
+
+
+# ── Edit project ──────────────────────────────────────────────────────────────
+@app.route('/api/classroom/<class_name>/project/<project_name>/edit', methods=['POST'])
+def edit_project(class_name, project_name):
+    try:
+        project_ref = (
+            db.collection('classrooms')
+              .document(class_name)
+              .collection('Projects')
+              .document(project_name)
+        )
+
+        if not project_ref.get().exists:
+            return jsonify({'error': 'Project not found'}), 404
+
+        update_data = {}
+
+        # ── Text fields ───────────────────────────────────────────────────────
+        new_name    = request.form.get('project_name')
+        description = request.form.get('description')
+        due_date_str= request.form.get('due_date')
+
+        if new_name:
+            update_data['projectName'] = new_name
+        if description:
+            update_data['description'] = description
+        if due_date_str:
+            try:
+                update_data['dueDate'] = datetime.fromisoformat(due_date_str)
+            except ValueError:
+                update_data['dueDate'] = due_date_str
+
+        # ── Remove description PDF ────────────────────────────────────────────
+        if request.form.get('remove_description_pdf') == 'true':
+            snap = project_ref.get().to_dict() or {}
+            old  = snap.get('description_pdf')
+            if old and old.get('url'):
+                delete_pdf(old['url'])
+            update_data['description_pdf'] = firestore.DELETE_FIELD
+
+        # ── New / replacement description PDF ─────────────────────────────────
+        desc_pdf_file = request.files.get('description_pdf')
+        if desc_pdf_file and desc_pdf_file.filename:
+            # Delete old one first if it exists
+            snap = project_ref.get().to_dict() or {}
+            old  = snap.get('description_pdf')
+            if old and old.get('url'):
+                delete_pdf(old['url'])
+            dest = (f"projects/{class_name}/{project_name}/description_pdf/"
+                    f"{uuid.uuid4().hex}.pdf")
+            update_data['description_pdf'] = upload_pdf(desc_pdf_file, dest)
+
+        # ── Remove specific notes by URL ──────────────────────────────────────
+        urls_to_remove = request.form.getlist('remove_note_urls')
+        current_notes  = (project_ref.get().to_dict() or {}).get('notes', [])
+        if urls_to_remove:
+            for url in urls_to_remove:
+                delete_pdf(url)
+            current_notes = [n for n in current_notes if n.get('url') not in urls_to_remove]
+            update_data['notes'] = current_notes
+
+        # ── Append new note PDFs ──────────────────────────────────────────────
+        new_note_files = request.files.getlist('note_files')
+        new_note_metas = []
+        for nf in new_note_files:
+            if nf and nf.filename:
+                dest = (f"projects/{class_name}/{project_name}/notes/"
+                        f"{uuid.uuid4().hex}_{secure_filename(nf.filename)}")
+                new_note_metas.append(upload_pdf(nf, dest))
+
+        if new_note_metas:
+            # If we already rebuilt current_notes above, use that; otherwise fetch fresh
+            base = update_data.get('notes', current_notes)
+            update_data['notes'] = base + new_note_metas
+
+        # ── Optional team file ────────────────────────────────────────────────
+        team_file = request.files.get('team_file')
+        if team_file and allowed_file(team_file.filename):
+            filename  = secure_filename(team_file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            team_file.save(file_path)
+            try:
+                data = pd.read_csv(file_path) if filename.endswith('.csv') else pd.read_excel(file_path)
+                data.columns = data.columns.str.strip().str.lower()
+                # (team update logic here if needed)
+            except Exception as e:
+                return jsonify({"error": f"Error processing team file: {str(e)}"}), 500
+            finally:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+
+        project_ref.update(update_data)
+
+        # ── Make newly uploaded PDFs searchable by the study assistant ────────
+        ingest_docs = []
+        new_desc = update_data.get('description_pdf')
+        if new_desc and new_desc != firestore.DELETE_FIELD:
+            ingest_docs.append({"name": new_desc['name'], "url": new_desc['url']})
+        for note in new_note_metas:
+            ingest_docs.append({"name": note['name'], "url": note['url']})
+        if ingest_docs:
+            ingest_course_materials(project_course_id(class_name, project_name), ingest_docs)
+
+        return jsonify({"message": "Project updated successfully."}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error updating project: {str(e)}"}), 500
+
+
+# ── Delete project ────────────────────────────────────────────────────────────
+@app.route('/api/classroom/<class_name>/project/<project_name>/delete', methods=['DELETE'])
+def delete_project(class_name, project_name):
+    try:
+        project_ref = (
+            db.collection('classrooms')
+              .document(class_name)
+              .collection('Projects')
+              .document(project_name)
+        )
+        snap = project_ref.get()
+        if not snap.exists:
+            return jsonify({'error': 'Project not found'}), 404
+
+        # ── Clean up PDFs from Cloud Storage before deleting the doc ─────────
+        project_data = snap.to_dict() or {}
+        desc_pdf = project_data.get('description_pdf')
+        if desc_pdf and desc_pdf.get('url'):
+            delete_pdf(desc_pdf['url'])
+        for note in project_data.get('notes', []):
+            if note.get('url'):
+                delete_pdf(note['url'])
+
+        project_ref.delete()
+        return jsonify({'message': 'Project deleted successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Error deleting project: {str(e)}'}), 500
+
 
 @app.route('/classroom/<class_id>', methods=['GET'])
 def classroom_view(class_id):
     if not is_authenticated():
         return jsonify({"error": "Unauthorized access. Please log in."}), 401
-
-    # Fetch the classroom document
     classroom_ref = db.collection('classrooms').document(class_id).get()
     if not classroom_ref.exists:
         return jsonify({"error": "Classroom not found."}), 404
-
-    classroom = classroom_ref.to_dict()
+    classroom     = classroom_ref.to_dict()
     teacher_email = classroom['teacherEmail']
-    student_emails = [
-        student.id for student in db.collection('classrooms')
-        .document(class_id)
-        .collection('students')
-        .stream()
-    ]
-
-    # Get role and userEmail from the session or request
-    user_email = session.get('user', None)
-    if user_email is None:
+    student_emails = [s.id for s in db.collection('classrooms').document(class_id).collection('students').stream()]
+    user_email = session.get('user')
+    if not user_email:
         return jsonify({"error": "User email not found in session."}), 403
-
     role = 'teacher' if user_email == teacher_email else 'student' if user_email in student_emails else None
     if role is None:
         return jsonify({"error": "Access denied."}), 403
+    projects = [{"id": p.id, **p.to_dict()} for p in
+                db.collection('classrooms').document(class_id).collection('Projects').stream()]
+    return jsonify({"class_id": class_id, "class_name": classroom['class_name'],
+                    "semester": classroom['semester'], "projects": projects, "role": role})
 
-    # Fetch the projects in the classroom
-    projects_ref = db.collection('classrooms').document(class_id).collection('Projects').stream()
-    projects = [{"id": proj.id, **proj.to_dict()} for proj in projects_ref]
-
-    return jsonify({
-        "class_id": class_id, 
-        "class_name": classroom['class_name'], 
-        "semester": classroom['semester'],  
-        "projects": projects,
-        "role": role,
-    })
 
 @app.route('/api/classroom/<classID>/manage_students', methods=['GET'])
 def manage_students(classID):
     try:
-        classroom_ref = db.collection('classrooms').document(classID).collection('students')
         students = []
-        for doc in classroom_ref.stream():
-            student_data = doc.to_dict()
-
-            ts = student_data.get('assignedAt')
+        for doc in db.collection('classrooms').document(classID).collection('students').stream():
+            d  = doc.to_dict()
+            ts = d.get('assignedAt')
             assigned_at = None
             if ts is not None:
-                # Firestore usually returns a Python datetime
                 if isinstance(ts, datetime):
                     assigned_at = ts.isoformat()
                 else:
-                    # Some SDKs return a Timestamp-like with .to_datetime()
                     to_dt = getattr(ts, "to_datetime", None)
                     assigned_at = to_dt().isoformat() if callable(to_dt) else str(ts)
-
-
             students.append({
-                'firstName': student_data.get('firstName'),
-                'lastName': student_data.get('lastName'),
-                'lsuId': student_data.get('lsuID'),
-                'assignedAt': student_data.get('assignedAt'),
-                # 'assignedAt': student_data.get('assignedAt'),
-                'assignedAt': assigned_at,
-                'email': doc.id  # Use Firestore document ID as email
+                'firstName': d.get('firstName'), 'lastName': d.get('lastName'),
+                'lsuId': d.get('lsuID'), 'assignedAt': assigned_at, 'email': doc.id,
             })
         return jsonify({'students': students}), 200
     except Exception as e:
@@ -336,570 +556,244 @@ def manage_students(classID):
 @app.route('/api/classroom/<class_name>/add_student', methods=['POST'])
 def add_student(class_name):
     try:
-        data = request.get_json()
+        data       = request.get_json()
         first_name = data.get('first_name')
-        last_name = data.get('last_name')
-        email = data.get('email')
-        # lsu_id = str(data.get('lsu_id'))  
-
+        last_name  = data.get('last_name')
+        email      = data.get('email')
         classroom_ref = db.collection('classrooms').document(class_name)
-        
-        # **Use email as the document ID instead of LSU ID**
         classroom_ref.collection('students').document(email).set({
-            'firstName': first_name,
-            'lastName': last_name,
-            'email': email,
-            # 'lsuID': lsu_id,
-            'assignedAt': firestore.SERVER_TIMESTAMP
+            'firstName': first_name, 'lastName': last_name,
+            'email': email, 'assignedAt': firestore.SERVER_TIMESTAMP,
         })
-
         user_doc = db.collection('users').document(email)
         if not user_doc.get().exists:
-            user_doc.set({
-                'email': email,
-                'role': 'student',
-                'name': f"{last_name}, {first_name}",
-                # 'lsuID': lsu_id,
-                'createdAt': firestore.SERVER_TIMESTAMP
-            })
-
-        return jsonify({'message': f'{first_name} {last_name} has been added to the classroom.'}), 200
-
+            user_doc.set({'email': email, 'role': 'student',
+                          'name': f"{last_name}, {first_name}",
+                          'createdAt': firestore.SERVER_TIMESTAMP})
+        return jsonify({'message': f'{first_name} {last_name} has been added.'}), 200
     except Exception as e:
         return jsonify({'error': f'Error adding student: {str(e)}'}), 500
 
 
 @app.route('/api/classroom/<class_name>/notify_students', methods=['POST'])
 def notify_students(class_name):
-    """
-    For each student in classrooms/{class_name}/students:
-      - ensure a Firebase Auth user exists
-      - generate a password reset link
-      - email the link + their sign-in email
-    """
     try:
-        # Optional: simple “authorization”
-        role = request.form.get('role') or request.json.get('role') if request.is_json else None
-        user_email = request.form.get('userEmail') or request.json.get('userEmail') if request.is_json else None
+        body       = request.get_json(silent=True) or {}
+        user_email = request.form.get('userEmail') or body.get('userEmail')
+        if not user_email:
+            return jsonify({"error": "Only the classroom teacher can notify students."}), 403
         classroom_doc = db.collection('classrooms').document(class_name).get()
         if not classroom_doc.exists:
             return jsonify({"error": "Classroom not found."}), 404
-
-        # teacher_email = classroom_doc.to_dict().get('teacherEmail')
-        # if not user_email or user_email != teacher_email:
-        # if not user_email:
-        #     return jsonify({"error": "Only the classroom teacher can notify students."}), 403
-
-        if not user_email:
-            return jsonify({
-                "error": "Only the classroom teacher can notify students.",
-                "received_user_email": user_email,
-                "received_role": role
-            }), 403
-
-        students_ref = db.collection('classrooms').document(class_name).collection('students').stream()
-
         results = []
-        for s in students_ref:
-            sd = s.to_dict()
+        for s in db.collection('classrooms').document(class_name).collection('students').stream():
+            sd            = s.to_dict()
             student_email = sd.get('email')
-            first = sd.get('firstName', '')
-            last  = sd.get('lastName', '')
-
+            first, last   = sd.get('firstName', ''), sd.get('lastName', '')
             if not student_email:
                 continue
-
-            # ensure Firebase Auth user
             try:
-                user_rec = fb_auth.get_user_by_email(student_email)
+                fb_auth.get_user_by_email(student_email)
             except fb_auth.UserNotFoundError:
-                # create with a random initial password (not emailed), and custom claim role=student
-                temp_pw = gen_password()
-                user_rec = fb_auth.create_user(
-                    email=student_email,
-                    email_verified=False,
-                    password=temp_pw,
-                    display_name=f"{first} {last}".strip() or None
-                )
+                temp_pw  = gen_password()
+                user_rec = fb_auth.create_user(email=student_email, email_verified=False,
+                                               password=temp_pw,
+                                               display_name=f"{first} {last}".strip() or None)
                 try:
                     fb_auth.set_custom_user_claims(user_rec.uid, {"role": "student"})
                 except Exception as e:
-                    print("Failed to set custom claims for", student_email, e)
-
-            # generate a password reset link
+                    print("Claims error:", e)
             try:
                 reset_link = fb_auth.generate_password_reset_link(student_email)
             except Exception as e:
-                print("Failed to create reset link for", student_email, e)
                 results.append({"email": student_email, "sent": False, "reason": "reset_link_failed"})
                 continue
-
-            # send the email
             subject = f"[{class_name}] Your PolyFlux account"
-            html = f"""
-                <p>Hi {first or ''} {last or ''},</p>
-                <p>Your account is ready for the <strong>{class_name}</strong> workspace.</p>
+            html    = f"""
+                <p>Hi {first} {last},</p>
+                <p>Your account is ready for <strong>{class_name}</strong>.</p>
                 <p><strong>Sign-in email:</strong> {student_email}</p>
-                <p>Please set your password using this link:</p>
                 <p><a href="{reset_link}">Set your password</a></p>
-                <p>Then sign in here: <a href="{APP_SIGNIN_URL}">{APP_SIGNIN_URL}</a></p>
+                <p>Then sign in: <a href="{APP_SIGNIN_URL}">{APP_SIGNIN_URL}</a></p>
                 <p>— PolyFlux</p>
             """
-
-            ok = send_email(student_email, subject, html)
-            results.append({"email": student_email, "sent": ok})
-
+            results.append({"email": student_email, "sent": send_email(student_email, subject, html)})
         return jsonify({"message": "Notifications processed.", "results": results}), 200
-
     except Exception as e:
         return jsonify({"error": f"Failed to notify students: {e}"}), 500
 
-    
+
 @app.route('/api/classroom/<class_name>/edit_student/<student_email>', methods=['GET', 'PUT'])
 def edit_student(class_name, student_email):
     try:
-        classroom_ref = db.collection('classrooms').document(class_name).collection('students').document(student_email)
-
+        ref = db.collection('classrooms').document(class_name).collection('students').document(student_email)
         if request.method == 'GET':
-            student_doc = classroom_ref.get()
-            if not student_doc.exists:
+            doc = ref.get()
+            if not doc.exists:
                 return jsonify({'error': 'Student not found.'}), 404
-
-            student_data = student_doc.to_dict()
-
-            # Ensure LSU ID is returned correctly
-            student_response = {
-                'firstName': student_data.get('firstName', ''),
-                'lastName': student_data.get('lastName', ''),
-                'email': student_data.get('email', student_email),  # Ensure email is included
-                'lsuId': student_data.get('lsuID', '')  # Ensure LSU ID is included
-            }
-
-            return jsonify({'student': student_response}), 200
-
-        elif request.method == 'PUT':
-            data = request.get_json()
-            first_name = data.get('firstName')
-            last_name = data.get('lastName')
-            # lsu_id = data.get('lsuId')  # Ensure LSU ID is updated
-
-            # Update student details
-            classroom_ref.update({
-                'firstName': first_name,
-                'lastName': last_name,
-                # 'lsuID': lsu_id
-            })
-
-            # Also update the user record in Firestore (users collection)
-            user_doc = db.collection('users').document(student_email)
-            user_doc.update({
-                'name': f"{last_name}, {first_name}",
-                # 'lsuID': lsu_id
-            })
-
-            return jsonify({'message': 'Student information updated successfully.'}), 200
-
+            d = doc.to_dict()
+            return jsonify({'student': {'firstName': d.get('firstName',''), 'lastName': d.get('lastName',''),
+                                        'email': d.get('email', student_email), 'lsuId': d.get('lsuID','')}}), 200
+        data = request.get_json()
+        ref.update({'firstName': data.get('firstName'), 'lastName': data.get('lastName')})
+        db.collection('users').document(student_email).update(
+            {'name': f"{data.get('lastName')}, {data.get('firstName')}"})
+        return jsonify({'message': 'Student updated.'}), 200
     except Exception as e:
-        return jsonify({'error': f'Error updating student: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
-    
+
 @app.route('/api/classroom/<class_name>/delete_student/<lsu_id>', methods=['POST'])
 def delete_student(class_name, lsu_id):
     try:
-        classroom_ref = db.collection('classrooms').document(class_name)
-        students_ref = classroom_ref.collection('students')
-
-        # Find the student document based on LSU ID
-        students_query = students_ref.where("lsuID", "==", lsu_id).stream()
-
-        student_doc = None
-        for doc in students_query:
-            student_doc = doc
-            break  # We only need the first match
-
+        students_ref = db.collection('classrooms').document(class_name).collection('students')
+        student_doc  = next(iter(students_ref.where("lsuID", "==", lsu_id).stream()), None)
         if not student_doc:
-            return jsonify({'error': 'Student not found in the classroom'}), 404
-
-        student_data = student_doc.to_dict()
-        student_email = student_doc.id  # Firestore stores email as document ID
-        student_name = f"{student_data.get('firstName', '')} {student_data.get('lastName', '')}".strip()
-
-        # Delete the student document
+            return jsonify({'error': 'Student not found'}), 404
+        student_email = student_doc.id
+        student_name  = f"{student_doc.to_dict().get('firstName','')} {student_doc.to_dict().get('lastName','')}".strip()
         students_ref.document(student_email).delete()
-
-        # Remove student from projects
-        projects_ref = classroom_ref.collection('Projects')
-        projects = projects_ref.stream()
-
-        for project in projects:
-            project_ref = projects_ref.document(project.id)
-            teams_ref = project_ref.collection('teams')
-
-            for team in teams_ref.stream():
-                team_ref = teams_ref.document(team.id)
-                team_data = team_ref.get().to_dict()
-
-                if lsu_id in team_data:
-                    team_ref.update({
-                        lsu_id: firestore.DELETE_FIELD
-                    })
-
-                    if not team_ref.get().to_dict():
-                        team_ref.delete()
-
-        return jsonify({'message': f'{student_name} has been successfully removed from the classroom'}), 200
-
+        for project in db.collection('classrooms').document(class_name).collection('Projects').stream():
+            for team in project.reference.collection('teams').stream():
+                td = team.to_dict()
+                if lsu_id in td:
+                    td.pop(lsu_id)
+                    if td:
+                        team.reference.set(td)
+                    else:
+                        team.reference.delete()
+        return jsonify({'message': f'{student_name} removed.'}), 200
     except Exception as e:
-        return jsonify({'error': f'Error deleting student: {str(e)}'}), 500
-
-@app.route('/api/add_project/<class_name>', methods=['POST'])
-def add_project(class_name):
-    try:
-        project_name = request.form.get('project_name')
-        description = request.form.get('description')
-        due_date = request.form.get('due_date') #OPTIONAL
-        team_file = request.files.get('team_file') #OPTIONAL
-
-        # if not project_name or not due_date or not description:
-        if not project_name or not description:
-            return jsonify({"message": "Project name and description are required."}), 400
-
-        project_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name)
-
-        payload = {
-            'projectName': project_name,
-            'description': description,
-            'createdAt': firestore.SERVER_TIMESTAMP
-        }
-        if due_date:
-            payload['dueDate'] = due_date
-        
-        project_ref.set(payload)
-
-
-
-        # project_ref.set({
-        #     'projectName': project_name,
-        #     'dueDate': due_date,
-        #     'description': description,
-        #     'createdAt': firestore.SERVER_TIMESTAMP
-        # })
-
-        teams_created = False
-        if team_file and allowed_file(team_file.filename):
-            filename = secure_filename(team_file.filename)
-            # file_path = os.path.join('uploads', filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            team_file.save(file_path)
-
-            try:
-                data = pd.read_csv(file_path) if filename.endswith('.csv') else pd.read_excel(file_path)
-                # required_columns = ['firstname', 'lastname', 'email', 'lsu_id', 'teamname']
-                data.columns = data.columns.str.strip().str.lower()
-                required_columns = ['firstname', 'lastname', 'email']
-
-                missing_columns = [col for col in required_columns if col not in data.columns]
-                if missing_columns:
-                    return jsonify({"message": f"File missing columns: {', '.join(missing_columns)}"}), 400
-
-                class_students = {
-                    student.id: student.to_dict() for student in db.collection('classrooms').document(class_name).collection('students').stream()
-                }
-
-                for _, row in data.iterrows():
-                    # lsu_id = str(row['lsu_id'])
-                    student_email = row['email']
-                    student_name = f"{row['lastname']}, {row['firstname']}"
-                    # team_name = row['teamname']
-
-                    # if lsu_id not in class_students:
-                    #     return jsonify({"message": f"Student {student_name} (LSUID: {lsu_id}) is not in this class."}), 400
-
-                    # team_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams').document(team_name)
-                    
-                    # team_ref.set({
-                    #     lsu_id: {
-                    #         "name": student_name,
-                    #         "email": student_email
-                    #     }
-                    # }, merge=True)
-
-                teams_created = True
-
-            except Exception as e:
-                return jsonify({"message": f"Error processing team file: {str(e)}"}), 500
-
-        return jsonify({
-            "message": "Project added successfully.",
-            "teamsCreated": teams_created
-        }), 200
-
-    except Exception as e:
-        return jsonify({"message": f"An unexpected error occurred: {str(e)}"}), 500
-
-def update_due_dates():
-    classrooms = db.collection('classrooms').stream()
-    for classroom in classrooms:
-        class_id = classroom.id
-        projects = db.collection('classrooms').document(class_id).collection('Projects').stream()
-        
-        for project in projects:
-            project_ref = project.reference
-            project_data = project.to_dict()
-            if 'dueDate' in project_data and isinstance(project_data['dueDate'], str):
-                try:
-                    due_date = datetime.fromisoformat(project_data['dueDate'])
-                    if due_date < datetime.now():
-                        # Mark project as overdue or update logic as needed
-                        project_ref.update({"status": "overdue"})
-                except ValueError as e:
-                    print(f"Invalid due date format for project {project.id}: {e}")
-
-@app.route('/api/classroom/<class_name>/project/<project_name>/delete', methods=['DELETE'])
-def delete_project(class_name, project_name):
-    try:
-        # Reference to the project document
-        project_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name)
-        
-        # Check if the project exists
-        if not project_ref.get().exists:
-            return jsonify({'error': 'Project not found'}), 404
-
-        # Delete the project
-        project_ref.delete()
-
-        return jsonify({'message': 'Project deleted successfully'}), 200
-
-    except Exception as e:
-        return jsonify({'error': f'Error deleting project: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/classroom/<class_name>/project/<project_name>/manage_team', methods=['GET', 'POST'])
 def manage_team(class_name, project_name):
     if not is_authenticated():
         return jsonify({"error": "Not authenticated"}), 401
-
     classroom_ref = db.collection('classrooms').document(class_name).get()
     if not classroom_ref.exists or classroom_ref.to_dict()['teacherEmail'] != session['user']:
-        return jsonify({"error": "You do not have permission to manage teams."}), 403
-
+        return jsonify({"error": "Permission denied."}), 403
     if request.method == 'POST':
         data = request.get_json()
         team_name = data.get('teamName')
-        selected_students = data.get('students')
-
-        if not team_name or not selected_students:
-            return jsonify({"error": "Team name and at least one student are required."}), 400
-
-        teams_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams').stream()
-        existing_teams = {team.id: team.to_dict() for team in teams_ref}
-
-        if team_name not in existing_teams:
-            return jsonify({"error": f"Team {team_name} does not exist."}), 404
-
+        selected  = data.get('students')
+        if not team_name or not selected:
+            return jsonify({"error": "Team name and students required."}), 400
         team_data = {}
-        for student_email in selected_students:
-            student_ref = db.collection('classrooms').document(class_name).collection('students').document(student_email).get()
-            if student_ref.exists:
-                student_data = student_ref.to_dict()
-                team_data[student_email] = f"{student_data['lastName']}, {student_data['firstName']}"
+        for email in selected:
+            sr = db.collection('classrooms').document(class_name).collection('students').document(email).get()
+            if sr.exists:
+                sd = sr.to_dict()
+                team_data[email] = f"{sd['lastName']}, {sd['firstName']}"
             else:
-                return jsonify({"error": f"Student {student_email} not found."}), 404
+                return jsonify({"error": f"Student {email} not found."}), 404
+        db.collection('classrooms').document(class_name).collection('Projects')\
+          .document(project_name).collection('teams').document(team_name).set(team_data)
+        return jsonify({"message": f'Team "{team_name}" updated.'}), 200
+    all_students = [{'email': s.id, **s.to_dict()} for s in
+                    db.collection('classrooms').document(class_name).collection('students').stream()]
+    teams_snap   = db.collection('classrooms').document(class_name).collection('Projects')\
+                     .document(project_name).collection('teams').stream()
+    assigned = set()
+    teams    = []
+    for team in teams_snap:
+        td = team.to_dict()
+        teams.append({'teamName': team.id, 'students': [{'email': e, 'name': td[e]} for e in td]})
+        assigned.update(td.keys())
+    available = [s for s in all_students if s['email'] not in assigned]
+    return jsonify({"class_name": class_name, "project_name": project_name,
+                    "students": available, "teams": teams})
 
-        team_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams').document(team_name)
-        team_ref.set(team_data)
 
-        return jsonify({"message": f'Team "{team_name}" updated successfully!'}), 200
-
-    # Fetch all students and current teams for the project
-    all_students = db.collection('classrooms').document(class_name).collection('students').stream()
-    teams_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams').stream()
-
-    assigned_students = {}
-    available_students = []
-
-    for s in all_students:
-        student = s.to_dict()
-        student_email = s.id
-        assigned_students[student_email] = False
-        available_students.append({'email': student_email, 'firstName': student['firstName'], 'lastName': student['lastName']})
-
-    teams = []
-    for team in teams_ref:
-        team_name = team.id
-        team_data = team.to_dict()
-        students_in_team = [{'email': email, 'name': team_data[email]} for email in team_data]
-        teams.append({'teamName': team_name, 'students': students_in_team})
-        for student in students_in_team:
-            assigned_students[student['email']] = True
-
-    available_students = [s for s in available_students if not assigned_students[s['email']]]
-
-    return jsonify({
-        "class_name": class_name,
-        "project_name": project_name,
-        "students": available_students,
-        "teams": teams
-    })
 @app.route('/save-teams', methods=['POST'])
 def save_teams():
     try:
-        data = request.get_json()  # Move this line here to properly initialize 'data'
+        data         = request.get_json()
         if not data:
             return jsonify({"error": "No data received."}), 400
-
-        teams = data.get("teams", [])
-        class_name = data.get('class_name')
+        teams        = data.get("teams", [])
+        class_name   = data.get('class_name')
         project_name = data.get('project_name')
-
-        if not isinstance(teams, list):
-            return jsonify({"error": "Invalid format for teams. Expected a list."}), 400
-
-        teams_collection_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams')
-
-        existing_teams = teams_collection_ref.stream()
-        existing_team_data = {team.id: team.to_dict() for team in existing_teams}
-
-        processed_students = set()
-
+        teams_ref    = db.collection('classrooms').document(class_name)\
+                         .collection('Projects').document(project_name).collection('teams')
+        existing     = {t.id: t.to_dict() for t in teams_ref.stream()}
+        processed    = set()
         for team in teams:
             team_name = team.get("teamName")
-            students = team.get("students", [])
-
+            students  = team.get("students", []) or []
             if not team_name:
-                return jsonify({"error": "Team name is missing for one of the teams."}), 400
-
-            if students is None:
-                students = []
-
+                return jsonify({"error": "Team name missing."}), 400
             team_data = {}
-            for student_email in students:
-                if student_email in processed_students:
+            for email in students:
+                if email in processed:
                     continue
-
-                processed_students.add(student_email)
-
-                student_ref = db.collection('classrooms').document(class_name).collection('students').document(student_email).get()
-                if student_ref.exists:
-                    student_info = student_ref.to_dict()
-                    team_data[student_email] = f"{student_info['lastName']}, {student_info['firstName']}"
-
-                    # Remove student from any existing team
-                    for old_team_name, old_team_data in existing_team_data.items():
-                        if student_email in old_team_data:
-                            del old_team_data[student_email]
-
-                            # If the old team is empty, delete the team
-                            if not old_team_data:
-                                teams_collection_ref.document(old_team_name).delete()
-                                print(f"Deleted empty team document: '{old_team_name}'")
-                            else:
-                                # Otherwise, update the team with remaining students
-                                teams_collection_ref.document(old_team_name).set(old_team_data)
-                else:
-                    return jsonify({"error": f"Student {student_email} does not exist in the classroom."}), 404
-
-            # After all removals from old teams, update or create the new team
-            teams_collection_ref.document(team_name).set(team_data)
-
+                processed.add(email)
+                sr = db.collection('classrooms').document(class_name)\
+                       .collection('students').document(email).get()
+                if not sr.exists:
+                    return jsonify({"error": f"Student {email} not found."}), 404
+                si = sr.to_dict()
+                team_data[email] = f"{si['lastName']}, {si['firstName']}"
+                for old_name, old_data in existing.items():
+                    if email in old_data:
+                        del old_data[email]
+                        if not old_data:
+                            teams_ref.document(old_name).delete()
+                        else:
+                            teams_ref.document(old_name).set(old_data)
+            teams_ref.document(team_name).set(team_data)
         return jsonify({"message": "Teams saved successfully!"}), 200
-
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-    
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/student/<email>/project/<class_name>/<project_name>', methods=['GET'])
 def get_student_team(email, class_name, project_name):
     try:
-        teams_ref = db.collection('classrooms').document(class_name).collection('Projects').document(project_name).collection('teams').stream()
-
-        for team in teams_ref:
-            team_data = team.to_dict()
-
-            # If student's email is found in any team, return that team
-            if email in team_data:
+        for team in db.collection('classrooms').document(class_name)\
+                      .collection('Projects').document(project_name)\
+                      .collection('teams').stream():
+            if email in team.to_dict():
                 return jsonify({"teamName": team.id}), 200
-
         return jsonify({"message": "Student not assigned to any team"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route('/api/student/<email>/projects', methods=['GET'])
 def get_student_projects(email):
     try:
-        student_teams = []
-
-        # Loop through all classrooms
-        classrooms = db.collection('classrooms').stream()
-        for classroom in classrooms:
-            class_id = classroom.id
-            projects = db.collection('classrooms').document(class_id).collection('Projects').stream()
-
-            for project in projects:
-                project_id = project.id
-                teams_ref = db.collection('classrooms').document(class_id).collection('Projects').document(project_id).collection('teams').stream()
-
-                for team in teams_ref:
-                    team_data = team.to_dict()
-
-                    # If the student's email exists in the team, add it to the result
-                    if email in team_data:
-                        student_teams.append({
-                            "class_id": class_id,
-                            "project_name": project_id,
-                            "team_name": team.id
-                        })
-
-        if not student_teams:
+        results = []
+        for classroom in db.collection('classrooms').stream():
+            for project in classroom.reference.collection('Projects').stream():
+                for team in project.reference.collection('teams').stream():
+                    if email in team.to_dict():
+                        results.append({"class_id": classroom.id,
+                                        "project_name": project.id,
+                                        "team_name": team.id})
+        if not results:
             return jsonify({"message": "No teams found for this student."}), 404
-
-        return jsonify({"projects": student_teams}), 200
-
+        return jsonify({"projects": results}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 
 @app.route('/add_shape', methods=['POST'])
 @cross_origin()
 def add_shape():
-    print(request.headers)
-    # data = request.get_json()
-    # shape_id = data.get('shape_id')
-    # team_id = data.get('teamId')
-
     shape_id = request.form.get('shapeId')
-    team_id = request.form.get('teamId')
-
+    team_id  = request.form.get('teamId')
     if not shape_id:
         return jsonify({"error": "Missing shape id"}), 400
     if not team_id:
         return jsonify({"error": "Missing team id"}), 400
     try:
-        print(f"Received shape with Id: {shape_id} for team: {team_id}")
-        return jsonify({"message": f"Shape with ID: {shape_id} received succesfully"})
-    
-    # doc_path = f'classrooms/CSC7135/Projects/Final Project/teams/{team_id}/shapes/{shape_id}'
-
-    # try:
-    #     db.document(doc_path).set({
-    #         'shape_id': shape_id,
-    #         'team_id': team_id,
-    #         'comments': [],
-    #         'reactions':{
-    #             'like': 0,
-    #             'dislike': 0,
-    #             'confused': 0,
-    #             'surprised': 0
-    #         },
-    #         'createdAt': SERVER_TIMESTAMP
-    #     })
-    #     return jsonify({"message": "Shape added successfully"}), 200
+        return jsonify({"message": f"Shape {shape_id} received."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 if __name__ == '__main__' and os.getenv("FLASK_ENV") != "production":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=False)
-

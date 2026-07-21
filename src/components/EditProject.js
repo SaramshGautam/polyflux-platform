@@ -4,7 +4,7 @@ import { getFirestore, doc, getDoc } from "firebase/firestore";
 import "./EditProject.css";
 
 const API_BASE = (className, projectName) =>
-  `/api/classroom/${className}/project/${projectName}`;
+  `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/project/${projectName}`;
 
 const MAX_NOTE_SIZE_MB = 10;
 const MAX_NOTES = 10;
