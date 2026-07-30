@@ -46,6 +46,7 @@ import { createToggleRecorder } from "../utils/audioRecorder";
 import { useCanvasActionHistory } from "./useCanvasActionHistory";
 import HistoryCommentPanel from "./HistoryCommentPanel";
 import ProvenanceTrendsChart from "./ProvenanceTrendsChart";
+import { CanvasHeatMapOverlay } from "./CanvasHeatMapOverlay";
 
 const CUSTOM_TOOLS = [MicrophoneTool];
 const SHAPE_UTILS = [...defaultShapeUtils, AudioShapeUtil];
@@ -143,6 +144,8 @@ const CollaborativeWhiteboard = () => {
   const [selectedShape, setSelectedShape] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showChart, setShowChart] = useState(false);
+  const [showHeatMap, setShowHeatMap] = useState(false);
+  const [heatMapGridSize, setHeatMapGridSize] = useState(80);
 
   const [commentCounts, setCommentCounts] = useState({});
   const [comments, setComments] = useState({});
@@ -161,6 +164,20 @@ const CollaborativeWhiteboard = () => {
   // canvas action history (non-AI)
   const { actionHistory, setActionHistory, fetchActionHistory } =
     useCanvasActionHistory({ className, projectName, teamName });
+
+  const shapeCreatorMap = useMemo(() => {
+    return actionHistory.reduce((accumulator, entry) => {
+      if (!entry?.shapeId) return accumulator;
+
+      const creatorName =
+        (typeof entry.displayName === "string" && entry.displayName.trim()) ||
+        (typeof entry.userId === "string" && entry.userId.trim()) ||
+        "Unknown";
+
+      accumulator[entry.shapeId] = creatorName;
+      return accumulator;
+    }, {});
+  }, [actionHistory]);
 
   // Write camera / cursor presence
   useCameraPresence(editorInstance, {
@@ -712,6 +729,22 @@ const CollaborativeWhiteboard = () => {
         >
           📈 Analytics
         </button>
+        <button
+          style={{
+            background: showHeatMap ? "#dbeafe" : "#fff",
+            border: showHeatMap ? "1px solid #3b82f6" : "1px solid #888",
+            borderRadius: 6,
+            padding: "4px 12px",
+            fontWeight: 500,
+            fontSize: 14,
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
+          }}
+          onClick={() => setShowHeatMap((prev) => !prev)}
+          title="Toggle hybrid artifact and creator heat map"
+        >
+          🔥 Heat Map
+        </button>
       </div>
 
       <div className="main-container" style={{ position: "fixed", inset: 0 }}>
@@ -728,6 +761,13 @@ const CollaborativeWhiteboard = () => {
           shapeUtils={SHAPE_UTILS}
           overrides={uiOverrides}
           components={tldrawComponents}
+        />
+        <CanvasHeatMapOverlay
+          editor={editorInstance.current}
+          showHeatMap={showHeatMap}
+          gridSize={heatMapGridSize}
+          onGridSizeChange={setHeatMapGridSize}
+          shapeCreatorMap={shapeCreatorMap}
         />
       </div>
 
