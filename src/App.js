@@ -19,6 +19,7 @@ import Team from "./components/Team";
 import InactivityMonitor from "./components/InactivityMonitor";
 import CollaborativeWhiteboard from "./components/CollaborativeWhiteboard";
 import ExportMovesPanel from "./components/ExportMovesPanel";
+import HowToUse from "./components/navbar/HowToUse";
 
 import FinishSignIn from "./components/FinishSignIn";
 import AddUser from "./utils/AddUser";
@@ -106,6 +107,17 @@ const App = () => {
           <>
             <Navbar />
             <AddUser />
+          </>
+        }
+      />
+
+      {/* How to Use (Teacher Guide) */}
+      <Route
+        path="/how-to-use"
+        element={
+          <>
+            <Navbar />
+            <HowToUse />
           </>
         }
       />

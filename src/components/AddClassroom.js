@@ -192,6 +192,10 @@ const AddClassroom = () => {
               className="ac-file-input"
               required
             />
+            <p className="ac-format-note">
+              Required columns (first row = header):{" "}
+              <code>firstname</code>, <code>lastname</code>, <code>email</code>
+            </p>
           </div>
 
           {/* ── Actions ── */}

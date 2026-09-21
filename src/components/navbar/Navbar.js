@@ -203,18 +203,6 @@ const Navbar = () => {
               </li>
               <li className="nb-dropdown-divider" />
 
-              {role === "teacher" && (
-                <li role="menuitem">
-                  <Link
-                    className="nb-dropdown-item"
-                    to="/how-to-use"
-                    onClick={() => setIsProfileOpen(false)}
-                  >
-                    📘 How to Use
-                  </Link>
-                </li>
-              )}
-
               {isInWhiteboard && (
                 <li role="menuitem">
                   <a
