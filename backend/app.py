@@ -245,10 +245,11 @@ def addclassroom():
 
         existing = db.collection('classrooms')\
                      .where('teacherEmail', '==', user_email)\
-                     .where('class_name', '==', class_name).get()
+                     .where('class_name', '==', class_name)\
+                     .where('semester', '==', semester).get()
         if len(existing) > 0:
             os.remove(file_path)
-            return jsonify({"error": f"Classroom '{class_name}' already exists."}), 400
+            return jsonify({"error": f"Classroom '{class_name}' already exists for {semester}."}), 400
 
         classroom_ref.set({
             'classID': course_id, 'courseID': course_id,

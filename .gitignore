@@ -29,6 +29,13 @@ ai-backend/*
 backend/*
 
 shapes_dump
+*_dump
+canvas_activity_*
+nudge_response_*
+downloadLogs.js
+downloadAILogs.js
+data_dump_all7groups.zip
+polyflux-formative-datastream.js
 venv
 venv/*
 npm-debug.log*
