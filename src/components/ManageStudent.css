@@ -4,9 +4,9 @@
   margin: 0 auto;
   min-height: 100vh;
   padding: 5.5rem 1.5rem 4rem;
-  background: #f8f7f4;
+  background: var(--pf-page-bg);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   position: relative;
 }
 
@@ -17,7 +17,7 @@
   padding: 0;
   cursor: pointer;
   font-size: 0.8rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin-bottom: 1rem;
   display: inline-flex;
   align-items: center;
@@ -26,7 +26,7 @@
   font-family: inherit;
 }
 .ms-back-btn:hover {
-  color: #4a1d8f;
+  color: var(--pf-accent);
 }
 
 .ms-header {
@@ -43,14 +43,14 @@
 .ms-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   letter-spacing: -0.3px;
   margin: 0 0 0.2rem;
 }
 
 .ms-subtitle {
   font-size: 0.85rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0;
 }
 
@@ -60,7 +60,7 @@
   align-items: center;
   gap: 6px;
   padding: 0.55rem 1.1rem;
-  background: #4a1d8f;
+  background: var(--pf-accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -74,24 +74,24 @@
   flex-shrink: 0;
 }
 .ms-btn-primary:hover {
-  background: #3b1772;
+  background: var(--pf-accent-dark);
 }
 
 .ms-btn-ghost {
   padding: 0.6rem 1rem;
   background: none;
-  border: 1.5px solid #e8e4dd;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--pf-text-muted);
   cursor: pointer;
   min-height: 40px;
   transition: border-color 0.15s, color 0.15s;
   font-family: inherit;
 }
 .ms-btn-ghost:hover:not(:disabled) {
-  border-color: #c9c4bc;
-  color: #374151;
+  border-color: var(--pf-border-strong);
+  color: var(--pf-text-secondary);
 }
 .ms-btn-ghost:disabled {
   opacity: 0.5;
@@ -128,9 +128,9 @@
   align-items: center;
   gap: 5px;
   padding: 0.35rem 0.8rem;
-  background: #fff;
-  color: #4a1d8f;
-  border: 1.5px solid #c4b5e8;
+  background: var(--pf-card-bg);
+  color: var(--pf-accent);
+  border: 1.5px solid var(--pf-accent-border);
   border-radius: 7px;
   font-size: 12.5px;
   font-weight: 500;
@@ -140,8 +140,8 @@
   white-space: nowrap;
 }
 .ms-btn-edit:hover:not(:disabled) {
-  background: #f5f0ff;
-  border-color: #4a1d8f;
+  background: var(--pf-accent-light);
+  border-color: var(--pf-accent);
 }
 .ms-btn-edit:disabled {
   opacity: 0.4;
@@ -185,29 +185,29 @@
   top: 50%;
   transform: translateY(-50%);
   font-size: 16px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   pointer-events: none;
 }
 
 .ms-search {
   width: 100%;
   padding: 0.6rem 2.25rem 0.6rem 2.25rem;
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #1c1917;
-  background: #fff;
+  color: var(--pf-text-primary);
+  background: var(--pf-card-bg);
   outline: none;
   font-family: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
 }
 .ms-search:focus {
-  border-color: #4a1d8f;
+  border-color: var(--pf-accent);
   box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
 }
 .ms-search::placeholder {
-  color: #9ca3af;
+  color: var(--pf-text-muted);
 }
 
 .ms-search-clear {
@@ -218,7 +218,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #a09890;
+  color: var(--pf-text-muted);
   font-size: 13px;
   padding: 2px;
   border-radius: 4px;
@@ -226,13 +226,13 @@
   transition: color 0.15s;
 }
 .ms-search-clear:hover {
-  color: #1c1917;
+  color: var(--pf-text-primary);
 }
 
 /* ─── Card ───────────────────────────────────────────────────────────────── */
 .ms-card {
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -245,7 +245,7 @@
   gap: 10px;
   padding: 3rem 1rem;
   font-size: 14px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   font-style: italic;
 }
 
@@ -253,8 +253,8 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid #e8e4dd;
-  border-top-color: #4a1d8f;
+  border: 2px solid var(--pf-border);
+  border-top-color: var(--pf-accent);
   border-radius: 50%;
   animation: ms-spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -277,14 +277,14 @@
   align-items: center;
   gap: 12px;
   padding: 0.85rem 1.1rem;
-  border-bottom: 1px solid #f0ece6;
+  border-bottom: 1px solid var(--pf-border-soft);
   transition: background 0.12s;
 }
 .ms-row:last-child {
   border-bottom: none;
 }
 .ms-row:hover {
-  background: #faf9f7;
+  background: var(--pf-input-bg);
 }
 
 /* ─── Avatar ─────────────────────────────────────────────────────────────── */
@@ -292,8 +292,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #ede9fe;
-  color: #4a1d8f;
+  background: var(--pf-accent-soft);
+  color: var(--pf-accent);
   font-size: 13px;
   font-weight: 700;
   display: flex;
@@ -314,7 +314,7 @@
 .ms-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -322,7 +322,7 @@
 
 .ms-email {
   font-size: 12px;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -330,7 +330,7 @@
 
 .ms-lsuid {
   font-size: 11.5px;
-  color: #a09890;
+  color: var(--pf-text-muted);
 }
 
 /* ─── Row actions ────────────────────────────────────────────────────────── */
@@ -354,8 +354,8 @@
 }
 
 .ms-confirm {
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 14px;
   padding: 1.75rem 1.75rem 1.5rem;
   max-width: 380px;
@@ -371,17 +371,17 @@
 .ms-confirm h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   margin: 0 0 0.6rem;
 }
 .ms-confirm p {
   font-size: 0.875rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0 0 1.25rem;
   line-height: 1.55;
 }
 .ms-confirm p strong {
-  color: #1c1917;
+  color: var(--pf-text-primary);
 }
 .ms-confirm-actions {
   display: flex;
@@ -485,9 +485,9 @@
   gap: 6px;
   margin-top: 1.25rem;
   padding: 0.55rem 1rem;
-  background: #fff;
-  color: #6b7280;
-  border: 1.5px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  color: var(--pf-text-muted);
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
@@ -496,8 +496,8 @@
   font-family: inherit;
 }
 .ms-back-btn-bottom:hover {
-  border-color: #c9c4bc;
-  color: #374151;
+  border-color: var(--pf-border-strong);
+  color: var(--pf-text-secondary);
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */

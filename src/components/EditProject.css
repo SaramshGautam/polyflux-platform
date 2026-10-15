@@ -1,7 +1,7 @@
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 .ep-page {
   min-height: 100vh;
-  background: #f8f7f4;
+  background: var(--pf-page-bg);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -11,8 +11,8 @@
 
 /* ─── Card ───────────────────────────────────────────────────────────────── */
 .ep-card {
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 14px;
   padding: 2.25rem 2rem 2rem;
   width: 100%;
@@ -31,7 +31,7 @@
   padding: 0;
   cursor: pointer;
   font-size: 0.8rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin-bottom: 1rem;
   display: inline-flex;
   align-items: center;
@@ -40,20 +40,20 @@
   font-family: inherit;
 }
 .ep-back-btn:hover {
-  color: #4a1d8f;
+  color: var(--pf-accent);
 }
 
 .ep-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   letter-spacing: -0.3px;
   margin: 0 0 0.35rem;
 }
 
 .ep-subtitle {
   font-size: 0.85rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -112,7 +112,7 @@
 /* ─── Section divider + label ────────────────────────────────────────────── */
 .ep-section-divider {
   border: none;
-  border-top: 1px solid #e8e4dd;
+  border-top: 1px solid var(--pf-border);
   margin: 1.5rem 0 1.25rem;
 }
 
@@ -121,7 +121,7 @@
   font-weight: 600;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin-bottom: 0.35rem;
   display: flex;
   align-items: baseline;
@@ -130,7 +130,7 @@
 
 .ep-section-hint {
   font-size: 12.5px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   line-height: 1.55;
   margin: 0 0 1rem;
 }
@@ -151,7 +151,7 @@
 .ep-field > label:first-child {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--pf-text-secondary);
   margin-bottom: 0.35rem;
   display: flex;
   align-items: baseline;
@@ -165,18 +165,18 @@
 .ep-optional {
   font-size: 11.5px;
   font-weight: 400;
-  color: #a09890;
+  color: var(--pf-text-muted);
 }
 
 .ep-field input,
 .ep-field select,
 .ep-field textarea {
   padding: 0.6rem 0.8rem;
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #1c1917;
-  background: #fff;
+  color: var(--pf-text-primary);
+  background: var(--pf-card-bg);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
   font-family: inherit;
@@ -188,13 +188,13 @@
 .ep-field input:focus,
 .ep-field select:focus,
 .ep-field textarea:focus {
-  border-color: #4a1d8f;
+  border-color: var(--pf-accent);
   box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
 }
 
 .ep-field input::placeholder,
 .ep-field textarea::placeholder {
-  color: #9ca3af;
+  color: var(--pf-text-muted);
 }
 
 .ep-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
@@ -220,24 +220,24 @@
   align-items: center;
   gap: 10px;
   padding: 0.65rem 0.9rem;
-  border: 1.5px dashed #c9c4bc;
+  border: 1.5px dashed var(--pf-border-strong);
   border-radius: 8px;
-  background: #faf9f7;
+  background: var(--pf-input-bg);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   min-height: 44px;
 }
 .ep-file-label:hover {
-  border-color: #4a1d8f;
-  background: #f5f0ff;
+  border-color: var(--pf-accent);
+  background: var(--pf-accent-light);
 }
 
 .ep-file-icon {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: #ede9fe;
-  color: #4a1d8f;
+  background: var(--pf-accent-soft);
+  color: var(--pf-accent);
   font-size: 13px;
   font-weight: 700;
   display: flex;
@@ -261,7 +261,7 @@
 .ep-file-text {
   font-size: 13px;
   font-weight: 500;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -269,7 +269,7 @@
 }
 .ep-file-hint {
   font-size: 11.5px;
-  color: #9ca3af;
+  color: var(--pf-text-muted);
   flex-shrink: 0;
 }
 
@@ -279,8 +279,8 @@
   align-items: center;
   gap: 10px;
   padding: 0.55rem 0.8rem;
-  background: #faf9f7;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-input-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 8px;
   margin-bottom: 0.5rem;
   animation: ep-fade-in 0.18s ease;
@@ -299,7 +299,7 @@
 .ep-pdf-pill-name {
   font-size: 13px;
   font-weight: 500;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -308,14 +308,14 @@
 }
 .ep-pdf-pill-size {
   font-size: 11.5px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   flex-shrink: 0;
 }
 .ep-pdf-pill-remove {
   background: none;
   border: none;
   cursor: pointer;
-  color: #a09890;
+  color: var(--pf-text-muted);
   font-size: 12px;
   padding: 2px 4px;
   border-radius: 4px;
@@ -364,7 +364,7 @@
   justify-content: center;
   gap: 8px;
   padding: 0.65rem 1.5rem;
-  background: #4a1d8f;
+  background: var(--pf-accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -377,7 +377,7 @@
   font-family: inherit;
 }
 .ep-btn-primary:hover:not(:disabled) {
-  background: #3b1772;
+  background: var(--pf-accent-dark);
 }
 .ep-btn-primary:disabled {
   opacity: 0.65;
@@ -387,18 +387,18 @@
 .ep-btn-ghost {
   padding: 0.65rem 1rem;
   background: none;
-  border: 1.5px solid #e8e4dd;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--pf-text-muted);
   cursor: pointer;
   min-height: 42px;
   transition: border-color 0.15s, color 0.15s;
   font-family: inherit;
 }
 .ep-btn-ghost:hover:not(:disabled) {
-  border-color: #c9c4bc;
-  color: #374151;
+  border-color: var(--pf-border-strong);
+  color: var(--pf-text-secondary);
 }
 .ep-btn-ghost:disabled {
   opacity: 0.5;
@@ -486,8 +486,8 @@
 }
 
 .ep-confirm {
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 14px;
   padding: 1.75rem 1.75rem 1.5rem;
   max-width: 380px;
@@ -505,19 +505,19 @@
 .ep-confirm h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   margin: 0 0 0.6rem;
 }
 
 .ep-confirm p {
   font-size: 0.875rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0 0 1.25rem;
   line-height: 1.55;
 }
 
 .ep-confirm p strong {
-  color: #1c1917;
+  color: var(--pf-text-primary);
 }
 
 .ep-confirm-actions {
@@ -565,7 +565,7 @@
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   padding: 0.6rem 0;
   margin-bottom: 0.75rem;
 }
@@ -574,8 +574,8 @@
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid #e8e4dd;
-  border-top-color: #4a1d8f;
+  border: 2px solid var(--pf-border);
+  border-top-color: var(--pf-accent);
   border-radius: 50%;
   animation: ep-spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -583,8 +583,8 @@
 
 /* ─── Saved PDF pill variant ─────────────────────────────────────────────── */
 .ep-pdf-pill--saved {
-  border-color: #c4b5e8;
-  background: #f5f0ff;
+  border-color: var(--pf-accent-border);
+  background: var(--pf-accent-light);
 }
 
 .ep-pdf-pill-info {
@@ -598,7 +598,7 @@
 .ep-pdf-pill-link {
   font-size: 13px;
   font-weight: 500;
-  color: #4a1d8f;
+  color: var(--pf-accent);
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
@@ -613,8 +613,8 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background: #ede9fe;
-  color: #4a1d8f;
+  background: var(--pf-accent-soft);
+  color: var(--pf-accent);
   border-radius: 4px;
   padding: 2px 6px;
   flex-shrink: 0;
@@ -623,7 +623,7 @@
 /* ─── Empty hint ─────────────────────────────────────────────────────────── */
 .ep-empty-hint {
   font-size: 13px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   margin: 0 0 0.75rem;
   font-style: italic;
 }

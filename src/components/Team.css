@@ -1,6 +1,6 @@
 :root {
-  --navbar-height: 60px;
-  --accent: #6c63ff;
+  --navbar-height: var(--pf-navbar-height);
+  --accent: var(--pf-accent);
 }
 
 /* ── Page shell ── */
@@ -9,8 +9,8 @@
   margin: 0 auto;
   min-height: calc(100vh - var(--navbar-height));
   padding: var(--navbar-height) 1rem 3rem;
-  background-color: #f6f6f6;
-  color: #1a1a1a;
+  background-color: var(--pf-page-bg);
+  color: var(--pf-text-primary);
   font-family: "Inter", sans-serif;
   text-align: left;
 }
@@ -19,7 +19,7 @@
 .team-container .dashboard-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #333;
+  color: var(--pf-text-primary);
   margin-bottom: 0.5rem;
   display: inline-flex;
   align-items: center;
@@ -35,7 +35,7 @@
 .team-container .section-title {
   font-size: 1rem;
   font-weight: 500;
-  color: #666;
+  color: var(--pf-text-secondary);
   margin-bottom: 2rem;
   padding-left: 0;
   border: none;
@@ -43,10 +43,9 @@
 
 /* ── Members card ── */
 .team-members {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  background: var(--pf-card-bg);
+  border-radius: var(--pf-radius-lg);
+  border: 1px solid var(--pf-border);
   padding: 1.4rem 1.6rem;
   max-width: 520px;
   margin-bottom: 2rem;
@@ -57,8 +56,79 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: #888;
+  color: var(--pf-text-muted);
   margin-bottom: 1rem;
+}
+
+/* ── AI alignment check ── */
+.team-alignment-card {
+  background: var(--pf-card-bg);
+  border-radius: var(--pf-radius-lg);
+  border: 1px solid var(--pf-border);
+  padding: 1.4rem 1.6rem;
+  max-width: 640px;
+}
+
+.team-alignment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.team-alignment-header h5 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pf-text-muted);
+  margin: 0;
+}
+
+.team-alignment-hint {
+  font-size: 0.85rem;
+  color: var(--pf-text-secondary);
+  font-style: italic;
+  margin: 0.75rem 0 0;
+}
+
+.team-alignment-error {
+  font-size: 0.85rem;
+  color: #b91c1c;
+  margin: 0.75rem 0 0;
+}
+
+.team-alignment-result {
+  margin-top: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--pf-radius-md);
+  border-left: 4px solid var(--accent);
+  background: var(--pf-accent-light);
+}
+
+.team-alignment-result.is-off-track {
+  border-left-color: #d97706;
+  background: #fffaf0;
+}
+
+.team-alignment-verdict {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--pf-text-primary);
+}
+
+.team-alignment-score {
+  font-weight: 400;
+  color: var(--pf-text-secondary);
+}
+
+.team-alignment-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--pf-text-secondary);
+  line-height: 1.5;
 }
 
 /* ── Member list ── */
@@ -76,15 +146,15 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.6rem 0.75rem;
-  border-radius: 8px;
-  background: #f6f6f6;
+  border-radius: var(--pf-radius-md);
+  background: var(--pf-input-bg);
   font-size: 0.95rem;
-  color: #222;
+  color: var(--pf-text-primary);
   transition: background 0.15s;
 }
 
 .team-members ul li:hover {
-  background: #efedff;
+  background: var(--pf-accent-light);
 }
 
 /* Avatar initial bubble */
@@ -112,47 +182,42 @@
 }
 
 .btn.action-btn {
-  background-color: #14213d;
+  background-color: var(--pf-accent);
   color: #ffffff;
   border: none;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: var(--pf-radius-md);
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: background-color 0.18s ease, transform 0.18s ease,
-    box-shadow 0.18s ease;
+  transition: background-color 0.15s ease;
 }
 
 .btn.action-btn:hover {
-  background-color: #023e8a;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+  background-color: var(--pf-accent-dark);
 }
 
 /* ── Back button ── */
 .btn.back-btn {
-  background-color: #f0f0f0;
-  color: #333;
-  border: 1px solid #1a1a1a;
+  background-color: var(--pf-card-bg);
+  color: var(--pf-text-secondary);
+  border: 1px solid var(--pf-border);
   padding: 8px 14px;
-  border-radius: 6px;
+  border-radius: var(--pf-radius-md);
   cursor: pointer;
   font-size: 0.85rem;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  transition: background-color 0.18s ease, box-shadow 0.18s ease,
-    transform 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .btn.back-btn:hover {
-  background-color: #eaeaea;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  background-color: var(--pf-accent-light);
+  border-color: var(--pf-accent);
 }
 
 /* ── Error alert ── */
@@ -160,7 +225,7 @@
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: #991b1b;
-  border-radius: 10px;
+  border-radius: var(--pf-radius-lg);
   padding: 1rem 1.25rem;
   font-size: 0.92rem;
   margin-top: 2rem;
@@ -170,7 +235,7 @@
 .team-container > p {
   text-align: center;
   margin-top: 3rem;
-  color: #777;
+  color: var(--pf-text-muted);
 }
 
 /* ── Responsive ── */

@@ -4,8 +4,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background: #1e1e2e;
-  height: 60px;
+  background: var(--pf-navbar-bg);
+  border-bottom: 1px solid var(--pf-navbar-border);
+  height: 56px;
   position: fixed;
   top: 0;
   left: 0;
@@ -13,10 +14,11 @@
   z-index: 900; /* below ai-sidebar (1000) and ai-toggle (1100) */
   gap: 12px;
   font-family: "Inter", system-ui, sans-serif;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 body {
-  padding-top: 60px;
+  padding-top: 56px;
 }
 
 /* ─── Left side ──────────────────────────────────────────────────────────── */
@@ -35,42 +37,44 @@ body {
   object-fit: contain;
   cursor: pointer;
   flex-shrink: 0;
-  border-radius: 4px;
+  border-radius: var(--pf-radius-sm);
 }
 
 .nb-brand {
   background: none;
   border: none;
-  color: #fff;
-  font-size: 18px;
+  color: var(--pf-navbar-text);
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
   font-family: inherit;
   flex-shrink: 0;
+  letter-spacing: -0.01em;
 }
 .nb-brand:hover {
-  color: #c4b5e8;
+  color: var(--pf-accent);
 }
 
 .nb-divider {
   width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.2);
+  height: 18px;
+  background: var(--pf-navbar-border);
   flex-shrink: 0;
 }
 
 .nb-link {
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--pf-navbar-text-secondary);
   text-decoration: none;
-  font-size: 13.5px;
+  font-size: 13px;
+  font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
   transition: color 0.15s;
 }
 .nb-link:hover {
-  color: #fff;
+  color: var(--pf-accent);
 }
 
 /* ─── Page title ─────────────────────────────────────────────────────────── */
@@ -84,7 +88,7 @@ body {
 .nb-page-title {
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: var(--pf-navbar-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,7 +97,7 @@ body {
 
 .nb-page-sub {
   font-size: 10.5px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--pf-navbar-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -118,7 +122,7 @@ body {
 }
 
 .nb-crumb-sep {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--pf-navbar-text-tertiary);
   font-size: 12px;
   padding: 0 3px;
   flex-shrink: 0;
@@ -127,7 +131,7 @@ body {
 .nb-crumb-link {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--pf-navbar-text-secondary);
   font-size: 12px;
   cursor: pointer;
   padding: 0;
@@ -139,13 +143,13 @@ body {
   transition: color 0.15s;
 }
 .nb-crumb-link:hover {
-  color: #fff;
+  color: var(--pf-accent);
   text-decoration: underline;
 }
 
 .nb-crumb-current {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--pf-navbar-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -157,15 +161,40 @@ body {
 .nb-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-/* This spacer reserves room for the AI toggle button (fixed, ~180px wide).
+/* This spacer reserves room for the AI toggle button (fixed, ~200px wide).
    Without it the avatar slides under the AI pill when the panel is closed. */
 .nb-ai-spacer {
-  width: 172px; /* approximate width of "Study Assistant" pill */
+  width: 198px; /* approximate width of "PolyFlux Assistant" pill */
   flex-shrink: 0;
+}
+
+/* ─── Theme toggle ───────────────────────────────────────────────────────── */
+.nb-theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.nb-theme-toggle:hover {
+  background-color: rgba(128, 128, 128, 0.12);
+}
+
+.nb-theme-toggle svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* ─── Profile avatar row ─────────────────────────────────────────────────── */
@@ -180,8 +209,8 @@ body {
   font-family: inherit;
 }
 .nb-avatar-row:hover .nb-avatar {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: #fff;
+  background: var(--pf-accent-light);
+  border-color: var(--pf-accent);
 }
 
 .nb-user-info {
@@ -195,7 +224,7 @@ body {
 .nb-user-name {
   font-size: 12px;
   font-weight: 600;
-  color: #fff;
+  color: var(--pf-navbar-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -204,7 +233,7 @@ body {
 
 .nb-user-email {
   font-size: 10.5px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--pf-navbar-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -217,13 +246,13 @@ body {
 }
 
 .nb-avatar {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  color: #fff;
-  font-size: 15px;
+  background: var(--pf-accent-light);
+  border: 1px solid var(--pf-border);
+  color: var(--pf-accent);
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -235,8 +264,8 @@ body {
   user-select: none;
 }
 .nb-avatar:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: #fff;
+  background: var(--pf-accent-light);
+  border-color: var(--pf-accent);
 }
 
 /* ─── Dropdown ───────────────────────────────────────────────────────────── */
@@ -245,10 +274,10 @@ body {
   top: calc(100% + 8px);
   right: 0;
   min-width: 200px;
-  background: #2a2a3e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-lg);
+  box-shadow: var(--pf-shadow-dropdown);
   list-style: none;
   padding: 6px 0;
   margin: 0;
@@ -277,7 +306,7 @@ body {
 .nb-dropdown-name span:first-child {
   font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: var(--pf-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -285,13 +314,13 @@ body {
 
 .nb-dropdown-role {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--pf-text-muted);
   text-transform: capitalize;
 }
 
 .nb-dropdown-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--pf-border);
   margin: 4px 0;
 }
 
@@ -302,7 +331,7 @@ body {
   width: 100%;
   padding: 8px 14px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--pf-text-secondary);
   background: none;
   border: none;
   cursor: pointer;
@@ -312,16 +341,16 @@ body {
   transition: background 0.12s, color 0.12s;
 }
 .nb-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--pf-accent-light);
+  color: var(--pf-accent);
 }
 
 .nb-dropdown-item--danger {
-  color: #f87171;
+  color: #dc2626;
 }
 .nb-dropdown-item--danger:hover {
-  background: rgba(248, 113, 113, 0.1);
-  color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */

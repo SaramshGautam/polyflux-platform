@@ -7,18 +7,18 @@
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 .teacher-dashboard {
-  background-color: #f8f7f4;
+  background-color: var(--pf-page-bg);
   min-height: 100vh;
   padding: 3.5rem 2rem 4rem;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  color: #1c1917;
+  color: var(--pf-text-primary);
 }
 
 /* ─── Dashboard title ────────────────────────────────────────────────────── */
 .dashboard-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   letter-spacing: -0.3px;
   margin-bottom: 2rem;
 }
@@ -89,17 +89,17 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0 0 1rem;
   padding-bottom: 0.6rem;
-  border-bottom: 2px solid #e8e4dd;
+  border-bottom: 2px solid var(--pf-border);
   width: 100%;
 }
 
 /* Accent stripe for the active/current semester */
 .semester-section > h4.fall-2025 {
-  color: #4a1d8f;
-  border-bottom-color: #4a1d8f;
+  color: var(--pf-accent);
+  border-bottom-color: var(--pf-accent);
 }
 
 /* ─── Grid ───────────────────────────────────────────────────────────────── */
@@ -113,8 +113,8 @@
 .classroom-card {
   position: relative;
   cursor: pointer;
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 10px;
   padding: 1.1rem 1.1rem 1rem;
   display: flex;
@@ -133,12 +133,12 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: #4a1d8f;
+  background: var(--pf-accent);
   border-radius: 10px 10px 0 0;
 }
 
 .classroom-card:hover {
-  border-color: #c4b5e8;
+  border-color: var(--pf-accent-border);
   box-shadow: 0 4px 16px rgba(74, 29, 143, 0.08);
   transform: translateY(-2px);
 }
@@ -151,7 +151,7 @@
 .classroom-card .card-title h4 {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   line-height: 1.35;
   margin: 0;
   /* Course ID portion styled differently via JS split if desired */
@@ -164,7 +164,7 @@
 
 .classroom-card .card-text {
   font-size: 0.775rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin-top: 0.6rem;
   line-height: 1.4;
 }
@@ -174,9 +174,9 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  border: 1.5px dashed #c9c4bc;
+  border: 1.5px dashed var(--pf-border-strong);
   background: transparent;
-  color: #a09890;
+  color: var(--pf-text-muted);
   min-height: 130px;
 }
 
@@ -187,20 +187,20 @@
 .classroom-card.add-classroom-card h4 {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #a09890;
+  color: var(--pf-text-muted);
   margin: 0;
 }
 
 .classroom-card.add-classroom-card:hover {
-  border-color: #4a1d8f;
-  background: #f5f0ff;
-  color: #4a1d8f;
+  border-color: var(--pf-accent);
+  background: var(--pf-accent-light);
+  color: var(--pf-accent);
   box-shadow: none;
   transform: none;
 }
 
 .classroom-card.add-classroom-card:hover h4 {
-  color: #4a1d8f;
+  color: var(--pf-accent);
 }
 
 /* ─── Empty state ────────────────────────────────────────────────────────── */
@@ -216,7 +216,7 @@
 /* ─── Loading / signed-out state ─────────────────────────────────────────── */
 .teacher-dashboard > p {
   text-align: center;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   font-size: 0.9rem;
   padding: 4rem 0;
 }

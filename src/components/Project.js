@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import TeamCard from "./TeamCard";
+import ProjectMaterials from "./ProjectMaterials";
+import CollapsibleSection from "./CollapsibleSection";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -254,10 +256,16 @@ const Project = () => {
         </div>
       )}
 
-      {/* ── Teams section ── */}
-      <section className="teams-section mt-4">
-        <h2>Teams</h2>
+      {/* ── Materials ── */}
+      <ProjectMaterials className={className} projectName={projectName} role={role} />
 
+      {/* ── Teams section ── */}
+      <CollapsibleSection
+        className="teams-section mt-4"
+        title="Teams"
+        count={teams.length}
+        storageKey={`pf-collapsed:teams:${className}:${projectName}`}
+      >
         {teams.length > 0 ? (
           <div className="teams-list">
             {role === "student" ? (
@@ -294,7 +302,7 @@ const Project = () => {
         ) : (
           <p className="text-muted">No teams yet.</p>
         )}
-      </section>
+      </CollapsibleSection>
 
       {/* ── Back button ── */}
       <Link to={`/classroom/${className}`} className="btn back-btn mt-3">

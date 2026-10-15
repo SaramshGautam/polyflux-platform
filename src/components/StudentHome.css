@@ -1,6 +1,6 @@
 :root {
-  --navbar-height: 60px;
-  --accent: #6c63ff;
+  --navbar-height: var(--pf-navbar-height);
+  --accent: var(--pf-accent);
 }
 
 /* ── Page shell — mirrors .classroom-page ── */
@@ -9,8 +9,8 @@
   margin: 0 auto;
   min-height: calc(100vh - var(--navbar-height));
   padding: var(--navbar-height) 1rem 3rem;
-  background-color: #f6f6f6;
-  color: #1a1a1a;
+  background-color: var(--pf-page-bg);
+  color: var(--pf-text-primary);
   font-family: "Inter", sans-serif;
   text-align: left;
 }
@@ -19,7 +19,7 @@
 .student-home-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #333;
+  color: var(--pf-text-primary);
   margin-bottom: 1.5rem;
   display: inline-flex;
   align-items: center;
@@ -35,7 +35,7 @@
 .section-title {
   font-size: 1.4rem;
   font-weight: 600;
-  color: #444;
+  color: var(--pf-text-primary);
   margin-bottom: 1rem;
   margin-top: 0.5rem;
   border-left: 4px solid var(--accent);
@@ -61,24 +61,20 @@
 
 /* ── Classroom card — mirrors .project-card ── */
 .classroom-card {
-  background-color: #ffffff;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  background-color: var(--pf-card-bg);
+  border-radius: var(--pf-radius-md);
+  border: 1px solid var(--pf-border);
   padding: 1.1rem 1.2rem;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: transform 0.18s ease, box-shadow 0.18s ease,
-    border-color 0.18s ease, background-color 0.18s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .classroom-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.08);
-  border-color: #6c63ff33;
-  background-color: #faf9ff;
+  border-color: var(--pf-accent);
+  background-color: var(--pf-accent-light);
 }
 
 /* ── Card title — mirrors .project-card h5 ── */
@@ -86,13 +82,13 @@
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 0.4rem;
-  color: #222;
+  color: var(--pf-text-primary);
 }
 
 /* ── Instructor line — mirrors .project-description ── */
 .classroom-card .card-instructor {
   font-size: 0.9rem;
-  color: #555;
+  color: var(--pf-text-secondary);
   margin-bottom: 0.35rem;
 }
 
@@ -112,14 +108,14 @@
 /* ── Empty / loading states ── */
 .text-muted {
   font-size: 0.9rem;
-  color: #777 !important;
+  color: var(--pf-text-muted) !important;
   margin-top: 1rem;
 }
 
 .student-home-state {
   text-align: center;
   margin-top: 3rem;
-  color: #777;
+  color: var(--pf-text-muted);
 }
 
 /* ── Responsive ── */

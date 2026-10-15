@@ -2,9 +2,22 @@ import React, { useState, useRef, useEffect } from "react";
 import "./AIChatPanel.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRobot } from "@fortawesome/free-solid-svg-icons";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+} from "firebase/firestore";
 
 const AI_BASE = "https://canvas-ai-backend-l7rilyhu2a-uc.a.run.app";
+
+// The ai-backend keys its ingested content by `${className}__${projectName}`
+// (see backend/app.py's project_course_id()) — NOT courseId alone. courseId
+// here is the classroom's Firestore doc id (used to look up uploaded PDFs);
+// this derived key is what must be sent to the ai-backend itself.
+const backendCourseId = (courseId, projectName) =>
+  projectName ? `${courseId}__${projectName}` : courseId;
 
 export default function AIChatPanel({
   courseId,
@@ -15,15 +28,24 @@ export default function AIChatPanel({
   const [messages, setMessages] = useState([
     {
       role: "ai",
-      text: "Hi! Ask me anything about the course material your professor uploaded.",
+      text: "Hey there! 👋 I'm your PolyFlux Assistant — ask me anything about the material your professor has uploaded for this project, and I'll do my best to help you work through it.",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [wakingUp, setWakingUp] = useState(false); // backend cold-start likely in progress
   const [sources, setSources] = useState([]); // loaded PDF names from Firestore
   const [ingesting, setIngesting] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+
+  // ── Pre-warm the AI backend on mount ────────────────────────────────────────
+  // Best-effort only: if the Cloud Run instance is cold, this kicks off its
+  // (slow) model load in the background so it's more likely to be ready by
+  // the time the student actually asks something.
+  useEffect(() => {
+    fetch(`${AI_BASE}/`).catch(() => {});
+  }, []);
 
   // ── Auto-scroll ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -50,22 +72,63 @@ export default function AIChatPanel({
         const data = snap.data() || {};
         const descPdf = data.description_pdf ? [data.description_pdf] : [];
         const notePdfs = Array.isArray(data.notes) ? data.notes : [];
-        const allPdfs = [...descPdf, ...notePdfs];
 
-        if (allPdfs.length === 0) return;
+        // Materials library (Project page "Materials" section) — only the
+        // document items (PDF/PPTX/DOCX); video links have no extractable
+        // text. These are included in what the AI can draw on even when a
+        // teacher has marked them private — "private" only controls whether
+        // a *student* can see/open the file, not whether the assistant can
+        // use it to answer questions.
+        const materialsSnap = await getDocs(
+          collection(
+            db,
+            "classrooms",
+            courseId,
+            "Projects",
+            projectName,
+            "materials"
+          )
+        );
+        const documentMaterials = materialsSnap.docs
+          .map((d) => d.data())
+          .filter((m) => m.type === "document" && m.url);
 
-        // Show the source names in the UI
-        setSources(allPdfs.map((p) => p.name).filter(Boolean));
+        const allDocuments = [
+          ...descPdf,
+          ...notePdfs,
+          ...documentMaterials.map((m) => ({
+            name: m.fileName || m.title,
+            url: m.url,
+          })),
+        ];
 
-        // Trigger ingest so the AI backend has the latest PDFs indexed
+        if (allDocuments.length === 0) return;
+
+        // Show the source names in the UI — legacy description/notes PDFs
+        // were always student-visible; for the new materials library, only
+        // list items the teacher actually marked visible, so a private
+        // file's existence/title is never hinted at in the chat panel.
+        const visibleSourceNames = [
+          ...descPdf.map((p) => p.name),
+          ...notePdfs.map((p) => p.name),
+          ...documentMaterials
+            .filter((m) => m.visibleToStudents)
+            .map((m) => m.title),
+        ];
+        setSources(visibleSourceNames.filter(Boolean));
+
+        // Trigger ingest so the AI backend has the latest material indexed
         setIngesting(true);
         try {
-          await fetch(`${AI_BASE}/api/ingest`, {
+          await fetch(`${AI_BASE}/api/chatbot/ingest`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              course_id: courseId,
-              documents: allPdfs.map((p) => ({ name: p.name, url: p.url })),
+              course_id: backendCourseId(courseId, projectName),
+              documents: allDocuments.map((p) => ({
+                name: p.name,
+                url: p.url,
+              })),
             }),
           });
         } catch (e) {
@@ -91,13 +154,22 @@ export default function AIChatPanel({
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: question }]);
     setLoading(true);
+    setWakingUp(false);
+
+    // If this takes more than a few seconds, the backend is very likely
+    // cold-starting (see AI_BASE) — let the student know that's expected
+    // rather than leaving them staring at a silent typing indicator.
+    const wakeTimer = setTimeout(() => setWakingUp(true), 6000);
 
     try {
-      const res = await fetch(`${AI_BASE}/api/chatbot/ask/${courseId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
+      const res = await fetch(
+        `${AI_BASE}/api/chatbot/ask/${backendCourseId(courseId, projectName)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        }
+      );
       const data = await res.json();
       setMessages((prev) => [
         ...prev,
@@ -108,10 +180,12 @@ export default function AIChatPanel({
         ...prev,
         {
           role: "ai",
-          text: "Could not reach the AI backend. Please try again.",
+          text: "Sorry, I couldn't reach my brain just now — I might be waking up from a nap. Give it a few seconds and try again?",
         },
       ]);
     } finally {
+      clearTimeout(wakeTimer);
+      setWakingUp(false);
       setLoading(false);
     }
   };
@@ -125,22 +199,22 @@ export default function AIChatPanel({
         }`}
         onClick={onToggle}
         aria-label={
-          isCollapsed ? "Open Study Assistant" : "Close Study Assistant"
+          isCollapsed ? "Open PolyFlux Assistant" : "Close PolyFlux Assistant"
         }
-        title="Study Assistant"
+        title="PolyFlux Assistant"
       >
         <span className="ai-toggle-icon" aria-hidden="true">
           <FontAwesomeIcon icon={faRobot} />
         </span>
         {isCollapsed && (
-          <span className="ai-toggle-label">Study Assistant</span>
+          <span className="ai-toggle-label">PolyFlux Assistant</span>
         )}
       </button>
 
       {/* ── Sidebar ── */}
       <aside
         className={`ai-sidebar${isCollapsed ? " ai-sidebar--collapsed" : ""}`}
-        aria-label="Study Assistant"
+        aria-label="PolyFlux Assistant"
         aria-hidden={isCollapsed}
       >
         {/* Header */}
@@ -148,7 +222,7 @@ export default function AIChatPanel({
           <div className="ai-sidebar-header-left">
             <span className="ai-sidebar-icon" aria-hidden="true"></span>
             <div>
-              <div className="ai-sidebar-title">Study Assistant</div>
+              <div className="ai-sidebar-title">PolyFlux Assistant</div>
               <div className="ai-sidebar-course">{projectName || courseId}</div>
             </div>
           </div>
@@ -209,6 +283,12 @@ export default function AIChatPanel({
                 <span />
               </div>
             </div>
+          )}
+          {loading && wakingUp && (
+            <p className="ai-waking-hint">
+              Still here — just waking up my brain, this can take a minute the
+              first time. ☕
+            </p>
           )}
           <div ref={bottomRef} />
         </div>

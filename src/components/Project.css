@@ -1,19 +1,19 @@
 /* ─── Tokens ─────────────────────────────────────────────────────────────── */
 :root {
-  --navbar-height: 60px;
-  --purple: #4a1d8f;
-  --purple-dark: #3b1772;
-  --purple-light: #f5f0ff;
-  --purple-ring: rgba(74, 29, 143, 0.1);
-  --page-bg: #f8f7f4;
-  --card-bg: #ffffff;
-  --border: #e8e4dd;
-  --border-soft: #ede9e3;
-  --text-primary: #1c1917;
-  --text-secondary: #78716c;
-  --text-muted: #a09890;
-  --radius-card: 12px;
-  --radius-btn: 8px;
+  --navbar-height: var(--pf-navbar-height);
+  --purple: var(--pf-accent);
+  --purple-dark: var(--pf-accent-dark);
+  --purple-light: var(--pf-accent-light);
+  --purple-ring: var(--pf-accent-soft);
+  --page-bg: var(--pf-page-bg);
+  --card-bg: var(--pf-card-bg);
+  --border: var(--pf-border);
+  --border-soft: var(--pf-border-soft);
+  --text-primary: var(--pf-text-primary);
+  --text-secondary: var(--pf-text-secondary);
+  --text-muted: var(--pf-text-muted);
+  --radius-card: var(--pf-radius-lg);
+  --radius-btn: var(--pf-radius-md);
 }
 
 /* ─── Page shell ─────────────────────────────────────────────────────────── */
@@ -114,19 +114,6 @@
   cursor: not-allowed;
 }
 
-/* ─── Teams section header ───────────────────────────────────────────────── */
-.teams-section h2 {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin: 0 0 1rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 2px solid var(--purple);
-  display: inline-block;
-}
-
 /* ─── Teams grid ─────────────────────────────────────────────────────────── */
 .teams-list {
   display: grid;
@@ -160,7 +147,7 @@
 }
 
 .team-card:hover {
-  border-color: #c4b5e8;
+  border-color: var(--pf-accent-border);
   box-shadow: 0 6px 20px rgba(74, 29, 143, 0.09);
   transform: translateY(-2px);
 }
@@ -168,7 +155,7 @@
 /* ─── Whiteboard preview ─────────────────────────────────────────────────── */
 .whiteboard-preview {
   height: 170px;
-  background-color: #ede9e3;
+  background-color: var(--pf-border-soft);
   background-size: cover;
   background-position: center;
   overflow: hidden;
@@ -245,7 +232,7 @@
 
 .btn-whiteboard:last-child:hover {
   background: var(--card-bg);
-  border-color: #c9c4bc;
+  border-color: var(--pf-border-strong);
   color: var(--text-primary);
   transform: translateY(-1px);
 }
@@ -269,9 +256,9 @@
 }
 
 .btn.back-btn:hover {
-  border-color: #c9c4bc;
+  border-color: var(--pf-border-strong);
   color: var(--text-primary);
-  background: #f0ece6;
+  background: var(--pf-border-soft);
 }
 
 /* ─── Empty / muted states ───────────────────────────────────────────────── */

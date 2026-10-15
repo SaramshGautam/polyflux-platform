@@ -1,6 +1,80 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   PolyFlux design tokens — single source of truth for color/radius/shadow.
+   Namespaced "--pf-" so these never collide with older per-component
+   --accent/--purple/etc. variables; those get re-pointed at these instead
+   of hardcoded hex, file by file. Switch themes by setting
+   document.documentElement.dataset.theme = "dark" | "light" (see
+   src/utils/theme.js) — everything below follows automatically.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --pf-accent: #4a1d8f;
+  --pf-accent-dark: #3b1772;
+  --pf-accent-light: #f5f0ff;
+  --pf-accent-soft: #ede9fe;
+
+  --pf-text-primary: #1c1917;
+  --pf-text-secondary: #78716c;
+  --pf-text-muted: #a09890;
+
+  --pf-border: #e8e4dd;
+  --pf-border-soft: #ede9e3;
+
+  --pf-page-bg: #f8f7f4;
+  --pf-card-bg: #ffffff;
+  --pf-input-bg: #faf9f7;
+
+  --pf-navbar-bg: #ffffff;
+  --pf-navbar-border: #ebebeb;
+  --pf-navbar-text: #111111;
+  --pf-navbar-text-secondary: #6b6b6b;
+  --pf-navbar-text-tertiary: #9a9a9a;
+
+  --pf-navbar-height: 56px;
+
+  --pf-border-strong: #c9c4bc;
+  --pf-accent-border: #c4b5e8;
+
+  --pf-radius-sm: 6px;
+  --pf-radius-md: 8px;
+  --pf-radius-lg: 10px;
+
+  --pf-shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="dark"] {
+  --pf-accent: #8b5cf6;
+  --pf-accent-dark: #7c3aed;
+  --pf-accent-light: rgba(139, 92, 246, 0.14);
+  --pf-accent-soft: rgba(139, 92, 246, 0.1);
+
+  --pf-text-primary: #f4f4f6;
+  --pf-text-secondary: #9b9ba8;
+  --pf-text-muted: #767685;
+
+  --pf-border: #23232e;
+  --pf-border-soft: #1f1f28;
+
+  --pf-page-bg: #0b0b0f;
+  --pf-card-bg: #15151d;
+  --pf-input-bg: #15151d;
+
+  --pf-navbar-bg: #0f0f14;
+  --pf-navbar-border: #1f1f28;
+  --pf-navbar-text: #f4f4f6;
+  --pf-navbar-text-secondary: #9b9ba8;
+  --pf-navbar-text-tertiary: #6f6f7d;
+
+  --pf-border-strong: #33333f;
+  --pf-accent-border: rgba(139, 92, 246, 0.35);
+
+  --pf-shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
 body {
-  background-color: #f8f9fa !important; /* Use a slightly off-white background */
+  background-color: var(--pf-page-bg);
+  color: var(--pf-text-primary);
   padding: 0 20px;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* .classrooms-list {
@@ -415,6 +489,7 @@ body {
 .bi {
   font-size: 1.1rem;
   margin-right: 5px;
+  margin-top: 10px;
 }
 
 /* alerts */

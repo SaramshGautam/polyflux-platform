@@ -16,6 +16,27 @@ const Team = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // ── Instructor-facing AI alignment check ──────────────────────────────────
+  const role = localStorage.getItem("role");
+  const [alignment, setAlignment] = useState(null); // { status, aligned, score, message } | { error }
+  const [checkingAlignment, setCheckingAlignment] = useState(false);
+
+  const runAlignmentCheck = async () => {
+    setCheckingAlignment(true);
+    setAlignment(null);
+    try {
+      const res = await fetch(
+        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/project/${projectName}/team/${teamName}/check_alignment`
+      );
+      const data = await res.json();
+      setAlignment(data);
+    } catch (e) {
+      setAlignment({ error: "Could not reach the AI backend. It may be starting up — try again shortly." });
+    } finally {
+      setCheckingAlignment(false);
+    }
+  };
+
   useEffect(() => {
     const fetchTeamMembers = async () => {
       try {
@@ -108,6 +129,63 @@ const Team = () => {
               ))}
             </ul>
           </div>
+
+          {/* ── AI alignment check (instructor-only) ── */}
+          {role === "teacher" && (
+            <div className="team-alignment-card mb-4">
+              <div className="team-alignment-header">
+                <h5>AI Alignment Check</h5>
+                <button
+                  className="btn action-btn"
+                  onClick={runAlignmentCheck}
+                  disabled={checkingAlignment}
+                >
+                  <i className="bi bi-stars me-2" />
+                  {checkingAlignment ? "Checking…" : "Check Alignment"}
+                </button>
+              </div>
+
+              {checkingAlignment && (
+                <p className="team-alignment-hint">
+                  Comparing this team's whiteboard to the project description—
+                  this can take a minute if the AI backend needs to wake up.
+                </p>
+              )}
+
+              {!checkingAlignment && alignment?.error && (
+                <p className="team-alignment-error">{alignment.error}</p>
+              )}
+
+              {!checkingAlignment && alignment?.status === "not_enough_content" && (
+                <p className="team-alignment-hint">{alignment.message}</p>
+              )}
+
+              {!checkingAlignment && alignment?.status === "ok" && (
+                <div
+                  className={`team-alignment-result ${
+                    alignment.aligned ? "is-aligned" : "is-off-track"
+                  }`}
+                >
+                  <p className="team-alignment-verdict">
+                    {alignment.aligned
+                      ? "✅ On track — this team's work lines up with the project description."
+                      : "⚠️ Possibly off-track from the project description."}
+                    {typeof alignment.score === "number" && (
+                      <span className="team-alignment-score">
+                        {" "}
+                        (similarity: {alignment.score.toFixed(2)})
+                      </span>
+                    )}
+                  </p>
+                  {alignment.message && (
+                    <p className="team-alignment-note">
+                      AI suggestion for the team: “{alignment.message}”
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Actions ── */}
           <div className="action-buttons mb-2">

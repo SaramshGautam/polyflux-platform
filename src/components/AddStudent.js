@@ -101,14 +101,16 @@ const AddStudent = () => {
         </div>
         <div className="mb-3">
           <label htmlFor="lsu_id" className="form-label">
-            <i className="bi bi-card-text"></i> LSU ID
+            <i className="bi bi-card-text"></i> LSU ID{" "}
+            <span className="text-muted" style={{ fontWeight: 400 }}>
+              (optional)
+            </span>
           </label>
           <input
             type="text"
             name="lsu_id"
             id="lsu_id"
             className="form-control"
-            required
             value={lsuId}
             onChange={handleLsuIdChange} // Handling LSU ID change
           />
