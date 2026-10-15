@@ -11,37 +11,42 @@
 # production
 /build
 
-# misc
-.DS_Store
+# python
+__pycache__/
+*.pyc
+venv/
+ai-backend/venv/
+backend/venv/
+ai-backend/chroma_data/
+ai-backend/test_*.pdf
+
+# runtime / generated — never source, and flask_session can hold live session data
+flask_session/
+
+# env files & credentials — real secrets live only in .env / firebase-key.json,
+# never commit these; .env.example files ARE meant to be committed as templates
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+firebase-key.json
 
-ai-backend/__pycache__/
-ai-backend/ai/__pycache__/
-ai-backend/routers/__pycache__/
-ai-backend/venv/
-ai-backend/test_*.pdf
-ai-backend/chroma_data/
-ai-backend/.env
-ai-backend/*
-backend/*
-
-shapes_dump
-*_dump
-canvas_activity_*
-nudge_response_*
-downloadLogs.js
-downloadAILogs.js
-data_dump_all7groups.zip
-polyflux-formative-datastream.js
-venv
-venv/*
+# misc
+.DS_Store
+.vercel
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.vercel
-.env
-firebase-key.json
-bot_logs_dump
+
+# internal data exports — these contain real classroom/student activity data
+# and must never be committed, even privately
+shapes_dump/
+*_dump/
+canvas_activity_*
+nudge_response_*
+bot_logs_dump/
+data_dump_all7groups.zip
+polyflux-formative-datastream.js
+downloadLogs.js
+downloadAILogs.js
