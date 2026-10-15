@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pymupdf
+python-pptx
+python-docx
+chromadb
+sentence-transformers
+transformers
+torch
+accelerate
+requests
+python-dotenv
+httpx
+numpy
+pydantic

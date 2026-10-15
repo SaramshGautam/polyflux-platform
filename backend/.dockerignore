@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.Python
+venv/
+env/
+.venv/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Flask session store
+flask_session/
+
+# Uploads (runtime data, not build input)
+uploads/
+/tmp/uploads/
+
+# Git / editor / OS cruft
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Docs
+README.md
