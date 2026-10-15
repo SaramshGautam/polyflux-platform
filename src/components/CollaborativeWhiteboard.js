@@ -39,6 +39,7 @@ import Navbar from "./navbar/Navbar";
 import CustomContextMenu from "./CustomContextMenu";
 import ContextToolbarComponent from "./ContextToolbarComponent";
 import { AudioShapeUtil } from "../shapes/AudioShapeUtil";
+import { PdfShapeUtil } from "../shapes/PdfShapeUtil";
 import { MicrophoneTool } from "../tools/MicrophoneTool";
 import CustomActionsMenu from "./CustomActionsMenu";
 import { createToggleRecorder } from "../utils/audioRecorder";
@@ -48,7 +49,10 @@ import AIChatPanel from "./AIChatPanel";
 import SocraticChecker from "./SocraticChecker";
 
 const CUSTOM_TOOLS = [MicrophoneTool];
-const SHAPE_UTILS = [...defaultShapeUtils, AudioShapeUtil];
+// PdfShapeUtil is a stub registered only so leftover "pdf"-type shape
+// records already saved in some rooms' sync stores don't fail schema
+// validation and crash the whiteboard on load — see PdfShapeUtil.js.
+const SHAPE_UTILS = [...defaultShapeUtils, AudioShapeUtil, PdfShapeUtil];
 const BINDING_UTILS = [...defaultBindingUtils];
 
 /**
@@ -685,11 +689,12 @@ const CollaborativeWhiteboard = () => {
     <>
       <Navbar />
       {/* AI Chat Panel */}
-      {/* <AIChatPanel
-        courseId={`${className}-${projectName}`}
+      <AIChatPanel
+        courseId={className}
+        projectName={projectName}
         isCollapsed={isPanelCollapsed}
         onToggle={togglePanelStable}
-      /> */}
+      />
 
       {/* Socratic Checker — only runs when editor is ready */}
       {/* {editorReady && (

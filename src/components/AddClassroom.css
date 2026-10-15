@@ -1,25 +1,25 @@
 :root {
-  --navbar-height: 120px;
-  --purple: #4a1d8f;
-  --purple-dark: #3b1772;
-  --purple-light: #f5f0ff;
-  --purple-ring: rgba(74, 29, 143, 0.1);
-  --page-bg: #f8f7f4;
-  --card-bg: #ffffff;
-  --border: #e8e4dd;
-  --border-soft: #ede9e3;
-  --text-primary: #1c1917;
-  --text-secondary: #78716c;
-  --text-muted: #a09890;
-  --radius-card: 12px;
-  --radius-btn: 8px;
+  --navbar-height: var(--pf-navbar-height);
+  --purple: var(--pf-accent);
+  --purple-dark: var(--pf-accent-dark);
+  --purple-light: var(--pf-accent-light);
+  --purple-ring: var(--pf-accent-soft);
+  --page-bg: var(--pf-page-bg);
+  --card-bg: var(--pf-card-bg);
+  --border: var(--pf-border);
+  --border-soft: var(--pf-border-soft);
+  --text-primary: var(--pf-text-primary);
+  --text-secondary: var(--pf-text-secondary);
+  --text-muted: var(--pf-text-muted);
+  --radius-card: var(--pf-radius-lg);
+  --radius-btn: var(--pf-radius-md);
 }
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 .ac-page {
   /* min-height: 100vh;s */
   min-height: calc(100vh - var(--navbar-height));
-  background: #f8f7f4;
+  background: var(--page-bg);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -29,8 +29,8 @@
 
 /* ─── Card ───────────────────────────────────────────────────────────────── */
 .ac-card {
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 14px;
   padding: 2.25rem 2rem 2rem;
   width: 100%;
@@ -49,7 +49,7 @@
   padding: 0;
   cursor: pointer;
   font-size: 0.8rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin-bottom: 1rem;
   display: inline-flex;
   align-items: center;
@@ -58,20 +58,20 @@
 }
 
 .ac-back-btn:hover {
-  color: #4a1d8f;
+  color: var(--pf-accent);
 }
 
 .ac-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   letter-spacing: -0.3px;
   margin: 0 0 0.35rem;
 }
 
 .ac-subtitle {
   font-size: 0.85rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0;
   line-height: 1.5;
 }
@@ -148,18 +148,18 @@
 .ac-field label:first-child {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--pf-text-secondary);
   margin-bottom: 0.35rem;
 }
 
 .ac-field input,
 .ac-field select {
   padding: 0.6rem 0.8rem;
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #1c1917;
-  background: #fff;
+  color: var(--pf-text-primary);
+  background: var(--pf-card-bg);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
   font-family: inherit;
@@ -169,12 +169,12 @@
 
 .ac-field input:focus,
 .ac-field select:focus {
-  border-color: #4a1d8f;
+  border-color: var(--pf-accent);
   box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
 }
 
 .ac-field input::placeholder {
-  color: #9ca3af;
+  color: var(--pf-text-muted);
 }
 
 .ac-field select {
@@ -204,24 +204,24 @@
   align-items: center;
   gap: 12px;
   padding: 0.8rem 1rem;
-  border: 1.5px dashed #c9c4bc;
+  border: 1.5px dashed var(--pf-border-strong);
   border-radius: 8px;
-  background: #faf9f7;
+  background: var(--pf-input-bg);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
 .ac-file-label:hover {
-  border-color: #4a1d8f;
-  background: #f5f0ff;
+  border-color: var(--pf-accent);
+  background: var(--pf-accent-light);
 }
 
 .ac-file-icon {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #ede9fe;
-  color: #4a1d8f;
+  background: var(--pf-accent-soft);
+  color: var(--pf-accent);
   font-size: 15px;
   font-weight: 700;
   display: flex;
@@ -233,7 +233,7 @@
 .ac-file-text {
   font-size: 13.5px;
   font-weight: 500;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -242,19 +242,19 @@
 
 .ac-file-hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--pf-text-muted);
   flex-shrink: 0;
 }
 
 .ac-format-note {
   margin: 8px 2px 0;
   font-size: 12.5px;
-  color: #78716c;
+  color: var(--pf-text-secondary);
 }
 
 .ac-format-note code {
-  background: #f5f0ff;
-  color: #4a1d8f;
+  background: var(--pf-accent-light);
+  color: var(--pf-accent);
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 12px;
@@ -264,7 +264,7 @@
 /* File selected state */
 .ac-file-input:focus + .ac-file-label,
 .ac-file-label:focus-within {
-  border-color: #4a1d8f;
+  border-color: var(--pf-accent);
   box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
 }
 
@@ -282,7 +282,7 @@
   justify-content: center;
   gap: 8px;
   padding: 0.65rem 1.5rem;
-  background: #4a1d8f;
+  background: var(--pf-accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -296,7 +296,7 @@
 }
 
 .ac-btn-primary:hover:not(:disabled) {
-  background: #3b1772;
+  background: var(--pf-accent-dark);
 }
 
 .ac-btn-primary:disabled {
@@ -307,10 +307,10 @@
 .ac-btn-ghost {
   padding: 0.65rem 1rem;
   background: none;
-  border: 1.5px solid #e8e4dd;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--pf-text-muted);
   cursor: pointer;
   min-height: 42px;
   transition: border-color 0.15s, color 0.15s;
@@ -318,8 +318,8 @@
 }
 
 .ac-btn-ghost:hover:not(:disabled) {
-  border-color: #c9c4bc;
-  color: #374151;
+  border-color: var(--pf-border-strong);
+  color: var(--pf-text-secondary);
 }
 
 .ac-btn-ghost:disabled {

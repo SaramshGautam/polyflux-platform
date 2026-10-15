@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import "./Navbar.css";
+import { getStoredTheme, toggleTheme } from "../../utils/theme";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
 
 // Derive a human-readable page title from the current URL path
 function usePageTitle() {
@@ -41,31 +44,118 @@ function usePageTitle() {
   return null;
 }
 
-// Simple breadcrumbs from path segments
+// Breadcrumbs built from the app's actual registered routes (see App.js) —
+// not by blindly chopping the URL — so every non-current crumb is a real,
+// working link and the true current page is always marked correctly.
 function Breadcrumbs() {
   const location = useLocation();
   const navigate = useNavigate();
   const parts = location.pathname.split("/").filter(Boolean);
 
-  if (parts.length <= 1) return null;
+  if (parts.length === 0) return null;
 
   const decode = (s) => decodeURIComponent(s).replace(/-/g, " ");
 
-  // Build crumbs — skip "project" and "whiteboard" as labels, use them as separators
   const crumbs = [];
-  let path = "";
-  parts.forEach((part, i) => {
-    path += `/${part}`;
-    const skip = [
-      "project",
-      "whiteboard",
-      "manage-students",
-      "manage-teams",
-    ].includes(part);
-    if (!skip) {
-      crumbs.push({ label: decode(part), path, last: i === parts.length - 1 });
+
+  if (parts[0] === "classroom" && parts[1]) {
+    const className = parts[1];
+    const classroomPath = `/classroom/${className}`;
+    const rest = parts.slice(2);
+    const isJustClassroom = rest.length === 0;
+    crumbs.push({
+      label: decode(className),
+      path: classroomPath,
+      last: isJustClassroom,
+    });
+
+    if (rest[0] === "project" && rest[1]) {
+      const projectName = rest[1];
+      const projectPath = `${classroomPath}/project/${projectName}`;
+      const projRest = rest.slice(2);
+      const isJustProject = projRest.length === 0;
+      crumbs.push({
+        label: decode(projectName),
+        path: projectPath,
+        last: isJustProject,
+      });
+
+      if (projRest[0] === "team" && projRest[1]) {
+        crumbs.push({
+          label: decode(projRest[1]),
+          path: `${projectPath}/team/${projRest[1]}`,
+          last: true,
+        });
+      } else if (projRest[0] === "edit") {
+        crumbs.push({
+          label: "Edit Project",
+          path: `${projectPath}/edit`,
+          last: true,
+        });
+      } else if (projRest[0] === "manage-teams") {
+        crumbs.push({
+          label: "Manage Teams",
+          path: `${projectPath}/manage-teams`,
+          last: true,
+        });
+      }
+    } else if (rest[0] === "manage-students") {
+      const msPath = `${classroomPath}/manage-students`;
+      const msRest = rest.slice(1);
+      crumbs.push({
+        label: "Manage Students",
+        path: msPath,
+        last: msRest.length === 0,
+      });
+
+      if (msRest[0] === "add-student") {
+        crumbs.push({
+          label: "Add Student",
+          path: `${msPath}/add-student`,
+          last: true,
+        });
+      } else if (msRest[1] === "edit") {
+        crumbs.push({
+          label: "Edit Student",
+          path: `${msPath}/${msRest[0]}/edit`,
+          last: true,
+        });
+      }
+    } else if (rest[0] === "add-project") {
+      crumbs.push({
+        label: "Add Project",
+        path: `${classroomPath}/add-project`,
+        last: true,
+      });
+    } else if (rest[0] === "add-student") {
+      crumbs.push({
+        label: "Add Student",
+        path: `${classroomPath}/add-student`,
+        last: true,
+      });
+    } else if (rest[0] === "edit") {
+      crumbs.push({
+        label: "Edit Classroom",
+        path: `${classroomPath}/edit`,
+        last: true,
+      });
     }
-  });
+  } else if (
+    (parts[0] === "whiteboard" || parts[0] === "export") &&
+    parts.length >= 4
+  ) {
+    const [, className, projectName, teamName] = parts;
+    crumbs.push({ label: decode(className), path: `/classroom/${className}` });
+    crumbs.push({
+      label: decode(projectName),
+      path: `/classroom/${className}/project/${projectName}`,
+    });
+    crumbs.push({
+      label: decode(teamName),
+      path: location.pathname,
+      last: true,
+    });
+  }
 
   if (crumbs.length <= 1) return null;
 
@@ -98,6 +188,9 @@ const Navbar = () => {
 
   const isInWhiteboard = location.pathname.startsWith("/whiteboard");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [theme, setTheme] = useState(getStoredTheme);
+
+  const handleThemeToggle = () => setTheme(toggleTheme());
 
   const role = localStorage.getItem("role");
   const displayName =
@@ -179,6 +272,24 @@ const Navbar = () => {
 
       {/* ── Right — email + avatar (sits LEFT of the AI toggle) ── */}
       <div className="nb-right">
+        <button
+          className="nb-theme-toggle"
+          onClick={handleThemeToggle}
+          aria-label={
+            theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+          }
+          title={
+            theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+          }
+        >
+          {/* {theme === "dark" ? "☀️" : "🌙"} */}
+          {theme === "dark" ? (
+            <LightModeIcon fontSize="small" />
+          ) : (
+            <DarkModeIcon fontSize="small" />
+          )}
+        </button>
+
         <div className="nb-profile-wrap">
           <button
             className="nb-avatar-row"
@@ -203,7 +314,19 @@ const Navbar = () => {
               </li>
               <li className="nb-dropdown-divider" />
 
-              {isInWhiteboard && (
+              {role === "teacher" && (
+                <li role="menuitem">
+                  <Link
+                    className="nb-dropdown-item"
+                    to="/how-to-use"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    📘 How to Use
+                  </Link>
+                </li>
+              )}
+
+              {/* {isInWhiteboard && (
                 <li role="menuitem">
                   <a
                     className="nb-dropdown-item"
@@ -215,7 +338,7 @@ const Navbar = () => {
                     📤 Submit Feedback
                   </a>
                 </li>
-              )}
+              )} */}
 
               <li role="menuitem">
                 <button

@@ -1,9 +1,9 @@
 :root {
-  --ink: #0f172a;
-  --muted: #334155;
-  --accent: #0ea5e9;
-  --bg: #f8fafc;
-  --card: #ffffff;
+  --ink: var(--pf-text-primary);
+  --muted: var(--pf-text-secondary);
+  --accent: var(--pf-accent);
+  --bg: var(--pf-page-bg);
+  --card: var(--pf-card-bg);
 }
 
 .howto-wrap {
@@ -15,11 +15,10 @@
 }
 
 .howto-header {
-  background: linear-gradient(180deg, #e0f2fe, #fff);
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  background: var(--pf-accent-light);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-lg);
   padding: 24px 20px;
-  box-shadow: 0 4px 20px rgba(2, 6, 23, 0.04);
   margin-bottom: 24px;
 }
 
@@ -37,9 +36,9 @@
   display: inline-block;
   margin-right: 8px;
   padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
+  border-radius: var(--pf-radius-md);
+  border: 1px solid var(--pf-border);
+  background: var(--pf-card-bg);
   color: var(--ink);
   text-decoration: none;
   cursor: pointer;
@@ -51,10 +50,9 @@
 
 .howto-card {
   background: var(--card);
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-lg);
   padding: 18px 20px;
-  box-shadow: 0 4px 20px rgba(2, 6, 23, 0.04);
 }
 
 .howto-shot {
@@ -64,9 +62,8 @@
 .howto-shot img {
   width: 100%;
   height: auto;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  box-shadow: 0 8px 30px rgba(2, 6, 23, 0.06);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-lg);
 }
 .howto-shot figcaption {
   font-size: 14px;
@@ -77,21 +74,20 @@
 .howto-callout {
   border-left: 4px solid var(--accent);
   padding: 10px 14px;
-  background: #e0f2fe33;
-  border-radius: 6px;
+  background: var(--pf-accent-light);
+  border-radius: var(--pf-radius-sm);
 }
 
 pre {
-  background: #0f172a0a;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  background: var(--pf-input-bg);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-md);
   padding: 12px 14px;
   overflow: auto;
 }
 
 h2 {
   margin-top: 36px;
-  /* border-top: 1px solid #e2e8f0; */
   padding-top: 24px;
 }
 h3 {
@@ -99,7 +95,7 @@ h3 {
 }
 
 .howto-footer {
-  color: #64748b;
+  color: var(--pf-text-muted);
   font-size: 14px;
   margin-top: 40px;
 }

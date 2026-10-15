@@ -4,9 +4,9 @@
   margin: 0 auto;
   min-height: 100vh;
   padding: 2rem 1.5rem 4rem;
-  background: #f8f7f4;
+  background: var(--pf-page-bg);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   position: relative;
 }
 
@@ -17,7 +17,7 @@
   padding: 0;
   cursor: pointer;
   font-size: 0.8rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin-bottom: 1rem;
   display: inline-flex;
   align-items: center;
@@ -26,20 +26,20 @@
   font-family: inherit;
 }
 .mt-back-btn:hover {
-  color: #4a1d8f;
+  color: var(--pf-accent);
 }
 
 .mt-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   letter-spacing: -0.3px;
   margin: 0 0 0.25rem;
 }
 
 .mt-subtitle {
   font-size: 0.85rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0 0 1.5rem;
 }
 
@@ -51,8 +51,8 @@
   gap: 12px;
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 12px;
 }
 
@@ -64,25 +64,25 @@
 }
 
 .mt-randomizer {
-  border-left: 1px solid #e8e4dd;
+  border-left: 1px solid var(--pf-border);
   padding-left: 16px;
   margin-left: 4px;
 }
 
 .mt-input {
   padding: 0.55rem 0.8rem;
-  border: 1.5px solid #d1d5db;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 13.5px;
-  color: #1c1917;
-  background: #fff;
+  color: var(--pf-text-primary);
+  background: var(--pf-card-bg);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
   font-family: inherit;
   min-width: 160px;
 }
 .mt-input:focus {
-  border-color: #4a1d8f;
+  border-color: var(--pf-accent);
   box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
 }
 .mt-input--sm {
@@ -95,7 +95,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #374151;
+  color: var(--pf-text-secondary);
   white-space: nowrap;
 }
 
@@ -104,13 +104,13 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #374151;
+  color: var(--pf-text-secondary);
   cursor: pointer;
   white-space: nowrap;
 }
 .mt-checkbox-label input[type="checkbox"] {
   cursor: pointer;
-  accent-color: #4a1d8f;
+  accent-color: var(--pf-accent);
 }
 
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
@@ -120,7 +120,7 @@
   justify-content: center;
   gap: 6px;
   padding: 0.55rem 1.1rem;
-  background: #4a1d8f;
+  background: var(--pf-accent);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -133,7 +133,7 @@
   white-space: nowrap;
 }
 .mt-btn-primary:hover:not(:disabled) {
-  background: #3b1772;
+  background: var(--pf-accent-dark);
 }
 .mt-btn-primary:disabled {
   opacity: 0.65;
@@ -145,9 +145,9 @@
   align-items: center;
   gap: 6px;
   padding: 0.55rem 1rem;
-  background: #fff;
-  color: #4a1d8f;
-  border: 1.5px solid #c4b5e8;
+  background: var(--pf-card-bg);
+  color: var(--pf-accent);
+  border: 1.5px solid var(--pf-accent-border);
   border-radius: 8px;
   font-size: 13.5px;
   font-weight: 500;
@@ -158,25 +158,25 @@
   white-space: nowrap;
 }
 .mt-btn-secondary:hover {
-  background: #f5f0ff;
-  border-color: #4a1d8f;
+  background: var(--pf-accent-light);
+  border-color: var(--pf-accent);
 }
 
 .mt-btn-ghost {
   padding: 0.6rem 1rem;
   background: none;
-  border: 1.5px solid #e8e4dd;
+  border: 1.5px solid var(--pf-border);
   border-radius: 8px;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--pf-text-muted);
   cursor: pointer;
   min-height: 40px;
   transition: border-color 0.15s, color 0.15s;
   font-family: inherit;
 }
 .mt-btn-ghost:hover {
-  border-color: #c9c4bc;
-  color: #374151;
+  border-color: var(--pf-border-strong);
+  color: var(--pf-text-secondary);
 }
 
 .mt-btn-danger {
@@ -221,15 +221,15 @@
 
 .mt-no-teams {
   font-size: 13.5px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   padding: 2rem;
   font-style: italic;
 }
 
 /* ─── Column ─────────────────────────────────────────────────────────────── */
 .mt-column {
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -241,17 +241,17 @@
 .mt-column--unassigned {
   width: 220px;
   flex-shrink: 0;
-  border-top: 3px solid #78716c;
+  border-top: 3px solid var(--pf-text-secondary);
 }
 
 .mt-column--team {
-  border-top: 3px solid #4a1d8f;
+  border-top: 3px solid var(--pf-accent);
 }
 
 .mt-column--dragover {
-  border-color: #4a1d8f;
+  border-color: var(--pf-accent);
   box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.12);
-  background: #f5f0ff;
+  background: var(--pf-accent-light);
 }
 
 .mt-column-header {
@@ -259,8 +259,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.65rem 0.85rem 0.55rem;
-  border-bottom: 1px solid #e8e4dd;
-  background: #faf9f7;
+  border-bottom: 1px solid var(--pf-border);
+  background: var(--pf-input-bg);
   gap: 8px;
 }
 
@@ -275,7 +275,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -285,8 +285,8 @@
 .mt-badge {
   font-size: 11px;
   font-weight: 600;
-  background: #ede9fe;
-  color: #4a1d8f;
+  background: var(--pf-accent-soft);
+  color: var(--pf-accent);
   border-radius: 20px;
   padding: 1px 7px;
   flex-shrink: 0;
@@ -296,7 +296,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #a09890;
+  color: var(--pf-text-muted);
   font-size: 12px;
   padding: 2px 4px;
   border-radius: 4px;
@@ -322,14 +322,14 @@
 
 .mt-empty {
   font-size: 12.5px;
-  color: #a09890;
+  color: var(--pf-text-muted);
   text-align: center;
   padding: 1.25rem 0.5rem;
   font-style: italic;
 }
 
 .mt-empty--drop {
-  border: 1.5px dashed #c9c4bc;
+  border: 1.5px dashed var(--pf-border-strong);
   border-radius: 8px;
   margin: 0.25rem;
 }
@@ -340,16 +340,16 @@
   align-items: center;
   gap: 8px;
   padding: 0.4rem 0.6rem;
-  background: #f8f7f4;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-page-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 7px;
   cursor: grab;
   transition: border-color 0.15s, background 0.15s, transform 0.1s;
   user-select: none;
 }
 .mt-student-chip:hover {
-  border-color: #c4b5e8;
-  background: #f5f0ff;
+  border-color: var(--pf-accent-border);
+  background: var(--pf-accent-light);
 }
 .mt-student-chip:active {
   transform: scale(0.98);
@@ -360,16 +360,16 @@
   cursor: default;
 }
 .mt-student-chip--assigned:hover {
-  border-color: #e8e4dd;
-  background: #f8f7f4;
+  border-color: var(--pf-border);
+  background: var(--pf-page-bg);
 }
 
 .mt-student-avatar {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #ede9fe;
-  color: #4a1d8f;
+  background: var(--pf-accent-soft);
+  color: var(--pf-accent);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -381,7 +381,7 @@
 .mt-student-name {
   font-size: 12.5px;
   font-weight: 500;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -390,7 +390,7 @@
 
 .mt-drag-handle {
   font-size: 14px;
-  color: #c9c4bc;
+  color: var(--pf-border-strong);
   flex-shrink: 0;
   cursor: grab;
 }
@@ -399,7 +399,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #a09890;
+  color: var(--pf-text-muted);
   font-size: 11px;
   padding: 1px 3px;
   border-radius: 3px;
@@ -419,7 +419,7 @@
   gap: 10px;
   margin-top: 1.75rem;
   padding-top: 1.25rem;
-  border-top: 1px solid #e8e4dd;
+  border-top: 1px solid var(--pf-border);
 }
 
 /* ─── Spinner ────────────────────────────────────────────────────────────── */
@@ -452,8 +452,8 @@
 }
 
 .mt-confirm {
-  background: #ffffff;
-  border: 1px solid #e8e4dd;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-border);
   border-radius: 14px;
   padding: 1.75rem;
   max-width: 360px;
@@ -470,13 +470,13 @@
 .mt-confirm h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #1c1917;
+  color: var(--pf-text-primary);
   margin: 0 0 0.5rem;
 }
 
 .mt-confirm p {
   font-size: 0.875rem;
-  color: #78716c;
+  color: var(--pf-text-secondary);
   margin: 0 0 1.25rem;
   line-height: 1.55;
 }
@@ -573,7 +573,7 @@
   .mt-randomizer {
     border-left: none;
     padding-left: 0;
-    border-top: 1px solid #e8e4dd;
+    border-top: 1px solid var(--pf-border);
     padding-top: 12px;
     width: 100%;
   }

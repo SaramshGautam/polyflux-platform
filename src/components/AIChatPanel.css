@@ -276,6 +276,13 @@
   animation-delay: 0.4s;
 }
 
+.ai-waking-hint {
+  margin: -4px 0 8px 44px;
+  font-size: 12px;
+  color: #8b7fb0;
+  font-style: italic;
+}
+
 @keyframes ai-bounce {
   0%,
   80%,
