@@ -159,7 +159,7 @@ def project_course_id(class_name: str, project_name: str) -> str:
 def ingest_course_materials(course_id: str, documents: list):
     """
     Best-effort call to the ai-backend RAG service so newly uploaded PDFs
-    become searchable by the study assistant widget. Never raises — a
+    become searchable by the PolyFlux Assistant widget. Never raises — a
     failure here (e.g. ai-backend not running locally) must not block
     project creation/editing.
     """
@@ -176,6 +176,68 @@ def ingest_course_materials(course_id: str, documents: list):
             print(f"WARN: ai-backend ingest failed ({resp.status_code}): {resp.text}")
     except Exception as e:
         print(f"WARN: could not reach ai-backend for ingest: {e}")
+
+
+# ── Instructor-facing alignment check ─────────────────────────────────────────
+def get_team_canvas_text(class_name: str, project_name: str, team_name: str) -> str:
+    """Concatenates the text of every shape a team has placed on their
+    whiteboard so far (same data src.utils.registershapes.js writes to)."""
+    shapes = (
+        db.collection('classrooms').document(class_name)
+          .collection('Projects').document(project_name)
+          .collection('teams').document(team_name)
+          .collection('shapes').stream()
+    )
+    texts = [s.to_dict().get('text', '') for s in shapes]
+    return "\n".join(t for t in texts if t and t.strip())
+
+
+def check_team_alignment(class_name: str, project_name: str, team_name: str) -> dict:
+    """
+    Instructor-facing "first pass" check: how well does a team's current
+    whiteboard content line up with the project description? Uploads the
+    project description to the ai-backend's Socratic checker and asks it
+    to compare against the team's canvas text.
+    """
+    assignment_id = project_course_id(class_name, project_name)
+
+    project_snap = (
+        db.collection('classrooms').document(class_name)
+          .collection('Projects').document(project_name).get()
+    )
+    if not project_snap.exists:
+        return {"error": "Project not found."}
+    description = (project_snap.to_dict() or {}).get('description', '')
+    if not description.strip():
+        return {"error": "This project has no description to check against yet."}
+
+    canvas_text = get_team_canvas_text(class_name, project_name, team_name)
+    if len(canvas_text.strip()) < 30:
+        return {
+            "status": "not_enough_content",
+            "message": "This team hasn't added enough to their whiteboard yet for a meaningful check.",
+        }
+
+    try:
+        upload_resp = requests.post(
+            f"{AI_BACKEND_URL}/api/socratic/upload-assignment-text/{assignment_id}",
+            json={"text": description},
+            timeout=15,
+        )
+        upload_resp.raise_for_status()
+
+        check_resp = requests.post(
+            f"{AI_BACKEND_URL}/api/socratic/check/{assignment_id}",
+            json={"canvas_content": canvas_text},
+            timeout=30,
+        )
+        check_resp.raise_for_status()
+        result = check_resp.json()
+        result["status"] = "ok"
+        return result
+    except Exception as e:
+        print(f"WARN: alignment check failed: {e}")
+        return {"error": "Could not reach the AI backend to run this check. It may be starting up — try again shortly."}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -330,7 +392,7 @@ def add_project(class_name):
 
         project_ref.set(payload)
 
-        # ── Make uploaded PDFs searchable by the study assistant ──────────────
+        # ── Make uploaded PDFs searchable by the PolyFlux Assistant ───────────
         ingest_docs = []
         if payload.get('description_pdf'):
             ingest_docs.append({
@@ -463,7 +525,7 @@ def edit_project(class_name, project_name):
 
         project_ref.update(update_data)
 
-        # ── Make newly uploaded PDFs searchable by the study assistant ────────
+        # ── Make newly uploaded PDFs searchable by the PolyFlux Assistant ────
         ingest_docs = []
         new_desc = update_data.get('description_pdf')
         if new_desc and new_desc != firestore.DELETE_FIELD:
@@ -507,6 +569,16 @@ def delete_project(class_name, project_name):
 
     except Exception as e:
         return jsonify({'error': f'Error deleting project: {str(e)}'}), 500
+
+
+@app.route('/api/classroom/<class_name>/project/<project_name>/team/<team_name>/check_alignment', methods=['GET'])
+def check_alignment_route(class_name, project_name, team_name):
+    """Instructor-facing: how well does this team's whiteboard match the
+    project description so far? Runs an on-demand AI first-pass check."""
+    result = check_team_alignment(class_name, project_name, team_name)
+    if 'error' in result:
+        return jsonify(result), 502
+    return jsonify(result), 200
 
 
 @app.route('/classroom/<class_id>', methods=['GET'])
