@@ -29,6 +29,21 @@ Create `src/firebaseConfig.js` (or confirm it already points at your Firebase pr
 npm start
 ```
 
+### Pointing the frontend at a local backend
+
+All backend calls go through `src/config/api.js` (`FLASK_API_URL` and
+`AI_BACKEND_URL`), which fall back to the deployed Cloud Run URLs if unset.
+To test against a backend running locally (see below), create a
+`.env.local` in the repo root (already gitignored, never committed):
+
+```
+REACT_APP_FLASK_API_URL=http://localhost:8080
+REACT_APP_AI_BACKEND_URL=http://localhost:8000
+```
+
+`react-scripts` picks this up automatically on `npm start` — no code
+changes needed, and nothing to remember to revert before committing.
+
 ## 2. Flask backend setup (`backend/`)
 
 ```bash

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { FLASK_API_URL } from "../config/api";
 import TeamCard from "./TeamCard";
 import ProjectMaterials from "./ProjectMaterials";
 import CollapsibleSection from "./CollapsibleSection";
@@ -123,7 +124,7 @@ const Project = () => {
     setNotifying(true);
     try {
       const res = await fetch(
-        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/notify_students`,
+        `${FLASK_API_URL}/api/classroom/${className}/notify_students`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -245,19 +246,23 @@ const Project = () => {
           >
             <i className="bi bi-people" /> Manage teams
           </button>
-          <button
+          {/* <button
             className="btn action-btn"
             onClick={() => setConfirmOpen(true)}
             disabled={notifying}
           >
             <i className="bi bi-envelope" />
             {notifying ? "Notifying…" : "Notify students"}
-          </button>
+          </button> */}
         </div>
       )}
 
       {/* ── Materials ── */}
-      <ProjectMaterials className={className} projectName={projectName} role={role} />
+      <ProjectMaterials
+        className={className}
+        projectName={projectName}
+        role={role}
+      />
 
       {/* ── Teams section ── */}
       <CollapsibleSection

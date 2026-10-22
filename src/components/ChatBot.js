@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { AI_BACKEND_URL } from "../config/api";
 import "./ChatBot.css";
 import { formatBotReply } from "../utils/formatBotReply";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,9 +14,6 @@ import {
   faPlusCircle,
   faClockRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
-
-const AI_BACKEND_URL =
-  "https://flask-app-l7rilyhu2a-uc.a.run.app" || "http://127.0.0.1:8080";
 
 const ChatBot = ({ messages, setMessages, toggleSidebar, courseId }) => {
   const [userInput, setUserInput] = useState("");

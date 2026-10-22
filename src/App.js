@@ -1,4 +1,5 @@
 import React from "react";
+import { FLASK_API_URL } from "./config/api";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 
 // Importing pages
@@ -43,7 +44,7 @@ const App = () => {
       // Send the ID token to the backend for validation
       // const response = await fetch("http://localhost:5000/api/login", {
       const response = await fetch(
-        "https://flask-app-jqwkqdscaq-uc.a.run.app/api/login",
+        `${FLASK_API_URL}/api/login`,
         {
           method: "POST",
           headers: {

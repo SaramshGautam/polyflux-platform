@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
+import { AI_BACKEND_URL } from "../config/api";
 
 // const AI_BASE = "http://localhost:8000";
-const AI_BASE = "https://canvas-ai-backend-l7rilyhu2a-uc.a.run.app";
+const AI_BASE = AI_BACKEND_URL;
 // const AI_BASE = "http://smic1.hpc.lsu.edu:8000";
 const CHECK_INTERVAL_MS = 90000; // check every 90 seconds
 

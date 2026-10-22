@@ -1,10 +1,11 @@
 import React, { useState, useRef } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "./AddProject.css";
 
 const API_URL = (className) =>
-  `https://flask-app-l7rilyhu2a-uc.a.run.app/api/add_project/${className}`;
+  `${FLASK_API_URL}/api/add_project/${className}`;
 
 const MAX_NOTE_SIZE_MB = 10;
 const MAX_NOTES = 10;

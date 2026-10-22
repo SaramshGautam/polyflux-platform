@@ -1,9 +1,10 @@
 import React, { useState } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./AddClassroom.css";
 
-const API_URL = "https://flask-app-l7rilyhu2a-uc.a.run.app/addclassroom";
+const API_URL = `${FLASK_API_URL}/addclassroom`;
 
 const SEMESTERS = [
   "Spring 2025",
