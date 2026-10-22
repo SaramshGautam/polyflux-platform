@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -26,7 +27,7 @@ const Team = () => {
     setAlignment(null);
     try {
       const res = await fetch(
-        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/project/${projectName}/team/${teamName}/check_alignment`
+        `${FLASK_API_URL}/api/classroom/${className}/project/${projectName}/team/${teamName}/check_alignment`
       );
       const data = await res.json();
       setAlignment(data);
@@ -147,8 +148,10 @@ const Team = () => {
 
               {checkingAlignment && (
                 <p className="team-alignment-hint">
-                  Comparing this team's whiteboard to the project description—
-                  this can take a minute if the AI backend needs to wake up.
+                  Comparing this team's whiteboard text and board image to the
+                  project description — this can take a minute, especially
+                  the first check, since reading the board image needs its
+                  own model to wake up.
                 </p>
               )}
 
@@ -180,6 +183,11 @@ const Team = () => {
                   {alignment.message && (
                     <p className="team-alignment-note">
                       AI suggestion for the team: “{alignment.message}”
+                    </p>
+                  )}
+                  {alignment.image_caption && (
+                    <p className="team-alignment-caption">
+                      AI read the board image as: “{alignment.image_caption}”
                     </p>
                   )}
                 </div>

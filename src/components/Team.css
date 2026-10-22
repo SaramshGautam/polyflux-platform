@@ -131,6 +131,14 @@
   line-height: 1.5;
 }
 
+.team-alignment-caption {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--pf-text-muted);
+  line-height: 1.5;
+}
+
 /* ── Member list ── */
 .team-members ul {
   list-style: none;
