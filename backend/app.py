@@ -197,7 +197,11 @@ def check_team_alignment(class_name: str, project_name: str, team_name: str) -> 
     Instructor-facing "first pass" check: how well does a team's current
     whiteboard content line up with the project description? Uploads the
     project description to the ai-backend's Socratic checker and asks it
-    to compare against the team's canvas text.
+    to compare against the team's canvas text, plus a caption of the
+    team's current board screenshot (CollaborativeWhiteboard.js already
+    saves one to `previewUrl` on every visit) — this is what lets freehand
+    drawings and image shapes, which have no text of their own, factor
+    into the check instead of being silently skipped.
     """
     assignment_id = project_course_id(class_name, project_name)
 
@@ -212,7 +216,18 @@ def check_team_alignment(class_name: str, project_name: str, team_name: str) -> 
         return {"error": "This project has no description to check against yet."}
 
     canvas_text = get_team_canvas_text(class_name, project_name, team_name)
-    if len(canvas_text.strip()) < 30:
+
+    team_snap = (
+        db.collection('classrooms').document(class_name)
+          .collection('Projects').document(project_name)
+          .collection('teams').document(team_name).get()
+    )
+    board_image_url = (team_snap.to_dict() or {}).get('previewUrl') if team_snap.exists else None
+
+    # Only bail out for lack of content if there's neither real text NOR a
+    # board screenshot to fall back on — a board made entirely of drawings
+    # and images (no text shapes) should still be checkable via the image.
+    if len(canvas_text.strip()) < 30 and not board_image_url:
         return {
             "status": "not_enough_content",
             "message": "This team hasn't added enough to their whiteboard yet for a meaningful check.",
@@ -226,10 +241,14 @@ def check_team_alignment(class_name: str, project_name: str, team_name: str) -> 
         )
         upload_resp.raise_for_status()
 
+        check_payload = {"canvas_content": canvas_text}
+        if board_image_url:
+            check_payload["board_image_url"] = board_image_url
+
         check_resp = requests.post(
             f"{AI_BACKEND_URL}/api/socratic/check/{assignment_id}",
-            json={"canvas_content": canvas_text},
-            timeout=30,
+            json=check_payload,
+            timeout=45,  # captioning the board image adds real time on top of the text check
         )
         check_resp.raise_for_status()
         result = check_resp.json()

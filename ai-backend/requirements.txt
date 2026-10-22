@@ -13,4 +13,5 @@ requests
 python-dotenv
 httpx
 numpy
+Pillow
 pydantic
