@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import "./ManageStudent.css";
 
-const API = "https://flask-app-l7rilyhu2a-uc.a.run.app";
+const API = FLASK_API_URL;
 
 const ManageStudent = () => {
   const navigate = useNavigate();

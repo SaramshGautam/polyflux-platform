@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import "./EditProject.css";
 
 const API_BASE = (className, projectName) =>
-  `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/project/${projectName}`;
+  `${FLASK_API_URL}/api/classroom/${className}/project/${projectName}`;
 
 const MAX_NOTE_SIZE_MB = 10;
 const MAX_NOTES = 10;

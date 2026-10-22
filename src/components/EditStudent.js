@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -21,7 +22,7 @@ const EditStudent = () => {
 
         console.log(`Fetching data for student: ${studentId}`);
         const response = await axios.get(
-          `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${encodedStudentId}`
+          `${FLASK_API_URL}/api/classroom/${className}/edit_student/${encodedStudentId}`
         );
 
         console.log("Student Data Fetched:", response.data.student);
@@ -60,7 +61,7 @@ const EditStudent = () => {
       const encodedStudentId = encodeURIComponent(studentId);
 
       await axios.put(
-        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/edit_student/${encodedStudentId}`,
+        `${FLASK_API_URL}/api/classroom/${className}/edit_student/${encodedStudentId}`,
         {
           ...student,
           lsuId: student.lsuId || "",

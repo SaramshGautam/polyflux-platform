@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FLASK_API_URL } from "../config/api";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -35,7 +36,7 @@ const AddStudent = () => {
       //   studentData
       // );
       await axios.post(
-        `https://flask-app-l7rilyhu2a-uc.a.run.app/api/classroom/${className}/add_student`,
+        `${FLASK_API_URL}/api/classroom/${className}/add_student`,
         studentData
       );
       alert(`Student ${firstName} ${lastName} added successfully!`);

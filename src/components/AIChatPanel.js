@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { AI_BACKEND_URL } from "../config/api";
 import "./AIChatPanel.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRobot } from "@fortawesome/free-solid-svg-icons";
@@ -10,7 +11,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 
-const AI_BASE = "https://canvas-ai-backend-l7rilyhu2a-uc.a.run.app";
+const AI_BASE = AI_BACKEND_URL;
 
 // The ai-backend keys its ingested content by `${className}__${projectName}`
 // (see backend/app.py's project_course_id()) — NOT courseId alone. courseId

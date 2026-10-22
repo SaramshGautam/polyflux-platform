@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import {
@@ -103,7 +104,7 @@ const EditClassroom = () => {
         const formData = new FormData();
         formData.append("student_file", studentFile);
         await axios.post(
-          `https://flask-app-l7rilyhu2a-uc.a.run.app/update-students/${className}`,
+          `${FLASK_API_URL}/update-students/${className}`,
           formData,
           {
             withCredentials: true,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { FLASK_API_URL } from "../config/api";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -119,7 +120,7 @@ const ManageTeams = () => {
     setIsSaving(true);
     try {
       const res = await fetch(
-        "https://flask-app-l7rilyhu2a-uc.a.run.app/save-teams",
+        `${FLASK_API_URL}/save-teams`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
