@@ -1,7 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FLASK_API_URL } from "../config/api";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
+  orderBy,
+  query,
+} from "firebase/firestore";
+import {
+  ref,
+  uploadBytes,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
+import { storage } from "../firebaseConfig";
 import "./EditProject.css";
 
 const API_BASE = (className, projectName) =>
@@ -9,6 +28,60 @@ const API_BASE = (className, projectName) =>
 
 const MAX_NOTE_SIZE_MB = 10;
 const MAX_NOTES = 10;
+const MAX_MATERIAL_SIZE_MB = 15;
+const MAX_VIDEO_SIZE_MB = 200;
+
+const DOC_EXTENSIONS = {
+  pdf: { mime: ["application/pdf"], label: "PDF" },
+  pptx: {
+    mime: [
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ],
+    label: "SLIDES",
+  },
+  ppt: { mime: ["application/vnd.ms-powerpoint"], label: "SLIDES" },
+  docx: {
+    mime: [
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    label: "DOC",
+  },
+  doc: { mime: ["application/msword"], label: "DOC" },
+};
+
+const VIDEO_FILE_EXTENSIONS = {
+  mp4: { mime: ["video/mp4"], label: "MP4" },
+  mov: { mime: ["video/quicktime"], label: "MOV" },
+  webm: { mime: ["video/webm"], label: "WEBM" },
+  m4v: { mime: ["video/x-m4v", "video/mp4"], label: "M4V" },
+};
+
+function extOf(filename = "") {
+  const match = /\.([a-zA-Z0-9]+)$/.exec(filename);
+  return match ? match[1].toLowerCase() : "";
+}
+
+function parseVideoUrl(raw) {
+  const url = (raw || "").trim();
+  const yt = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+  );
+  if (yt) {
+    return { provider: "youtube", embedUrl: `https://www.youtube.com/embed/${yt[1]}` };
+  }
+
+  const vimeo = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeo) {
+    return { provider: "vimeo", embedUrl: `https://player.vimeo.com/video/${vimeo[1]}` };
+  }
+
+  return { provider: null, embedUrl: null };
+}
+
+function isSupportedVideoUrl(raw) {
+  const { provider } = parseVideoUrl(raw);
+  return provider === "youtube" || provider === "vimeo";
+}
 
 const formatBytes = (bytes) => {
   if (!bytes) return "";
@@ -55,14 +128,44 @@ const EditProject = () => {
   const [noteError, setNoteError] = useState("");
   const notesRef = useRef(null);
 
+  const [materials, setMaterials] = useState([]);
+  const [materialMode, setMaterialMode] = useState("document");
+  const [materialError, setMaterialError] = useState("");
+  const [uploadingMaterial, setUploadingMaterial] = useState(false);
+  const [materialProgress, setMaterialProgress] = useState(null);
+  const [videoUrlInput, setVideoUrlInput] = useState("");
+  const [videoTitleInput, setVideoTitleInput] = useState("");
+
   // ── UI state ─────────────────────────────────────────────────────────────
-  const [fetchingPdfs, setFetchingPdfs] = useState(true);
+  const [loadingProjectData, setLoadingProjectData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const minDateLocal = new Date().toISOString().slice(0, 16);
+
+  const materialsCollection = () =>
+    collection(
+      getFirestore(),
+      "classrooms",
+      className,
+      "Projects",
+      projectName,
+      "materials"
+    );
+
+  const fetchMaterials = async () => {
+    if (!className || !projectName) return;
+    try {
+      const snap = await getDocs(
+        query(materialsCollection(), orderBy("createdAt", "desc"))
+      );
+      setMaterials(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Error fetching project materials:", err);
+    }
+  };
 
   // ── Fetch existing PDF metadata from Firestore on mount ──────────────────
   useEffect(() => {
@@ -75,7 +178,6 @@ const EditProject = () => {
           const data = snap.data();
           if (data.description_pdf) setExistingDescPdf(data.description_pdf);
           if (Array.isArray(data.notes)) setExistingNotes(data.notes);
-          // Also hydrate text fields if location.state was missing
           if (!initial.description && data.description)
             setDescription(data.description);
           if (!initial.dueDate && data.dueDate) {
@@ -88,10 +190,14 @@ const EditProject = () => {
       } catch (err) {
         console.error("Error fetching project doc:", err);
       } finally {
-        setFetchingPdfs(false);
+        setLoadingProjectData(false);
       }
     };
-    fetchProjectDoc();
+
+    if (className && projectName) {
+      fetchProjectDoc();
+      fetchMaterials();
+    }
   }, [className, projectName]);
 
   // ── Team file ──────────────────────────────────────────────────────────────
@@ -188,6 +294,181 @@ const EditProject = () => {
   const removeExistingNote = (url) => {
     setRemovedNoteUrls((prev) => [...prev, url]);
     setExistingNotes((prev) => prev.filter((n) => n.url !== url));
+  };
+
+  const handleMaterialFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const ext = extOf(file.name);
+    const known = DOC_EXTENSIONS[ext];
+    if (!known || !known.mime.includes(file.type)) {
+      setMaterialError("Please upload a PDF, PPT/PPTX, or DOC/DOCX file.");
+      return;
+    }
+    if (file.size > MAX_MATERIAL_SIZE_MB * 1024 * 1024) {
+      setMaterialError(`That file is larger than the ${MAX_MATERIAL_SIZE_MB} MB limit.`);
+      return;
+    }
+
+    setMaterialError("");
+    setUploadingMaterial(true);
+    try {
+      const newDocRef = doc(materialsCollection());
+      const storagePath = `materials/${className}/${projectName}/${newDocRef.id}.${ext}`;
+      const fileRef = ref(storage, storagePath);
+
+      await uploadBytes(fileRef, file, { contentType: file.type });
+      const url = await getDownloadURL(fileRef);
+
+      await setDoc(newDocRef, {
+        type: "document",
+        title: file.name,
+        fileName: file.name,
+        mimeType: file.type,
+        storagePath,
+        url,
+        size: file.size,
+        visibleToStudents: true,
+        uploadedBy: localStorage.getItem("userEmail") || "",
+        createdAt: serverTimestamp(),
+      });
+
+      await fetchMaterials();
+      e.target.value = "";
+    } catch (err) {
+      console.error("Error uploading document material:", err);
+      setMaterialError("Upload failed. Please try again.");
+    } finally {
+      setUploadingMaterial(false);
+      setMaterialProgress(null);
+    }
+  };
+
+  const handleVideoMaterialUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const ext = extOf(file.name);
+    const known = VIDEO_FILE_EXTENSIONS[ext];
+    if (!known || !known.mime.includes(file.type)) {
+      setMaterialError("Please upload an MP4, MOV, or WEBM video file.");
+      return;
+    }
+    if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+      setMaterialError(`That video is larger than the ${MAX_VIDEO_SIZE_MB} MB limit.`);
+      return;
+    }
+
+    setMaterialError("");
+    setUploadingMaterial(true);
+    setMaterialProgress(0);
+
+    const newDocRef = doc(materialsCollection());
+    const storagePath = `materials/${className}/${projectName}/${newDocRef.id}.${ext}`;
+    const fileRef = ref(storage, storagePath);
+    const task = uploadBytesResumable(fileRef, file, { contentType: file.type });
+
+    task.on(
+      "state_changed",
+      (snapshot) => {
+        setMaterialProgress(
+          Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+        );
+      },
+      (err) => {
+        console.error("Error uploading video material:", err);
+        setMaterialError("Video upload failed. Please try again.");
+        setUploadingMaterial(false);
+        setMaterialProgress(null);
+      },
+      async () => {
+        try {
+          const url = await getDownloadURL(fileRef);
+          await setDoc(newDocRef, {
+            type: "video_file",
+            title: file.name,
+            fileName: file.name,
+            mimeType: file.type,
+            storagePath,
+            url,
+            size: file.size,
+            visibleToStudents: true,
+            uploadedBy: localStorage.getItem("userEmail") || "",
+            createdAt: serverTimestamp(),
+          });
+          await fetchMaterials();
+          e.target.value = "";
+        } catch (err) {
+          console.error("Error saving video material:", err);
+          setMaterialError("Video upload could not be saved.");
+        } finally {
+          setUploadingMaterial(false);
+          setMaterialProgress(null);
+        }
+      }
+    );
+  };
+
+  const handleAddVideoLink = async () => {
+    const trimmed = videoUrlInput.trim();
+    if (!trimmed) return;
+
+    try {
+      new URL(trimmed);
+    } catch {
+      setMaterialError("Please enter a valid URL.");
+      return;
+    }
+
+    if (!isSupportedVideoUrl(trimmed)) {
+      setMaterialError("Only YouTube and Vimeo links are supported right now.");
+      return;
+    }
+
+    const { provider, embedUrl } = parseVideoUrl(trimmed);
+    setMaterialError("");
+    setUploadingMaterial(true);
+    try {
+      await setDoc(doc(materialsCollection()), {
+        type: "video",
+        title: videoTitleInput.trim() || trimmed,
+        fileName: null,
+        mimeType: null,
+        storagePath: null,
+        url: trimmed,
+        videoProvider: provider,
+        embedUrl,
+        visibleToStudents: true,
+        uploadedBy: localStorage.getItem("userEmail") || "",
+        createdAt: serverTimestamp(),
+      });
+      setVideoUrlInput("");
+      setVideoTitleInput("");
+      await fetchMaterials();
+    } catch (err) {
+      console.error("Error adding video link:", err);
+      setMaterialError("Couldn't add that video link. Please try again.");
+    } finally {
+      setUploadingMaterial(false);
+    }
+  };
+
+  const removeMaterial = async (material) => {
+    try {
+      if (material.storagePath) {
+        try {
+          await deleteObject(ref(storage, material.storagePath));
+        } catch (err) {
+          console.warn("Storage file already gone or could not be deleted:", err);
+        }
+      }
+      await deleteDoc(doc(materialsCollection(), material.id));
+      setMaterials((prev) => prev.filter((m) => m.id !== material.id));
+    } catch (err) {
+      console.error("Error removing material:", err);
+      setMaterialError("Couldn't remove that item. Please try again.");
+    }
   };
 
   // ── Submit ──────────────────────────────────────────────────────────────────
@@ -408,10 +689,10 @@ const EditProject = () => {
             </span>
           </div>
 
-          {fetchingPdfs ? (
+          {loadingProjectData ? (
             <div className="ep-loading-row">
               <span className="ep-loading-spinner" aria-hidden="true" />
-              Loading saved files…
+              Loading project data…
             </div>
           ) : (
             <>
@@ -521,19 +802,17 @@ const EditProject = () => {
             </>
           )}
 
-          {/* ════ Notes PDFs ════ */}
+          {/* ════ Notes & materials ════ */}
           <div className="ep-section-divider" />
           <div className="ep-section-label">
-            Notes
+            Notes & materials
             <span className="ep-optional">
-              optional · {totalNotes}/{MAX_NOTES} PDFs · max {MAX_NOTE_SIZE_MB}{" "}
-              MB each
+              optional · PDFs, slides, docs, videos, and links
             </span>
           </div>
           <p className="ep-section-hint">
-            Supplementary materials for students — slides, references, datasets.
-            Click a saved file name to preview it. Removing a file deletes it
-            from storage on save.
+            Add references, slides, datasets, and videos for students. These
+            materials are stored in the same project materials collection used by the project materials panel.
           </p>
 
           {noteError && (
@@ -542,42 +821,160 @@ const EditProject = () => {
             </div>
           )}
 
-          {fetchingPdfs ? (
+          {materialError && (
+            <div className="ep-note-error" role="alert">
+              <span aria-hidden="true">⚠</span> {materialError}
+            </div>
+          )}
+
+          <div className="ep-upload-tabs">
+            <button
+              type="button"
+              className={
+                materialMode === "document"
+                  ? "ep-upload-tab ep-upload-tab--active"
+                  : "ep-upload-tab"
+              }
+              onClick={() => setMaterialMode("document")}
+            >
+              Upload file
+            </button>
+            <button
+              type="button"
+              className={
+                materialMode === "video_file"
+                  ? "ep-upload-tab ep-upload-tab--active"
+                  : "ep-upload-tab"
+              }
+              onClick={() => setMaterialMode("video_file")}
+            >
+              Upload video
+            </button>
+            <button
+              type="button"
+              className={
+                materialMode === "video_link"
+                  ? "ep-upload-tab ep-upload-tab--active"
+                  : "ep-upload-tab"
+              }
+              onClick={() => setMaterialMode("video_link")}
+            >
+              Add video link
+            </button>
+          </div>
+
+          {materialMode === "document" && (
+            <div className="ep-field">
+              <label htmlFor="ep-material-file" className="ep-file-label ep-file-label--pdf">
+                <span className="ep-file-icon ep-file-icon--pdf" aria-hidden="true">
+                  FILE
+                </span>
+                <span className="ep-file-text">
+                  {uploadingMaterial ? "Uploading…" : "Choose PDF, PPT, or DOC file"}
+                </span>
+                <span className="ep-file-hint">.pdf .ppt .pptx .doc .docx</span>
+              </label>
+              <input
+                id="ep-material-file"
+                type="file"
+                accept=".pdf,.ppt,.pptx,.doc,.docx"
+                onChange={handleMaterialFileUpload}
+                className="ep-file-input"
+                disabled={uploadingMaterial}
+              />
+            </div>
+          )}
+
+          {materialMode === "video_file" && (
+            <div className="ep-field">
+              <label htmlFor="ep-material-video" className="ep-file-label ep-file-label--pdf">
+                <span className="ep-file-icon ep-file-icon--pdf" aria-hidden="true">
+                  VID
+                </span>
+                <span className="ep-file-text">
+                  {uploadingMaterial ? "Uploading…" : "Choose MP4, MOV, or WEBM video"}
+                </span>
+                <span className="ep-file-hint">.mp4 .mov .webm</span>
+              </label>
+              <input
+                id="ep-material-video"
+                type="file"
+                accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+                onChange={handleVideoMaterialUpload}
+                className="ep-file-input"
+                disabled={uploadingMaterial}
+              />
+              {materialProgress !== null && (
+                <div className="ep-progress-bar" style={{ marginTop: "0.75rem" }}>
+                  <span style={{ width: `${materialProgress}%` }} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {materialMode === "video_link" && (
+            <div className="ep-field">
+              <label htmlFor="ep-video-url">Video URL</label>
+              <input
+                id="ep-video-url"
+                type="url"
+                value={videoUrlInput}
+                onChange={(e) => setVideoUrlInput(e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+              <label htmlFor="ep-video-title" style={{ marginTop: "0.75rem" }}>
+                Link label
+              </label>
+              <input
+                id="ep-video-title"
+                type="text"
+                value={videoTitleInput}
+                onChange={(e) => setVideoTitleInput(e.target.value)}
+                placeholder="Optional title"
+              />
+              <button
+                type="button"
+                className="ep-btn-primary"
+                style={{ marginTop: "0.75rem" }}
+                onClick={handleAddVideoLink}
+                disabled={uploadingMaterial}
+              >
+                {uploadingMaterial ? "Saving…" : "Add video link"}
+              </button>
+            </div>
+          )}
+
+          {loadingProjectData ? (
             <div className="ep-loading-row">
               <span className="ep-loading-spinner" aria-hidden="true" />
-              Loading saved notes…
+              Loading saved materials…
             </div>
           ) : (
             <>
-              {/* Existing saved notes */}
-              {existingNotes.length > 0 && (
-                <ul className="ep-notes-list" aria-label="Saved note files">
-                  {existingNotes.map((n) => (
-                    <li key={n.url} className="ep-pdf-pill ep-pdf-pill--saved">
+              {materials.length > 0 && (
+                <ul className="ep-notes-list" aria-label="Saved project materials">
+                  {materials.map((m) => (
+                    <li key={m.id} className="ep-pdf-pill ep-pdf-pill--saved">
                       <span className="ep-pdf-pill-icon" aria-hidden="true">
-                        PDF
+                        {m.type === "video" ? "VID" : m.type === "video_file" ? "MP4" : extOf(m.fileName || "") ? extOf(m.fileName || "").toUpperCase() : "FILE"}
                       </span>
                       <div className="ep-pdf-pill-info">
                         <a
-                          href={n.url}
+                          href={m.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="ep-pdf-pill-name ep-pdf-pill-link"
                         >
-                          {n.name}
+                          {m.title || m.fileName}
                         </a>
                         <span className="ep-pdf-pill-badge">Saved</span>
                       </div>
-                      {n.size && (
-                        <span className="ep-pdf-pill-size">
-                          {formatBytes(n.size)}
-                        </span>
-                      )}
+                      {m.size && <span className="ep-pdf-pill-size">{formatBytes(m.size)}</span>}
                       <button
                         type="button"
                         className="ep-pdf-pill-remove"
-                        onClick={() => removeExistingNote(n.url)}
-                        aria-label={`Remove ${n.name}`}
+                        onClick={() => removeMaterial(m)}
+                        aria-label={`Remove ${m.title || m.fileName}`}
                       >
                         ✕
                       </button>
@@ -586,65 +983,8 @@ const EditProject = () => {
                 </ul>
               )}
 
-              {/* New note uploads */}
-              {notes.length > 0 && (
-                <ul className="ep-notes-list" aria-label="Notes to be added">
-                  {notes.map((n) => (
-                    <li key={n.id} className="ep-pdf-pill">
-                      <span className="ep-pdf-pill-icon" aria-hidden="true">
-                        PDF
-                      </span>
-                      <span className="ep-pdf-pill-name">{n.name}</span>
-                      <span className="ep-pdf-pill-size">
-                        {formatBytes(n.size)}
-                      </span>
-                      <button
-                        type="button"
-                        className="ep-pdf-pill-remove"
-                        onClick={() => removeNewNote(n.id)}
-                        aria-label={`Remove ${n.name}`}
-                      >
-                        ✕
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* Add more button */}
-              {canAddMoreNotes && (
-                <div className="ep-field">
-                  <label
-                    htmlFor="ep-notes"
-                    className="ep-file-label ep-file-label--pdf"
-                  >
-                    <span
-                      className="ep-file-icon ep-file-icon--pdf"
-                      aria-hidden="true"
-                    >
-                      PDF
-                    </span>
-                    <span className="ep-file-text">
-                      {totalNotes === 0 ? "Add note PDFs" : "Add more PDFs"}
-                    </span>
-                    <span className="ep-file-hint">
-                      {totalNotes}/{MAX_NOTES} added
-                    </span>
-                  </label>
-                  <input
-                    id="ep-notes"
-                    type="file"
-                    accept="application/pdf"
-                    multiple
-                    onChange={handleNotesChange}
-                    className="ep-file-input"
-                    ref={notesRef}
-                  />
-                </div>
-              )}
-
-              {existingNotes.length === 0 && notes.length === 0 && (
-                <p className="ep-empty-hint">No notes attached yet.</p>
+              {materials.length === 0 && (
+                <p className="ep-empty-hint">No materials attached yet.</p>
               )}
             </>
           )}
@@ -654,7 +994,7 @@ const EditProject = () => {
             <button
               type="submit"
               className="ep-btn-primary"
-              disabled={isSubmitting || isDeleting || fetchingPdfs}
+              disabled={isSubmitting || isDeleting || loadingProjectData}
             >
               {isSubmitting ? (
                 <>
