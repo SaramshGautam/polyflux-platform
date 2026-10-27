@@ -8,6 +8,8 @@ const pub = (f) => `${process.env.PUBLIC_URL}/howto/${f}`;
 
 const IMAGE_MAP = {
   login: "welcome",
+  dashboard: "teacherdashboard",
+  classroom: "classroomview",
   add_classroom: "addnewclass",
   add_project: "addnewproject",
   edit_classroom: "editclassroom",
@@ -190,6 +192,10 @@ export default function HowToUse() {
         Create new classrooms or open existing ones. First time? Click{" "}
         <strong>Add Classroom</strong>.
       </p>
+      <figure className="howto-shot">
+        <img src={img("dashboard")} alt="Teacher dashboard" />
+        <figcaption>Teacher dashboard</figcaption>
+      </figure>
 
       <h2 id="add-classroom">3. Create a Classroom</h2>
       <p>Fill the form and upload a CSV (or Excel) with your roster.</p>
@@ -228,6 +234,10 @@ export default function HowToUse() {
           <strong>Edit Classroom</strong> — change details or delete the class
         </li>
       </ul>
+      <figure className="howto-shot">
+        <img src={img("classroom")} alt="Classroom view" />
+        <figcaption>Classroom view</figcaption>
+      </figure>
       <figure className="howto-shot">
         <img src={img("edit_classroom")} alt="Edit Classroom form" />
         <figcaption>Edit Classroom form</figcaption>
