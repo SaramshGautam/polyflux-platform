@@ -273,6 +273,54 @@
   flex-shrink: 0;
 }
 
+.ep-upload-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0.9rem;
+}
+
+.ep-upload-tab {
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--pf-border);
+  background: var(--pf-page-bg);
+  color: var(--pf-text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.ep-upload-tab:hover {
+  border-color: var(--pf-accent);
+  color: var(--pf-accent);
+}
+
+.ep-upload-tab--active {
+  border-color: var(--pf-accent);
+  background: var(--pf-accent-light);
+  color: var(--pf-accent);
+}
+
+.ep-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--pf-border-soft);
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+
+.ep-progress-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--pf-accent);
+  transition: width 0.2s ease;
+}
+
 /* ─── PDF pill ───────────────────────────────────────────────────────────── */
 .ep-pdf-pill {
   display: flex;
