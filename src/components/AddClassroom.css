@@ -211,7 +211,8 @@
   transition: border-color 0.15s, background 0.15s;
 }
 
-.ac-file-label:hover {
+.ac-file-label:hover,
+.ac-file-label--active {
   border-color: var(--pf-accent);
   background: var(--pf-accent-light);
 }
