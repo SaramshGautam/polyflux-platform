@@ -59,76 +59,101 @@ const sourceType = (source = "") => {
   return "other";
 };
 
-const openBlobPreview = async (url, fileName) => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Preview fetch failed: ${response.status}`);
-
-  const blob = await response.blob();
-  const blobUrl = URL.createObjectURL(blob);
+export const createPreviewPopup = (fileName = "Preview") => {
   const previewWindow = window.open("", "_blank", "noopener,noreferrer");
 
   if (!previewWindow) {
-    window.open(blobUrl, "_blank", "noopener,noreferrer");
-    return;
+    return null;
   }
-
-  const mimeType = response.headers.get("content-type") || blob.type || "application/octet-stream";
-  const isImage = mimeType.startsWith("image/");
-  const isVideo = mimeType.startsWith("video/");
-  const isPdf = mimeType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf");
 
   previewWindow.document.title = fileName;
   previewWindow.document.body.style.margin = "0";
   previewWindow.document.body.style.background = "#111827";
   previewWindow.document.body.style.display = "grid";
   previewWindow.document.body.style.placeItems = "center";
+  previewWindow.document.body.innerHTML = `
+    <div style="font-family: sans-serif; color: #fff; text-align: center; padding: 24px;">
+      Loading ${fileName}...
+    </div>
+  `;
 
-  if (isPdf) {
-    previewWindow.document.body.innerHTML = `
-      <iframe
-        src="${blobUrl}"
-        title="${fileName}"
-        style="border:0; width:100vw; height:100vh; background:white;"
-      ></iframe>
-    `;
+  return previewWindow;
+};
+
+const openGoogleViewer = (url) => {
+  const googleViewerUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+  window.open(googleViewerUrl, "_blank", "noopener,noreferrer");
+};
+
+export const openBlobPreview = async (url, fileName) => {
+  const ext = (fileName.split(".").pop() || "").toLowerCase();
+
+  if (["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext)) {
+    openGoogleViewer(url);
     return;
   }
 
-  if (isImage) {
-    previewWindow.document.body.innerHTML = `
-      <img
-        src="${blobUrl}"
-        alt="${fileName}"
-        style="max-width:100vw; max-height:100vh; object-fit:contain; display:block;"
-      />
-    `;
+  const previewWindow = createPreviewPopup(fileName);
+
+  if (!previewWindow) {
+    console.warn("Popup blocked; file preview was not opened.");
     return;
   }
 
-  if (isVideo) {
-    previewWindow.document.body.innerHTML = `
-      <video
-        controls
-        autoplay
-        style="max-width:100vw; max-height:100vh; background:black;"
-      >
-        <source src="${blobUrl}" type="${mimeType}" />
-      </video>
-    `;
-    return;
-  }
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Preview fetch failed: ${response.status}`);
 
-  const link = previewWindow.document.createElement("a");
-  link.href = blobUrl;
-  link.download = fileName;
-  link.textContent = "Download file";
-  link.style.color = "#fff";
-  link.style.fontFamily = "sans-serif";
-  link.style.textDecoration = "none";
-  link.style.padding = "18px 24px";
-  link.style.border = "1px solid rgba(255,255,255,0.2)";
-  link.style.borderRadius = "10px";
-  previewWindow.document.body.appendChild(link);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const mimeType = response.headers.get("content-type") || blob.type || "application/octet-stream";
+    const isImage = mimeType.startsWith("image/");
+    const isVideo = mimeType.startsWith("video/");
+
+    previewWindow.document.title = fileName;
+    previewWindow.document.body.style.margin = "0";
+    previewWindow.document.body.style.background = "#111827";
+    previewWindow.document.body.style.display = "grid";
+    previewWindow.document.body.style.placeItems = "center";
+
+    if (isImage) {
+      previewWindow.document.body.innerHTML = `
+        <img
+          src="${blobUrl}"
+          alt="${fileName}"
+          style="max-width:100vw; max-height:100vh; object-fit:contain; display:block;"
+        />
+      `;
+      return;
+    }
+
+    if (isVideo) {
+      previewWindow.document.body.innerHTML = `
+        <video
+          controls
+          autoplay
+          style="max-width:100vw; max-height:100vh; background:black;"
+        >
+          <source src="${blobUrl}" type="${mimeType}" />
+        </video>
+      `;
+      return;
+    }
+
+    previewWindow.document.body.innerHTML = `
+      <div style="font-family: sans-serif; color: #fff; text-align: center; padding: 24px; line-height: 1.6;">
+        <p style="margin: 0 0 12px; font-weight: 600;">This file type is not browser-viewable.</p>
+        <a href="${url}" target="_blank" rel="noreferrer" style="color: #93c5fd;">Open file directly</a>
+      </div>
+    `;
+  } catch (error) {
+    previewWindow.document.body.innerHTML = `
+      <div style="font-family: sans-serif; color: #fff; text-align: center; padding: 24px; line-height: 1.6;">
+        <p style="margin: 0 0 12px; font-weight: 600;">Unable to preview this file.</p>
+        <a href="${url}" target="_blank" rel="noreferrer" style="color: #93c5fd;">Open file directly</a>
+      </div>
+    `;
+  }
 };
 
 const openMaterialPreview = async (item) => {
@@ -161,29 +186,9 @@ const openMaterialPreview = async (item) => {
 
   if (["doc", "docx", "ppt", "pptx"].includes(ext)) {
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Office file not accessible");
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const previewWindow = window.open("", "_blank", "noopener,noreferrer");
-
-      if (previewWindow) {
-        previewWindow.document.title = name;
-        previewWindow.document.body.style.margin = "0";
-        previewWindow.document.body.style.background = "#f3f4f6";
-        previewWindow.document.body.style.display = "flex";
-        previewWindow.document.body.style.alignItems = "center";
-        previewWindow.document.body.style.justifyContent = "center";
-        previewWindow.document.body.innerHTML = `
-          <div style="font-family: sans-serif; text-align:center; color:#111827; padding:32px;">
-            <p style="margin:0 0 16px; font-size:18px; font-weight:600;">${name}</p>
-            <a href="${blobUrl}" download="${name}" style="display:inline-block; padding:12px 18px; border-radius:8px; background:#4f46e5; color:#fff; text-decoration:none;">Download file</a>
-          </div>
-        `;
-        return;
-      }
+      await openBlobPreview(url, name);
+      return;
     } catch {
-      // Fall back to direct link if the file is genuinely public and browser was blocked.
       window.open(url, "_blank", "noopener,noreferrer");
       return;
     }
