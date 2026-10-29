@@ -1,3 +1,8 @@
+:root {
+  --ai-sidebar-width: 340px;
+  --ai-toggle-offset: 8px;
+}
+
 /* ─── Navbar shell ───────────────────────────────────────────────────────── */
 .navbar {
   display: flex;
@@ -12,13 +17,35 @@
   left: 0;
   right: 0;
   z-index: 900; /* below ai-sidebar (1000) and ai-toggle (1100) */
-  gap: 12px;
+  gap: 8px;
   font-family: "Inter", system-ui, sans-serif;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: padding-right 0.25s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 body {
   padding-top: 56px;
+}
+
+body.ai-panel-open .navbar {
+  /* Keep the left side collapsed as-is; only move the right-side control cluster. */
+  padding-right: calc(var(--ai-sidebar-width) + var(--ai-toggle-offset) + 16px);
+}
+
+body.whiteboard-open .navbar {
+  padding-right: calc(var(--ai-sidebar-width) + 200px);
+}
+
+body.whiteboard-open.ai-panel-open .navbar {
+  padding-right: calc(var(--ai-sidebar-width) * 2 + 100px);
+}
+
+body.ai-panel-open .nb-right {
+  transform: translateX(calc(-1 * var(--ai-sidebar-width)));
+}
+
+body.ai-panel-open .nb-right--whiteboard {
+  right: calc(var(--ai-sidebar-width) + 52px);
+  transform: none;
 }
 
 /* ─── Left side ──────────────────────────────────────────────────────────── */
@@ -163,6 +190,16 @@ body {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  margin-left: auto;
+  transition: transform 0.2s ease, right 0.2s ease;
+}
+
+.nb-right--whiteboard {
+  position: fixed;
+  top: 12px;
+  right: 182px;
+  z-index: 1001;
+  margin-left: 0;
 }
 
 /* This spacer reserves room for the AI toggle button (fixed, ~200px wide).
@@ -365,6 +402,7 @@ body {
     display: none;
   }
   .nb-ai-spacer {
-    width: 48px;
+    width: 198px;
+    flex-shrink: 0;
   }
 }

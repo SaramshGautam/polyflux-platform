@@ -68,7 +68,8 @@
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
-.pm-file-label:hover {
+.pm-file-label:hover,
+.pm-file-label--active {
   border-color: var(--pf-accent);
   background: var(--pf-accent-light);
   color: var(--pf-accent);

@@ -190,6 +190,11 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [theme, setTheme] = useState(getStoredTheme);
 
+  useEffect(() => {
+    document.body.classList.toggle("whiteboard-open", isInWhiteboard);
+    return () => document.body.classList.remove("whiteboard-open");
+  }, [isInWhiteboard]);
+
   const handleThemeToggle = () => setTheme(toggleTheme());
 
   const role = localStorage.getItem("role");
@@ -271,7 +276,7 @@ const Navbar = () => {
       </div>
 
       {/* ── Right — email + avatar (sits LEFT of the AI toggle) ── */}
-      <div className="nb-right">
+      <div className={`nb-right ${isInWhiteboard ? "nb-right--whiteboard" : ""}`}>
         <button
           className="nb-theme-toggle"
           onClick={handleThemeToggle}
