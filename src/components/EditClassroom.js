@@ -142,6 +142,8 @@ const EditClassroom = () => {
   const set = (key) => (e) =>
     setClassroomData((p) => ({ ...p, [key]: e.target.value }));
 
+  const goBackToClassroom = () => navigate(`/classroom/${className}`);
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="ec-page">
@@ -184,9 +186,9 @@ const EditClassroom = () => {
           <button
             className="ec-back-btn"
             type="button"
-            onClick={() => navigate("/teachers-home")}
+            onClick={() => navigate(`/classroom/${className}`)}
           >
-            ← Back to dashboard
+            ← Back to classroom
           </button>
           <h1 className="ec-title">Edit classroom</h1>
           <p className="ec-subtitle">
@@ -325,7 +327,7 @@ const EditClassroom = () => {
             <button
               type="button"
               className="ec-btn-ghost"
-              onClick={() => navigate("/teachers-home")}
+              onClick={() => navigate(`/classroom/${className}`)}
               disabled={isSubmitting || isDeleting}
             >
               Cancel
