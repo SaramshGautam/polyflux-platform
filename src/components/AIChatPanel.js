@@ -20,6 +20,233 @@ const AI_BASE = AI_BACKEND_URL;
 const backendCourseId = (courseId, projectName) =>
   projectName ? `${courseId}__${projectName}` : courseId;
 
+const assistantName = "Poly";
+
+const welcomeMessage = `Hey there! 👋 I'm ${assistantName}, your project assistant. Ask me about the materials for this project and I’ll help you understand them faster.`;
+
+const materialMeta = (source = "") => {
+  const name = typeof source === "string" ? source : source.name || "";
+  const ext = (name.split(".").pop() || "").toLowerCase();
+
+  const map = {
+    pdf: { label: "PDF", icon: "📄", color: "#dc2626" },
+    ppt: { label: "PPT", icon: "📊", color: "#f59e0b" },
+    pptx: { label: "PPT", icon: "📊", color: "#f59e0b" },
+    doc: { label: "DOC", icon: "📝", color: "#3b82f6" },
+    docx: { label: "DOC", icon: "📝", color: "#3b82f6" },
+    png: { label: "IMAGE", icon: "🖼️", color: "#10b981" },
+    jpg: { label: "IMAGE", icon: "🖼️", color: "#10b981" },
+    jpeg: { label: "IMAGE", icon: "🖼️", color: "#10b981" },
+    webp: { label: "IMAGE", icon: "🖼️", color: "#10b981" },
+    mp4: { label: "VIDEO", icon: "🎬", color: "#8b5cf6" },
+    mov: { label: "VIDEO", icon: "🎬", color: "#8b5cf6" },
+    webm: { label: "VIDEO", icon: "🎬", color: "#8b5cf6" },
+  };
+
+  return map[ext] || { label: "FILE", icon: "📁", color: "#6b7280" };
+};
+
+const sourceType = (source = "") => {
+  const name = typeof source === "string" ? source : source.name || source.title || "";
+  const ext = (name.split(".").pop() || "").toLowerCase();
+
+  if (["pdf"].includes(ext)) return "pdf";
+  if (["ppt", "pptx"].includes(ext)) return "ppt";
+  if (["doc", "docx"].includes(ext)) return "doc";
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
+  if (["mp4", "mov", "webm", "m4v"].includes(ext)) return "video";
+  if (/youtube\.com|vimeo\.com|youtu\.be/i.test(name)) return "video";
+  return "other";
+};
+
+export const createPreviewPopup = (fileName = "Preview") => {
+  const previewWindow = window.open("", "_blank", "noopener,noreferrer");
+
+  if (!previewWindow) {
+    return null;
+  }
+
+  previewWindow.document.title = fileName;
+  previewWindow.document.body.style.margin = "0";
+  previewWindow.document.body.style.background = "#111827";
+  previewWindow.document.body.style.display = "grid";
+  previewWindow.document.body.style.placeItems = "center";
+  previewWindow.document.body.innerHTML = `
+    <div style="font-family: sans-serif; color: #fff; text-align: center; padding: 24px;">
+      Loading ${fileName}...
+    </div>
+  `;
+
+  return previewWindow;
+};
+
+const openGoogleViewer = (url) => {
+  const googleViewerUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+  window.open(googleViewerUrl, "_blank", "noopener,noreferrer");
+};
+
+export const openBlobPreview = async (url, fileName) => {
+  const ext = (fileName.split(".").pop() || "").toLowerCase();
+
+  if (["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx"].includes(ext)) {
+    openGoogleViewer(url);
+    return;
+  }
+
+  const previewWindow = createPreviewPopup(fileName);
+
+  if (!previewWindow) {
+    console.warn("Popup blocked; file preview was not opened.");
+    return;
+  }
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Preview fetch failed: ${response.status}`);
+
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const mimeType = response.headers.get("content-type") || blob.type || "application/octet-stream";
+    const isImage = mimeType.startsWith("image/");
+    const isVideo = mimeType.startsWith("video/");
+
+    previewWindow.document.title = fileName;
+    previewWindow.document.body.style.margin = "0";
+    previewWindow.document.body.style.background = "#111827";
+    previewWindow.document.body.style.display = "grid";
+    previewWindow.document.body.style.placeItems = "center";
+
+    if (isImage) {
+      previewWindow.document.body.innerHTML = `
+        <img
+          src="${blobUrl}"
+          alt="${fileName}"
+          style="max-width:100vw; max-height:100vh; object-fit:contain; display:block;"
+        />
+      `;
+      return;
+    }
+
+    if (isVideo) {
+      previewWindow.document.body.innerHTML = `
+        <video
+          controls
+          autoplay
+          style="max-width:100vw; max-height:100vh; background:black;"
+        >
+          <source src="${blobUrl}" type="${mimeType}" />
+        </video>
+      `;
+      return;
+    }
+
+    previewWindow.document.body.innerHTML = `
+      <div style="font-family: sans-serif; color: #fff; text-align: center; padding: 24px; line-height: 1.6;">
+        <p style="margin: 0 0 12px; font-weight: 600;">This file type is not browser-viewable.</p>
+        <a href="${url}" target="_blank" rel="noreferrer" style="color: #93c5fd;">Open file directly</a>
+      </div>
+    `;
+  } catch (error) {
+    previewWindow.document.body.innerHTML = `
+      <div style="font-family: sans-serif; color: #fff; text-align: center; padding: 24px; line-height: 1.6;">
+        <p style="margin: 0 0 12px; font-weight: 600;">Unable to preview this file.</p>
+        <a href="${url}" target="_blank" rel="noreferrer" style="color: #93c5fd;">Open file directly</a>
+      </div>
+    `;
+  }
+};
+
+const openMaterialPreview = async (item) => {
+  if (!item || !item.url) return;
+
+  const url = item.url;
+  const name = item.name || item.title || "Material";
+  const ext = (name.split(".").pop() || "").toLowerCase();
+
+  if (["pdf"].includes(ext)) {
+    try {
+      await openBlobPreview(url, name);
+      return;
+    } catch {
+      const googleViewerUrl = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+      window.open(googleViewerUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+  }
+
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
+    try {
+      await openBlobPreview(url, name);
+      return;
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+  }
+
+  if (["doc", "docx", "ppt", "pptx"].includes(ext)) {
+    try {
+      await openBlobPreview(url, name);
+      return;
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+  }
+
+  if (["mp4", "mov", "webm", "m4v"].includes(ext)) {
+    try {
+      await openBlobPreview(url, name);
+      return;
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+  }
+
+  if (/youtube\.com|vimeo\.com|youtu\.be/i.test(url)) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  try {
+    await openBlobPreview(url, name);
+  } catch {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+};
+
+const handleMaterialDownload = async (item) => {
+  if (!item || !item.url) return;
+
+  const isVideo = /(\.mp4|\.mov|\.webm|youtube\.com|vimeo\.com)/i.test(
+    item.name || ""
+  );
+
+  if (isVideo) {
+    window.open(item.url, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  try {
+    const response = await fetch(item.url);
+    if (!response.ok) throw new Error("Download failed");
+
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = item.name || "download";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.warn("Download failed, opening file instead:", err);
+    window.open(item.url, "_blank", "noopener,noreferrer");
+  }
+};
+
 export default function AIChatPanel({
   courseId,
   projectName,
@@ -29,7 +256,7 @@ export default function AIChatPanel({
   const [messages, setMessages] = useState([
     {
       role: "ai",
-      text: "Hey there! 👋 I'm your PolyFlux Assistant — ask me anything about the material your professor has uploaded for this project, and I'll do my best to help you work through it.",
+      text: welcomeMessage,
     },
   ]);
   const [input, setInput] = useState("");
@@ -37,6 +264,7 @@ export default function AIChatPanel({
   const [wakingUp, setWakingUp] = useState(false); // backend cold-start likely in progress
   const [sources, setSources] = useState([]); // loaded PDF names from Firestore
   const [ingesting, setIngesting] = useState(false);
+  const [showAllSources, setShowAllSources] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -56,6 +284,11 @@ export default function AIChatPanel({
   // ── Focus input when panel opens ───────────────────────────────────────────
   useEffect(() => {
     if (!isCollapsed) setTimeout(() => inputRef.current?.focus(), 150);
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    document.body.classList.toggle("ai-panel-open", !isCollapsed);
+    return () => document.body.classList.remove("ai-panel-open");
   }, [isCollapsed]);
 
   // ── On mount: fetch PDF metadata from Firestore & trigger ingest ───────────
@@ -109,14 +342,17 @@ export default function AIChatPanel({
         // were always student-visible; for the new materials library, only
         // list items the teacher actually marked visible, so a private
         // file's existence/title is never hinted at in the chat panel.
-        const visibleSourceNames = [
-          ...descPdf.map((p) => p.name),
-          ...notePdfs.map((p) => p.name),
+        const visibleSourceItems = [
+          ...descPdf.map((p) => ({ name: p.name, url: p.url })),
+          ...notePdfs.map((p) => ({ name: p.name, url: p.url })),
           ...documentMaterials
             .filter((m) => m.visibleToStudents)
-            .map((m) => m.title),
+            .map((m) => ({
+              name: m.title || m.fileName,
+              url: m.url,
+            })),
         ];
-        setSources(visibleSourceNames.filter(Boolean));
+        setSources(visibleSourceItems.filter((item) => item.url && item.name));
 
         // Trigger ingest so the AI backend has the latest material indexed
         setIngesting(true);
@@ -149,6 +385,15 @@ export default function AIChatPanel({
   }, [courseId, projectName]);
 
   // ── Send message ───────────────────────────────────────────────────────────
+  const contextPreviewItems = Object.values(
+    (sources || []).reduce((acc, source) => {
+      const type = sourceType(source);
+      if (!acc[type]) acc[type] = source;
+      return acc;
+    }, {})
+  );
+  const visibleSources = showAllSources ? sources : contextPreviewItems;
+
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
     const question = input.trim();
@@ -200,22 +445,22 @@ export default function AIChatPanel({
         }`}
         onClick={onToggle}
         aria-label={
-          isCollapsed ? "Open PolyFlux Assistant" : "Close PolyFlux Assistant"
+          isCollapsed ? "Open Poly Assistant" : "Close Poly Assistant"
         }
-        title="PolyFlux Assistant"
+        title="Poly Assistant"
       >
         <span className="ai-toggle-icon" aria-hidden="true">
           <FontAwesomeIcon icon={faRobot} />
         </span>
         {isCollapsed && (
-          <span className="ai-toggle-label">PolyFlux Assistant</span>
+          <span className="ai-toggle-label">Poly Assistant</span>
         )}
       </button>
 
       {/* ── Sidebar ── */}
       <aside
         className={`ai-sidebar${isCollapsed ? " ai-sidebar--collapsed" : ""}`}
-        aria-label="PolyFlux Assistant"
+        aria-label="Poly Assistant"
         aria-hidden={isCollapsed}
       >
         {/* Header */}
@@ -223,7 +468,7 @@ export default function AIChatPanel({
           <div className="ai-sidebar-header-left">
             <span className="ai-sidebar-icon" aria-hidden="true"></span>
             <div>
-              <div className="ai-sidebar-title">PolyFlux Assistant</div>
+              <div className="ai-sidebar-title">Poly Assistant</div>
               <div className="ai-sidebar-course">{projectName || courseId}</div>
             </div>
           </div>
@@ -236,7 +481,7 @@ export default function AIChatPanel({
           </button>
         </div>
 
-        {/* Source context bar — shows which PDFs are loaded */}
+        {/* Source context bar — shows which materials are active in the chat */}
         {(sources.length > 0 || ingesting) && (
           <div className="ai-context-bar">
             {ingesting ? (
@@ -246,8 +491,59 @@ export default function AIChatPanel({
               </span>
             ) : (
               <>
-                <span className="ai-context-label">📄 Context:</span>
-                <span className="ai-context-files">{sources.join(" · ")}</span>
+                <span className="ai-context-label">Context</span>
+                {visibleSources.map((source, index) => {
+                  const meta = materialMeta(source);
+                  const label = typeof source === "string" ? source : source.name || source.title;
+                  const href = typeof source === "string" ? undefined : source.url;
+
+                  if (href) {
+                    return (
+                      <button
+                        key={`${label}-${index}`}
+                        type="button"
+                        className="ai-context-chip"
+                        title={label}
+                        onClick={() => openMaterialPreview(source)}
+                      >
+                        <span
+                          className="ai-context-icon"
+                          style={{ background: meta.color }}
+                          aria-hidden="true"
+                        >
+                          {meta.icon}
+                        </span>
+                        <span>{label}</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <span
+                      key={`${label}-${index}`}
+                      className="ai-context-chip"
+                      title={label}
+                    >
+                      <span
+                        className="ai-context-icon"
+                        style={{ background: meta.color }}
+                        aria-hidden="true"
+                      >
+                        {meta.icon}
+                      </span>
+                      <span>{label}</span>
+                    </span>
+                  );
+                })}
+                {sources.length > contextPreviewItems.length && (
+                  <button
+                    type="button"
+                    className="ai-context-toggle"
+                    onClick={() => setShowAllSources((prev) => !prev)}
+                  >
+                    {showAllSources ? "Show less" : `+${sources.length - contextPreviewItems.length} more`}
+                  </button>
+                )}
               </>
             )}
           </div>

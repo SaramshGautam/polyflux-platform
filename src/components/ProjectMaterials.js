@@ -118,6 +118,8 @@ export default function ProjectMaterials({ className, projectName, role }) {
   const [videoUrlInput, setVideoUrlInput] = useState("");
   const [videoTitleInput, setVideoTitleInput] = useState("");
   const [downloadingId, setDownloadingId] = useState(null);
+  const [isDocumentDragActive, setIsDocumentDragActive] = useState(false);
+  const [isVideoDragActive, setIsVideoDragActive] = useState(false);
   const fileInputRef = useRef(null);
   const videoFileInputRef = useRef(null);
 
@@ -150,50 +152,75 @@ export default function ProjectMaterials({ className, projectName, role }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [className, projectName]);
 
-  // ─── Upload a document (PDF/PPTX/DOCX) ───────────────────────────────────
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    if (!file) return;
-
+  // ─── Upload one or more documents (PDF/PPTX/DOCX) ──────────────────────
+  const handleFileUpload = async (file) => {
     const ext = extOf(file.name);
     const known = DOC_EXTENSIONS[ext];
     if (!known || !known.mime.includes(file.type)) {
-      setError("Please upload a PDF, PPT/PPTX, or DOC/DOCX file.");
-      return;
+      throw new Error("Please upload a PDF, PPT/PPTX, or DOC/DOCX file.");
     }
     if (file.size > MAX_MATERIAL_SIZE_MB * 1024 * 1024) {
-      setError(`That file is larger than the ${MAX_MATERIAL_SIZE_MB} MB limit.`);
-      return;
+      throw new Error(`That file is larger than the ${MAX_MATERIAL_SIZE_MB} MB limit.`);
     }
+
+    const newDocRef = doc(materialsCollection());
+    const storagePath = `materials/${className}/${projectName}/${newDocRef.id}.${ext}`;
+    const fileRef = ref(storage, storagePath);
+
+    await uploadBytes(fileRef, file, { contentType: file.type });
+    const url = await getDownloadURL(fileRef);
+
+    await setDoc(newDocRef, {
+      type: "document",
+      title: file.name,
+      fileName: file.name,
+      mimeType: file.type,
+      storagePath,
+      url,
+      size: file.size,
+      visibleToStudents: true,
+      uploadedBy: localStorage.getItem("userEmail") || "",
+      createdAt: serverTimestamp(),
+    });
+  };
+
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!files.length) return;
 
     setError("");
     setUploading(true);
     try {
-      const newDocRef = doc(materialsCollection());
-      const storagePath = `materials/${className}/${projectName}/${newDocRef.id}.${ext}`;
-      const fileRef = ref(storage, storagePath);
-
-      await uploadBytes(fileRef, file, { contentType: file.type });
-      const url = await getDownloadURL(fileRef);
-
-      await setDoc(newDocRef, {
-        type: "document",
-        title: file.name,
-        fileName: file.name,
-        mimeType: file.type,
-        storagePath,
-        url,
-        size: file.size,
-        visibleToStudents: true,
-        uploadedBy: localStorage.getItem("userEmail") || "",
-        createdAt: serverTimestamp(),
-      });
-
+      for (const file of files) {
+        await handleFileUpload(file);
+      }
       await fetchMaterials();
     } catch (e) {
       console.error("Error uploading material:", e);
-      setError("Upload failed. Please try again.");
+      setError(e.message || "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+      setIsDocumentDragActive(false);
+    }
+  };
+
+  const handleDocumentDrop = async (e) => {
+    e.preventDefault();
+    setIsDocumentDragActive(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) return;
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setError("");
+    setUploading(true);
+    try {
+      for (const file of files) {
+        await handleFileUpload(file);
+      }
+      await fetchMaterials();
+    } catch (e) {
+      console.error("Error uploading dropped materials:", e);
+      setError(e.message || "Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -540,8 +567,16 @@ export default function ProjectMaterials({ className, projectName, role }) {
           </div>
 
           {mode === "document" && (
-            <label className="pm-file-label">
-              <span>{uploading ? "Uploading…" : "Choose PDF, PPTX, or DOCX"}</span>
+            <label
+              className={`pm-file-label ${isDocumentDragActive ? "pm-file-label--active" : ""}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDocumentDragActive(true);
+              }}
+              onDragLeave={() => setIsDocumentDragActive(false)}
+              onDrop={handleDocumentDrop}
+            >
+              <span>{uploading ? "Uploading…" : "Drag and drop files here or browse"}</span>
               <input
                 type="file"
                 accept=".pdf,.ppt,.pptx,.doc,.docx"
@@ -549,6 +584,7 @@ export default function ProjectMaterials({ className, projectName, role }) {
                 onChange={handleFileChange}
                 disabled={uploading}
                 className="pm-file-input"
+                multiple
               />
             </label>
           )}
@@ -577,11 +613,28 @@ export default function ProjectMaterials({ className, projectName, role }) {
 
           {mode === "video_file" && (
             <>
-              <label className="pm-file-label">
+              <label
+                className={`pm-file-label ${isVideoDragActive ? "pm-file-label--active" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsVideoDragActive(true);
+                }}
+                onDragLeave={() => setIsVideoDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsVideoDragActive(false);
+                  if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+                  const file = e.dataTransfer?.files?.[0];
+                  if (file) {
+                    const transfer = { target: { files: e.dataTransfer.files } };
+                    handleVideoFileChange(transfer);
+                  }
+                }}
+              >
                 <span>
                   {uploading
                     ? `Uploading… ${uploadProgress ?? 0}%`
-                    : "Choose MP4, MOV, or WEBM"}
+                    : "Drag and drop video here or browse"}
                 </span>
                 <input
                   type="file"

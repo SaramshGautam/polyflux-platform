@@ -24,13 +24,13 @@ const AddClassroom = () => {
   const [studentFile, setStudentFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
   const [error, setError] = useState("");
 
   const role = localStorage.getItem("role");
   const userEmail = localStorage.getItem("userEmail");
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleRosterFile = (file) => {
     if (!file) return;
 
     const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
@@ -40,9 +40,22 @@ const AddClassroom = () => {
       setFileName("");
       return;
     }
+
     setError("");
     setStudentFile(file);
     setFileName(file.name);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    handleRosterFile(file);
+  };
+
+  const handleFileDrop = (e) => {
+    e.preventDefault();
+    setIsDragActive(false);
+    const file = e.dataTransfer?.files?.[0];
+    handleRosterFile(file);
   };
 
   const handleSubmit = async (e) => {
@@ -174,15 +187,24 @@ const AddClassroom = () => {
           {/* ── File upload ── */}
           <div className="ac-field">
             <label>Student roster</label>
-            <label htmlFor="student_file" className="ac-file-label">
+            <label
+              htmlFor="student_file"
+              className={`ac-file-label ${isDragActive ? "ac-file-label--active" : ""}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragActive(true);
+              }}
+              onDragLeave={() => setIsDragActive(false)}
+              onDrop={handleFileDrop}
+            >
               <span className="ac-file-icon" aria-hidden="true">
                 ↑
               </span>
               <span className="ac-file-text">
-                {fileName ? fileName : "Choose CSV or Excel file"}
+                {fileName ? fileName : "Drag and drop roster here or browse"}
               </span>
               <span className="ac-file-hint">
-                {fileName ? "Click to change" : ".csv, .xls, .xlsx"}
+                {fileName ? "Click to replace" : ".csv, .xls, .xlsx"}
               </span>
             </label>
             <input
