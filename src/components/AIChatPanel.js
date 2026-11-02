@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
 import { AI_BACKEND_URL } from "../config/api";
 import "./AIChatPanel.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -268,6 +269,19 @@ export default function AIChatPanel({
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Per-answer source citations (msg.sources) come back from the backend as
+  // plain filename strings — ChromaDB only stores the name, not a URL. This
+  // maps each name back to the material object (with its real Firebase
+  // Storage URL) from the materials list already loaded for the context
+  // bar, so a citation can open the same way a materials chip does.
+  const materialsByName = useMemo(() => {
+    const map = {};
+    for (const item of sources) {
+      if (item?.name) map[item.name] = item;
+    }
+    return map;
+  }, [sources]);
+
   // ── Pre-warm the AI backend on mount ────────────────────────────────────────
   // Best-effort only: if the Cloud Run instance is cold, this kicks off its
   // (slow) model load in the background so it's more likely to be ready by
@@ -407,19 +421,32 @@ export default function AIChatPanel({
     // rather than leaving them staring at a silent typing indicator.
     const wakeTimer = setTimeout(() => setWakingUp(true), 6000);
 
+    // Last few turns of the conversation so far (not including the question
+    // just typed, which is sent separately below) — lets the backend handle
+    // follow-ups like "what about the second part?" instead of treating
+    // every message as standalone.
+    const recentHistory = messages
+      .slice(-6)
+      .map((m) => ({ role: m.role, content: m.text }));
+
     try {
       const res = await fetch(
         `${AI_BASE}/api/chatbot/ask/${backendCourseId(courseId, projectName)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify({ question, history: recentHistory }),
         }
       );
       const data = await res.json();
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: data.answer, sources: data.sources },
+        {
+          role: "ai",
+          text: data.answer,
+          sources: data.sources,
+          webReference: data.web_reference,
+        },
       ]);
     } catch {
       setMessages((prev) => [
@@ -491,7 +518,7 @@ export default function AIChatPanel({
               </span>
             ) : (
               <>
-                <span className="ai-context-label">Context</span>
+                <span className="ai-context-label">Project Materials</span>
                 {visibleSources.map((source, index) => {
                   const meta = materialMeta(source);
                   const label = typeof source === "string" ? source : source.name || source.title;
@@ -559,10 +586,48 @@ export default function AIChatPanel({
                 </span>
               )}
               <div className="ai-msg-bubble">
-                <p>{msg.text}</p>
+                {msg.role === "ai" ? (
+                  <div className="ai-msg-markdown">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p>{msg.text}</p>
+                )}
                 {msg.sources?.length > 0 && (
                   <p className="ai-sources">
-                    <span aria-hidden="true">📄</span> {msg.sources.join(", ")}
+                    <span aria-hidden="true">📄</span>{" "}
+                    {msg.sources.map((name, i) => {
+                      const material = materialsByName[name];
+                      return (
+                        <React.Fragment key={`${name}-${i}`}>
+                          {i > 0 && ", "}
+                          {material ? (
+                            <button
+                              type="button"
+                              className="ai-source-link"
+                              onClick={() => openMaterialPreview(material)}
+                              title={`Open ${name}`}
+                            >
+                              {name}
+                            </button>
+                          ) : (
+                            name
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </p>
+                )}
+                {msg.webReference && (
+                  <p className="ai-web-reference">
+                    <span aria-hidden="true">🌐</span>{" "}
+                    <a
+                      href={msg.webReference.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {msg.webReference.title} (Wikipedia)
+                    </a>
                   </p>
                 )}
               </div>

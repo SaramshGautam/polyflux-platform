@@ -17,7 +17,7 @@ const Team = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // ── Instructor-facing AI alignment check ──────────────────────────────────
+  /* ── Instructor-facing AI alignment check — hidden on the frontend for now (2026-10-30); backend left as-is ──
   const role = localStorage.getItem("role");
   const [alignment, setAlignment] = useState(null); // { status, aligned, score, message } | { error }
   const [checkingAlignment, setCheckingAlignment] = useState(false);
@@ -37,6 +37,7 @@ const Team = () => {
       setCheckingAlignment(false);
     }
   };
+  */
 
   useEffect(() => {
     const fetchTeamMembers = async () => {
@@ -131,7 +132,7 @@ const Team = () => {
             </ul>
           </div>
 
-          {/* ── AI alignment check (instructor-only) ── */}
+          {/* ── AI alignment check (instructor-only) — hidden on the frontend for now (2026-10-30); backend left as-is
           {role === "teacher" && (
             <div className="team-alignment-card mb-4">
               <div className="team-alignment-header">
@@ -194,6 +195,7 @@ const Team = () => {
               )}
             </div>
           )}
+          */}
 
           {/* ── Actions ── */}
           <div className="action-buttons mb-2">
