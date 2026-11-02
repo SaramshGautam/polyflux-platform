@@ -198,12 +198,21 @@ const Navbar = () => {
   const handleThemeToggle = () => setTheme(toggleTheme());
 
   const role = localStorage.getItem("role");
-  const displayName =
+  const rawDisplayName =
     localStorage.getItem("userDisplayName") ||
     localStorage.getItem("displayName") ||
     "";
   const userEmail = localStorage.getItem("userEmail") || "";
-  const initial = (displayName || "?").charAt(0).toUpperCase();
+  // Accounts with no profile name set fall back to storing the email as
+  // the "display name" (see LoginPage.js). Showing that next to the real
+  // email just duplicates it, so only treat it as a name when it is
+  // actually different from the email.
+  const displayName =
+    rawDisplayName &&
+    rawDisplayName.trim().toLowerCase() !== userEmail.trim().toLowerCase()
+      ? rawDisplayName
+      : "";
+  const initial = (rawDisplayName || "?").charAt(0).toUpperCase();
 
   const homeRoute =
     role === "teacher"

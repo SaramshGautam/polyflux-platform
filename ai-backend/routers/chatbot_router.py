@@ -7,12 +7,26 @@ from ai.pdf_utils import (
     extract_text_from_docx,
 )
 from ai.rag_chatbot import ingest_material, answer_question
+from ai.web_reference import fetch_wikipedia_reference
 
 router = APIRouter(prefix="/api/chatbot", tags=["chatbot"])
 
 
+class HistoryTurn(BaseModel):
+    # Mirrors the frontend chat message shape ("ai" for the assistant's own
+    # turns), translated to the "assistant"/"user" roles a chat template
+    # expects right before it's used (see ask() below).
+    role: str
+    content: str
+
+
 class QuestionRequest(BaseModel):
     question: str
+    # Last few turns of this conversation, oldest first — lets the model
+    # handle a follow-up ("what about the second part?") instead of treating
+    # every question as standalone. The frontend trims this to a handful of
+    # recent turns before sending it.
+    history: list[HistoryTurn] = []
 
 
 # ── Existing: upload a file directly (keep as-is) ─────────────────────────────
@@ -101,5 +115,20 @@ async def ingest_from_urls(req: IngestRequest):
 # ── Existing: ask a question ──────────────────────────────────────────────────
 @router.post("/ask/{course_id}")
 async def ask(course_id: str, body: QuestionRequest):
-    result = answer_question(course_id, body.question)
+    # Best-effort, free background reference from Wikipedia. Never blocks or
+    # fails the answer — a lookup miss or network hiccup just means Poly
+    # answers from the course materials alone, same as before this existed.
+    web_reference = await fetch_wikipedia_reference(body.question)
+
+    history = [
+        {"role": "assistant" if h.role == "ai" else "user", "content": h.content}
+        for h in body.history[-6:]
+    ]
+
+    result = answer_question(
+        course_id,
+        body.question,
+        history=history,
+        web_reference=web_reference,
+    )
     return result

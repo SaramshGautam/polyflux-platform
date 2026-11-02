@@ -1,6 +1,20 @@
 :root {
   --ai-sidebar-width: 340px;
   --ai-toggle-offset: 8px;
+
+  /* ── Open-panel icon-cluster spacing ──────────────────────────────────────
+     The Poly Assistant toggle button (.ai-toggle-btn in AIChatPanel.css) and
+     the navbar's icon cluster (.nb-right--whiteboard, below) live in separate
+     branches of the DOM — the toggle button is a sibling of <nav>, not a
+     child of it — so they can only be kept in sync by computing both of
+     their positions from the same shared numbers instead of two independently
+     eyeballed pixel values. These three variables are that shared source of
+     truth: sidebar width, the fixed width we give the toggle button once it
+     collapses to an icon-only pill (open-panel state), and the gaps on
+     either side of it. */
+  --ai-toggle-btn-active-width: 40px;
+  --ai-toggle-sidebar-gap: 12px;
+  --ai-icon-cluster-gap: 12px;
 }
 
 /* ─── Navbar shell ───────────────────────────────────────────────────────── */
@@ -44,8 +58,23 @@ body.ai-panel-open .nb-right {
 }
 
 body.ai-panel-open .nb-right--whiteboard {
-  right: calc(var(--ai-sidebar-width) + 52px);
-  transform: none;
+  /* Chat box (sidebar) width, + the bot icon's own width, + the gaps on
+     either side of the bot icon — i.e. exactly enough room to clear the
+     sidebar AND the toggle button before the avatar/theme-toggle cluster
+     starts, computed from the same variables AIChatPanel.css uses for the
+     toggle button itself so the two can never drift out of sync. */
+  right: calc(
+    var(--ai-sidebar-width) + var(--ai-toggle-sidebar-gap) +
+    var(--ai-toggle-btn-active-width) + var(--ai-icon-cluster-gap)
+  );
+  transform: translateY(-50%);
+}
+
+/* Hide the email next to the avatar while the Poly Assistant chat panel is
+   expanded (name + avatar still show); it reappears once the panel is
+   collapsed again. */
+body.ai-panel-open .nb-user-email {
+  display: none;
 }
 
 /* ─── Left side ──────────────────────────────────────────────────────────── */
@@ -196,7 +225,8 @@ body.ai-panel-open .nb-right--whiteboard {
 
 .nb-right--whiteboard {
   position: fixed;
-  top: 12px;
+  top: 28px; /* vertical center of the 56px navbar, same anchor the sidebar header's own flex-centered content uses */
+  transform: translateY(-50%);
   right: 182px;
   z-index: 1001;
   margin-left: 0;
