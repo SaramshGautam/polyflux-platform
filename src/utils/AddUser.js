@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { db } from "../firebaseConfig";
-import { doc, setDoc, deleteDoc } from "firebase/firestore";
+import { doc, deleteDoc } from "firebase/firestore";
 import { getDocs, collection, query, where } from "firebase/firestore";
+import { FLASK_API_URL } from "../config/api";
 
 import "./AddUser.css";
 
@@ -79,16 +80,28 @@ const AddUser = () => {
       return;
     }
 
+    // Routed through the backend instead of writing Firestore directly:
+    // a plain client-side setDoc here can only ever create the
+    // `users/{email}` record, never a real Firebase Auth login (that
+    // needs the Admin SDK), which used to leave this "added" user unable
+    // to ever sign in, reset a password, or get a reset email. The
+    // backend's /api/users/add creates both together.
     try {
-      const userRef = doc(db, "users", email);
-      await setDoc(userRef, { email, name, role });
+      const res = await fetch(`${FLASK_API_URL}/api/users/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to add user.");
 
-      setMessage(`✅ ${email} added as ${role}`);
+      setMessage(`✅ ${data.message}`);
       setEmail("");
+      setName("");
       setRole("student");
     } catch (error) {
       console.error("Error adding user:", error);
-      setMessage("❌ Error adding user.");
+      setMessage(`❌ ${error.message || "Error adding user."}`);
     }
   };
 
