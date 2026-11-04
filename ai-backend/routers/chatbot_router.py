@@ -1,12 +1,15 @@
+import json
+
 import httpx
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from ai.pdf_utils import (
     extract_text_from_pdf,
     extract_text_from_pptx,
     extract_text_from_docx,
 )
-from ai.rag_chatbot import ingest_material, answer_question
+from ai.rag_chatbot import ingest_material, answer_question, answer_question_stream
 from ai.web_reference import fetch_wikipedia_reference
 
 router = APIRouter(prefix="/api/chatbot", tags=["chatbot"])
@@ -112,19 +115,22 @@ async def ingest_from_urls(req: IngestRequest):
     return {"course_id": req.course_id, "results": results}
 
 
-# ── Existing: ask a question ──────────────────────────────────────────────────
-@router.post("/ask/{course_id}")
-async def ask(course_id: str, body: QuestionRequest):
+async def _build_request_context(body: QuestionRequest):
     # Best-effort, free background reference from Wikipedia. Never blocks or
     # fails the answer — a lookup miss or network hiccup just means Poly
     # answers from the course materials alone, same as before this existed.
     web_reference = await fetch_wikipedia_reference(body.question)
-
     history = [
         {"role": "assistant" if h.role == "ai" else "user", "content": h.content}
         for h in body.history[-6:]
     ]
+    return history, web_reference
 
+
+# ── Existing: ask a question ──────────────────────────────────────────────────
+@router.post("/ask/{course_id}")
+async def ask(course_id: str, body: QuestionRequest):
+    history, web_reference = await _build_request_context(body)
     result = answer_question(
         course_id,
         body.question,
@@ -132,3 +138,29 @@ async def ask(course_id: str, body: QuestionRequest):
         web_reference=web_reference,
     )
     return result
+
+
+# ── Streaming version: same answer, delivered as it's generated ──────────────
+@router.post("/ask-stream/{course_id}")
+async def ask_stream(course_id: str, body: QuestionRequest):
+    """
+    Same inputs/answer as /ask, but streams the response as newline-delimited
+    JSON instead of waiting for generation to finish before sending anything.
+    Each line is one JSON object:
+      {"type": "token", "text": "..."}                              — zero or more
+      {"type": "done", "sources": [...], "web_reference": {...}|null} — exactly one, last
+    Doesn't change total generation time, but lets the chat UI start showing
+    words within a second or two instead of after the full ~15-30s answer.
+    """
+    history, web_reference = await _build_request_context(body)
+
+    def stream():
+        for event in answer_question_stream(
+            course_id,
+            body.question,
+            history=history,
+            web_reference=web_reference,
+        ):
+            yield json.dumps(event) + "\n"
+
+    return StreamingResponse(stream(), media_type="application/x-ndjson")

@@ -1,7 +1,7 @@
 import os
 import chromadb
 import re
-from ai.hf_client import get_embeddings, generate_text
+from ai.hf_client import get_embeddings, generate_text, generate_text_stream
 from ai.pdf_utils import chunk_text
 
 # ── Persistent ChromaDB — survives restarts ───────────────────────────────────
@@ -12,6 +12,16 @@ from ai.pdf_utils import chunk_text
 # Override with CHROMA_DATA_DIR if you want it somewhere else (e.g. a mounted volume).
 CHROMA_DATA_DIR = os.getenv("CHROMA_DATA_DIR", "chroma_data")
 chroma_client = chromadb.PersistentClient(path=CHROMA_DATA_DIR)
+
+# Retrieval/prompt sizing — kept modest on purpose. Fewer chunks and a
+# smaller context cap mean less for the model to read before it starts
+# answering (prefill time), and a tighter answer-length cap means less time
+# spent generating (the dominant cost on CPU, roughly one forward pass per
+# output token). Bump these back up if answers start missing context more
+# than they used to.
+DEFAULT_TOP_K = 3
+CONTEXT_CHAR_CAP = 1200
+DEFAULT_MAX_TOKENS = 180
 
 
 def sanitize_collection_name(course_id: str) -> str:
@@ -69,12 +79,61 @@ Sourcing:
 - If nothing available covers the question, say so kindly and suggest the student check with their professor. Never make facts up."""
 
 
+def _retrieve(course_id: str, question: str, top_k: int):
+    """Shared by answer_question and answer_question_stream."""
+    collection = get_or_create_collection(course_id)
+    has_materials = collection.count() > 0
+
+    chunks, sources = [], []
+    if has_materials:
+        question_embedding = get_embeddings([question])[0]
+        results = collection.query(
+            query_embeddings=[question_embedding],
+            n_results=min(top_k, collection.count()),
+        )
+        chunks = results["documents"][0]
+        sources = list(set(m["source"] for m in results["metadatas"][0]))
+
+    return has_materials, chunks, sources
+
+
+def _build_prompt(question: str, chunks: list[str], web_reference: dict | None) -> str:
+    context = "\n\n".join(chunks) if chunks else "(No course material matched this question.)"
+
+    web_block = ""
+    if web_reference:
+        web_block = f"""
+
+Background reference (from the web, NOT your course materials — Wikipedia: "{web_reference['title']}"):
+{web_reference['extract']}
+"""
+
+    web_instruction = (
+        " You may also draw on the background reference above for general "
+        "context it doesn't cover, but say plainly when you're doing that."
+        if web_reference else ""
+    )
+
+    return f"""Course material:
+{context[:CONTEXT_CHAR_CAP]}
+{web_block}
+Student's question: {question}
+
+Answer the question using the course material above as your primary source.{web_instruction} If neither covers it, say so kindly."""
+
+
+def _no_match_answer(has_materials: bool) -> str:
+    if not has_materials:
+        return "I don't have any course materials to study yet! Ask your professor to upload some notes or slides, and I'll be ready to help."
+    return "Hmm, I couldn't find anything relevant to that in the course materials I have. Could you try rephrasing, or ask your professor about it?"
+
+
 def answer_question(
     course_id: str,
     question: str,
     history: list[dict] | None = None,
     web_reference: dict | None = None,
-    top_k: int = 4,
+    top_k: int = DEFAULT_TOP_K,
 ) -> dict:
     """
     `history` — prior turns in this chat ({"role": "user"|"assistant", "content": ...}),
@@ -84,61 +143,19 @@ def answer_question(
     material (when there is any) always comes first.
     """
     try:
-        collection = get_or_create_collection(course_id)
-        has_materials = collection.count() > 0
+        has_materials, chunks, sources = _retrieve(course_id, question, top_k)
 
-        chunks, sources = [], []
-        if has_materials:
-            question_embedding = get_embeddings([question])[0]
-            results = collection.query(
-                query_embeddings=[question_embedding],
-                n_results=min(top_k, collection.count()),
-            )
-            chunks = results["documents"][0]
-            sources = list(set(m["source"] for m in results["metadatas"][0]))
-
-        # Nothing usable at all — not even a web reference to fall back on.
         if not chunks and not web_reference:
-            if not has_materials:
-                answer = "I don't have any course materials to study yet! Ask your professor to upload some notes or slides, and I'll be ready to help."
-            else:
-                answer = "Hmm, I couldn't find anything relevant to that in the course materials I have. Could you try rephrasing, or ask your professor about it?"
-            return {"answer": answer, "sources": [], "web_reference": None}
+            return {"answer": _no_match_answer(has_materials), "sources": [], "web_reference": None}
 
-        context = "\n\n".join(chunks) if chunks else "(No course material matched this question.)"
-
-        web_block = ""
-        if web_reference:
-            web_block = f"""
-
-Background reference (from the web, NOT your course materials — Wikipedia: "{web_reference['title']}"):
-{web_reference['extract']}
-"""
-
-        web_instruction = (
-            " You may also draw on the background reference above for general "
-            "context it doesn't cover, but say plainly when you're doing that."
-            if web_reference else ""
-        )
-
-        prompt = f"""Course material:
-{context[:2000]}
-{web_block}
-Student's question: {question}
-
-Answer the question using the course material above as your primary source.{web_instruction} If neither covers it, say so kindly."""
-
+        prompt = _build_prompt(question, chunks, web_reference)
         answer = generate_text(
             prompt,
-            max_tokens=300,
+            max_tokens=DEFAULT_MAX_TOKENS,
             system=POLYFLUX_ASSISTANT_PERSONA,
             history=history,
         )
-        return {
-            "answer": answer,
-            "sources": sources,
-            "web_reference": web_reference,
-        }
+        return {"answer": answer, "sources": sources, "web_reference": web_reference}
 
     except Exception as e:
         print(f"[RAG] Error: {e}")
@@ -147,3 +164,46 @@ Answer the question using the course material above as your primary source.{web_
             "sources": [],
             "web_reference": None,
         }
+
+
+def answer_question_stream(
+    course_id: str,
+    question: str,
+    history: list[dict] | None = None,
+    web_reference: dict | None = None,
+    top_k: int = DEFAULT_TOP_K,
+):
+    """
+    Generator version of answer_question: yields dicts as the answer is
+    produced instead of returning one finished dict — lets the chat show the
+    first words almost immediately instead of waiting out the full
+    generation time. Yields:
+      {"type": "token", "text": "..."}           — zero or more, in order
+      {"type": "done", "sources": [...], "web_reference": {...} | None}  — exactly one, last
+    """
+    try:
+        has_materials, chunks, sources = _retrieve(course_id, question, top_k)
+
+        if not chunks and not web_reference:
+            yield {"type": "token", "text": _no_match_answer(has_materials)}
+            yield {"type": "done", "sources": [], "web_reference": None}
+            return
+
+        prompt = _build_prompt(question, chunks, web_reference)
+        for piece in generate_text_stream(
+            prompt,
+            max_tokens=DEFAULT_MAX_TOKENS,
+            system=POLYFLUX_ASSISTANT_PERSONA,
+            history=history,
+        ):
+            yield {"type": "token", "text": piece}
+
+        yield {"type": "done", "sources": sources, "web_reference": web_reference}
+
+    except Exception as e:
+        print(f"[RAG] Error: {e}")
+        yield {
+            "type": "token",
+            "text": "Oops, I hit a snag trying to answer that — mind giving it another try in a moment?",
+        }
+        yield {"type": "done", "sources": [], "web_reference": None}

@@ -1,7 +1,8 @@
 import os
+import threading
 
 from sentence_transformers import SentenceTransformer
-from transformers import pipeline
+from transformers import pipeline, TextIteratorStreamer
 import torch
 
 # The Cloud Run secret for this is bound as HF_API_TOKEN (our own name, set
@@ -16,6 +17,14 @@ import torch
 # existing secret or the deploy command.
 if os.getenv("HF_API_TOKEN") and not os.getenv("HF_TOKEN"):
     os.environ["HF_TOKEN"] = os.environ["HF_API_TOKEN"]
+
+# Cloud Run doesn't always let PyTorch see the container's real CPU quota —
+# it can report the host machine's full core count instead, so PyTorch's
+# auto-detected thread pool ends up oversized for what's actually allocated.
+# More threads than real quota just means more context-switching, not more
+# throughput. Pin it explicitly to match --memory 16Gi's auto-paired 4 vCPUs
+# (override via CPU_THREADS if the Cloud Run tier ever changes).
+torch.set_num_threads(int(os.getenv("CPU_THREADS", "4")))
 
 print("Loading embedding model...")
 embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
@@ -39,44 +48,101 @@ def get_embeddings(texts: list[str]) -> list[list[float]]:
     return embeddings.tolist()
 
 
-def generate_text(
-    prompt: str,
-    model_url: str = None,
-    max_tokens: int = 200,
-    system: str = None,
-    history: list[dict] | None = None,
-) -> str:
-    """
-     is an optional list of {"role": "user"|"assistant", "content": ...}
-    turns from earlier in the conversation, inserted between the system
-    prompt and the current question so follow-ups ("what about the second
-    part?") actually have something to refer back to.
-    """
+def _build_prompt(prompt: str, system: str | None, history: list[dict] | None) -> str:
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     for turn in history or []:
         messages.append(turn)
     messages.append({"role": "user", "content": prompt})
-
-    formatted = generator.tokenizer.apply_chat_template(
+    return generator.tokenizer.apply_chat_template(
         messages,
         tokenize=False,
-        add_generation_prompt=True
+        add_generation_prompt=True,
     )
+
+
+# Shared generation settings: greedy decoding (do_sample=False) instead of
+# sampling. Sampling doesn't cost meaningfully more per token on its own, but
+# it does make the model keep going past the point where it's actually said
+# everything useful — it only stops when it happens to sample an end token,
+# rather than reliably picking the most likely (often: "done") one. Greedy
+# decoding converges to a natural stop sooner, so most answers finish well
+# under the max_tokens ceiling instead of running it out by default. A small
+# repetition_penalty guards against the classic failure mode of greedy
+# decoding on a small model: looping on the same phrase once sampling's
+# randomness isn't there to break it out.
+_GEN_KWARGS = dict(
+    do_sample=False,
+    repetition_penalty=1.15,
+    return_full_text=False,
+)
+
+
+def generate_text(
+    prompt: str,
+    model_url: str = None,
+    max_tokens: int = 180,
+    system: str = None,
+    history: list[dict] | None = None,
+) -> str:
+    """
+    `history` is an optional list of {"role": "user"|"assistant", "content": ...}
+    turns from earlier in the conversation, inserted between the system
+    prompt and the current question so follow-ups ("what about the second
+    part?") actually have something to refer back to.
+    """
+    formatted = _build_prompt(prompt, system, history)
     result = generator(
         formatted,
         max_new_tokens=max_tokens,
-        do_sample=True,
-        temperature=0.7,
         pad_token_id=generator.tokenizer.eos_token_id,
-        # Only the newly generated continuation, not the prompt echoed back.
-        # This also makes the code model-agnostic — no more splitting on a
-        # chat-template special token ("<|assistant|>") that was specific to
-        # TinyLlama/Zephyr-style templates and would silently break on Qwen's.
-        return_full_text=False,
+        **_GEN_KWARGS,
     )
     return result[0]["generated_text"].strip()
+
+
+def generate_text_stream(
+    prompt: str,
+    max_tokens: int = 180,
+    system: str = None,
+    history: list[dict] | None = None,
+):
+    """
+    Same generation as generate_text, but yields text pieces as they're
+    produced instead of returning the whole answer at once — lets the chat
+    show the first words within a second or two instead of waiting the full
+    generation time, even though total compute is unchanged.
+
+    Runs generation on a background thread because TextIteratorStreamer is
+    fed from inside model.generate() itself; the only way to read from it
+    incrementally on the calling thread is to have generate() run elsewhere
+    while this function iterates the streamer as values arrive.
+    """
+    formatted = _build_prompt(prompt, system, history)
+    streamer = TextIteratorStreamer(
+        generator.tokenizer, skip_prompt=True, skip_special_tokens=True
+    )
+
+    thread = threading.Thread(
+        target=generator,
+        args=(formatted,),
+        kwargs=dict(
+            max_new_tokens=max_tokens,
+            pad_token_id=generator.tokenizer.eos_token_id,
+            streamer=streamer,
+            **_GEN_KWARGS,
+        ),
+        daemon=True,
+    )
+    thread.start()
+
+    try:
+        for piece in streamer:
+            if piece:
+                yield piece
+    finally:
+        thread.join(timeout=1)
 
 # ─── Image captioning (lazy-loaded) ────────────────────────────────────────
 # Used by the instructor alignment check to turn a whole-board screenshot
