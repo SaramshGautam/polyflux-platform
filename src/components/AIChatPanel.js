@@ -256,6 +256,7 @@ export default function AIChatPanel({
 }) {
   const [messages, setMessages] = useState([
     {
+      id: 0,
       role: "ai",
       text: welcomeMessage,
     },
@@ -268,6 +269,9 @@ export default function AIChatPanel({
   const [showAllSources, setShowAllSources] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  // Stable per-message id (array index isn't safe as a React key once a
+  // message's own text keeps changing while it streams in).
+  const nextMsgId = useRef(1);
 
   // Per-answer source citations (msg.sources) come back from the backend as
   // plain filename strings — ChromaDB only stores the name, not a URL. This
@@ -294,6 +298,18 @@ export default function AIChatPanel({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // ── Auto-grow the textarea as the student types ────────────────────────────
+  // Reset to "auto" first so scrollHeight reflects the *current* content
+  // (otherwise a previous inline height sticks around when text shrinks).
+  // CSS max-height caps the actual rendered growth and switches to a
+  // scrollbar once the cap is hit.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
 
   // ── Focus input when panel opens ───────────────────────────────────────────
   useEffect(() => {
@@ -412,7 +428,10 @@ export default function AIChatPanel({
     if (!input.trim() || loading) return;
     const question = input.trim();
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", text: question }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: nextMsgId.current++, role: "user", text: question },
+    ]);
     setLoading(true);
     setWakingUp(false);
 
@@ -429,33 +448,90 @@ export default function AIChatPanel({
       .slice(-6)
       .map((m) => ({ role: m.role, content: m.text }));
 
+    // Placeholder bubble the streamed tokens get appended into as they
+    // arrive, so the student sees the answer build up instead of waiting
+    // for the whole thing at once.
+    const aiId = nextMsgId.current++;
+    setMessages((prev) => [
+      ...prev,
+      { id: aiId, role: "ai", text: "", streaming: true },
+    ]);
+
+    let gotFirstToken = false;
+
     try {
       const res = await fetch(
-        `${AI_BASE}/api/chatbot/ask/${backendCourseId(courseId, projectName)}`,
+        `${AI_BASE}/api/chatbot/ask-stream/${backendCourseId(
+          courseId,
+          projectName
+        )}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question, history: recentHistory }),
         }
       );
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "ai",
-          text: data.answer,
-          sources: data.sources,
-          webReference: data.web_reference,
-        },
-      ]);
+      if (!res.ok || !res.body) throw new Error("Stream request failed");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      // The backend streams newline-delimited JSON events
+      // ({"type":"token","text":...} / {"type":"done","sources":...}) —
+      // buffer partial lines across chunk boundaries and process only the
+      // complete ones.
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 1);
+          if (!line) continue;
+
+          const event = JSON.parse(line);
+          if (event.type === "token") {
+            if (!gotFirstToken) {
+              gotFirstToken = true;
+              clearTimeout(wakeTimer);
+              setWakingUp(false);
+            }
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiId ? { ...m, text: m.text + event.text } : m
+              )
+            );
+          } else if (event.type === "done") {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiId
+                  ? {
+                      ...m,
+                      sources: event.sources,
+                      webReference: event.web_reference,
+                      streaming: false,
+                    }
+                  : m
+              )
+            );
+          }
+        }
+      }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "ai",
-          text: "Sorry, I couldn't reach my brain just now — I might be waking up from a nap. Give it a few seconds and try again?",
-        },
-      ]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === aiId
+            ? {
+                ...m,
+                text: "Sorry, I couldn't reach my brain just now — I might be waking up from a nap. Give it a few seconds and try again?",
+                streaming: false,
+              }
+            : m
+        )
+      );
     } finally {
       clearTimeout(wakeTimer);
       setWakingUp(false);
@@ -578,74 +654,69 @@ export default function AIChatPanel({
 
         {/* Messages */}
         <div className="ai-messages" role="log" aria-live="polite">
-          {messages.map((msg, i) => (
-            <div key={i} className={`ai-msg ai-msg--${msg.role}`}>
+          {messages.map((msg) => (
+            <div key={msg.id} className={`ai-msg ai-msg--${msg.role}`}>
               {msg.role === "ai" && (
                 <span className="ai-msg-avatar" aria-hidden="true">
                   <FontAwesomeIcon icon={faRobot} />
                 </span>
               )}
-              <div className="ai-msg-bubble">
-                {msg.role === "ai" ? (
-                  <div className="ai-msg-markdown">
-                    <ReactMarkdown>{msg.text}</ReactMarkdown>
-                  </div>
-                ) : (
-                  <p>{msg.text}</p>
-                )}
-                {msg.sources?.length > 0 && (
-                  <p className="ai-sources">
-                    <span aria-hidden="true">📄</span>{" "}
-                    {msg.sources.map((name, i) => {
-                      const material = materialsByName[name];
-                      return (
-                        <React.Fragment key={`${name}-${i}`}>
-                          {i > 0 && ", "}
-                          {material ? (
-                            <button
-                              type="button"
-                              className="ai-source-link"
-                              onClick={() => openMaterialPreview(material)}
-                              title={`Open ${name}`}
-                            >
-                              {name}
-                            </button>
-                          ) : (
-                            name
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </p>
-                )}
-                {msg.webReference && (
-                  <p className="ai-web-reference">
-                    <span aria-hidden="true">🌐</span>{" "}
-                    <a
-                      href={msg.webReference.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {msg.webReference.title} (Wikipedia)
-                    </a>
-                  </p>
-                )}
-              </div>
+              {msg.role === "ai" && msg.streaming && !msg.text ? (
+                <div className="ai-msg-bubble ai-msg-bubble--typing">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              ) : (
+                <div className="ai-msg-bubble">
+                  {msg.role === "ai" ? (
+                    <div className="ai-msg-markdown">
+                      <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p>{msg.text}</p>
+                  )}
+                  {msg.sources?.length > 0 && (
+                    <p className="ai-sources">
+                      <span aria-hidden="true">📄</span>{" "}
+                      {msg.sources.map((name, i) => {
+                        const material = materialsByName[name];
+                        return (
+                          <React.Fragment key={`${name}-${i}`}>
+                            {i > 0 && ", "}
+                            {material ? (
+                              <button
+                                type="button"
+                                className="ai-source-link"
+                                onClick={() => openMaterialPreview(material)}
+                                title={`Open ${name}`}
+                              >
+                                {name}
+                              </button>
+                            ) : (
+                              name
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </p>
+                  )}
+                  {msg.webReference && (
+                    <p className="ai-web-reference">
+                      <span aria-hidden="true">🌐</span>{" "}
+                      <a
+                        href={msg.webReference.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {msg.webReference.title} (Wikipedia)
+                      </a>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           ))}
-
-          {loading && (
-            <div className="ai-msg ai-msg--ai">
-              <span className="ai-msg-avatar" aria-hidden="true">
-                <FontAwesomeIcon icon={faRobot} />
-              </span>
-              <div className="ai-msg-bubble ai-msg-bubble--typing">
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-          )}
           {loading && wakingUp && (
             <p className="ai-waking-hint">
               Still here — just waking up my brain, this can take a minute the
@@ -657,14 +728,22 @@ export default function AIChatPanel({
 
         {/* Input */}
         <div className="ai-input-row">
-          <input
+          <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            onKeyDown={(e) => {
+              // Enter sends; Shift+Enter inserts a newline like a normal
+              // multi-line editor instead of submitting.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
             placeholder="Ask about course material…"
             disabled={loading || ingesting}
             aria-label="Ask a question"
+            rows={1}
           />
           <button
             className="ai-send-btn"

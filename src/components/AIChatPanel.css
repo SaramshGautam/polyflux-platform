@@ -449,7 +449,8 @@
   flex-shrink: 0;
 }
 
-.ai-input-row input {
+.ai-input-row input,
+.ai-input-row textarea {
   flex: 1;
   padding: 0.55rem 0.85rem;
   border: 1.5px solid #d1d5db;
@@ -461,17 +462,34 @@
   font-family: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.ai-input-row input:focus {
+.ai-input-row input:focus,
+.ai-input-row textarea:focus {
   border-color: #4a1d8f;
   box-shadow: 0 0 0 3px rgba(74, 29, 143, 0.1);
   background: #fff;
 }
-.ai-input-row input::placeholder {
+.ai-input-row input::placeholder,
+.ai-input-row textarea::placeholder {
   color: #9ca3af;
 }
-.ai-input-row input:disabled {
+.ai-input-row input:disabled,
+.ai-input-row textarea:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* The textarea starts at the same one-line height as the old input
+   (~36px, from the padding + font-size above) and is allowed to grow to
+   double that as the student adds lines; past that it scrolls instead of
+   pushing the rest of the panel around. */
+.ai-input-row textarea {
+  resize: none;
+  box-sizing: border-box;
+  min-height: 36px;
+  max-height: 72px;
+  line-height: 1.4;
+  overflow-y: auto;
+  white-space: pre-wrap;
 }
 
 /* ─── Send button ────────────────────────────────────────────────────────── */
