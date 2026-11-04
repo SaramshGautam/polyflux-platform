@@ -108,6 +108,62 @@ def send_email(to_email: str, subject: str, html: str):
         return False
 
 
+def _ensure_auth_account(email, display_name=None, role="student"):
+    """
+    Idempotently make sure a REAL Firebase Auth login exists for this
+    email, creating one (random password, never emailed as-is) if it
+    doesn't. This is what used to only happen inside notify_students,
+    *after* a separate "add student"/"add user" step had already created
+    a Firestore-only `users/{email}` record -- if that second step was
+    skipped or never run, the person was left with a record that made
+    signup say "account already exists" while no real account, and thus
+    no way to ever get a reset email, actually existed. Call this
+    anywhere a `users/{email}` doc gets created so the two can't drift
+    apart again. Returns (auth_user_record, created: bool).
+    """
+    try:
+        return fb_auth.get_user_by_email(email), False
+    except fb_auth.UserNotFoundError:
+        temp_pw = gen_password()
+        user_rec = fb_auth.create_user(
+            email=email, email_verified=False, password=temp_pw,
+            display_name=display_name or None,
+        )
+        try:
+            fb_auth.set_custom_user_claims(user_rec.uid, {"role": role})
+        except Exception as e:
+            print("Claims error:", e)
+        return user_rec, True
+
+
+def _send_signin_link_email(email, display_name=None, class_name=None):
+    """
+    Generate a Firebase password-reset link (used here as a first
+    "set your password" sign-in link) and email it via SendGrid, which
+    delivers far more reliably than Firebase Auth's own default sender --
+    the thing originally suspected (landing in junk) when the real cause
+    turned out to be no account existing to email about at all. Returns
+    True/False for whether SendGrid accepted the send.
+    """
+    try:
+        reset_link = fb_auth.generate_password_reset_link(email)
+    except Exception as e:
+        print("Reset link error:", e)
+        return False
+    greeting = f"Hi {display_name}," if display_name else "Hi,"
+    context = f" for <strong>{class_name}</strong>" if class_name else ""
+    subject = f"[{class_name}] Your PolyFlux account" if class_name else "Your PolyFlux account"
+    html = f"""
+        <p>{greeting}</p>
+        <p>Your account is ready{context}.</p>
+        <p><strong>Sign-in email:</strong> {email}</p>
+        <p><a href="{reset_link}">Set your password</a></p>
+        <p>Then sign in: <a href="{APP_SIGNIN_URL}">{APP_SIGNIN_URL}</a></p>
+        <p>— PolyFlux</p>
+    """
+    return send_email(email, subject, html)
+
+
 # ── Cloud Storage PDF helpers ─────────────────────────────────────────────────
 def upload_pdf(file_obj, destination_path: str) -> dict:
     """
@@ -662,9 +718,57 @@ def add_student(class_name):
             user_doc.set({'email': email, 'role': 'student',
                           'name': f"{last_name}, {first_name}",
                           'createdAt': firestore.SERVER_TIMESTAMP})
-        return jsonify({'message': f'{first_name} {last_name} has been added.'}), 200
+
+        # Create the real login right away instead of leaving it to a
+        # separate, easy-to-skip "notify students" step -- that gap was
+        # the root cause of students getting stuck with a record that
+        # blocks their own signup but has no real account behind it to
+        # ever send a reset email for.
+        display_name = f"{first_name} {last_name}".strip() or None
+        _, created = _ensure_auth_account(email, display_name=display_name, role='student')
+        sent = _send_signin_link_email(email, display_name=display_name, class_name=class_name) if created else None
+
+        message = f'{first_name} {last_name} has been added.'
+        if created and not sent:
+            message += ' (Added, but the sign-in email failed to send -- use "Notify students" to retry.)'
+        return jsonify({'message': message, 'accountCreated': created, 'emailSent': sent}), 200
     except Exception as e:
         return jsonify({'error': f'Error adding student: {str(e)}'}), 500
+
+
+@app.route('/api/users/add', methods=['POST'])
+def add_user():
+    """
+    Create (or update the role on) a PolyFlux login for an email address.
+    Used by the admin "Add User" page. Always creates a real Firebase
+    Auth account alongside the Firestore `users/{email}` record -- the
+    previous version of that page's logic lived entirely in the frontend
+    and wrote only the Firestore record, so the account it "added" could
+    never actually sign in or reset a password.
+    """
+    try:
+        data  = request.get_json() or {}
+        email = (data.get('email') or '').strip().lower()
+        name  = (data.get('name') or '').strip()
+        role  = data.get('role') or 'student'
+        if not email:
+            return jsonify({'error': 'Email is required.'}), 400
+
+        user_ref = db.collection('users').document(email)
+        payload = {'email': email, 'name': name, 'role': role}
+        if not user_ref.get().exists:
+            payload['createdAt'] = firestore.SERVER_TIMESTAMP
+        user_ref.set(payload, merge=True)
+
+        _, created = _ensure_auth_account(email, display_name=name or None, role=role)
+        sent = _send_signin_link_email(email, display_name=name or None) if created else None
+
+        message = f'{email} added as {role}.'
+        if created and not sent:
+            message += " (Couldn't email their sign-in link -- resend it from Manage Students / Notify students.)"
+        return jsonify({'message': message, 'accountCreated': created, 'emailSent': sent}), 200
+    except Exception as e:
+        return jsonify({'error': f'Error adding user: {str(e)}'}), 500
 
 
 @app.route('/api/classroom/<class_name>/notify_students', methods=['POST'])
@@ -684,32 +788,10 @@ def notify_students(class_name):
             first, last   = sd.get('firstName', ''), sd.get('lastName', '')
             if not student_email:
                 continue
-            try:
-                fb_auth.get_user_by_email(student_email)
-            except fb_auth.UserNotFoundError:
-                temp_pw  = gen_password()
-                user_rec = fb_auth.create_user(email=student_email, email_verified=False,
-                                               password=temp_pw,
-                                               display_name=f"{first} {last}".strip() or None)
-                try:
-                    fb_auth.set_custom_user_claims(user_rec.uid, {"role": "student"})
-                except Exception as e:
-                    print("Claims error:", e)
-            try:
-                reset_link = fb_auth.generate_password_reset_link(student_email)
-            except Exception as e:
-                results.append({"email": student_email, "sent": False, "reason": "reset_link_failed"})
-                continue
-            subject = f"[{class_name}] Your PolyFlux account"
-            html    = f"""
-                <p>Hi {first} {last},</p>
-                <p>Your account is ready for <strong>{class_name}</strong>.</p>
-                <p><strong>Sign-in email:</strong> {student_email}</p>
-                <p><a href="{reset_link}">Set your password</a></p>
-                <p>Then sign in: <a href="{APP_SIGNIN_URL}">{APP_SIGNIN_URL}</a></p>
-                <p>— PolyFlux</p>
-            """
-            results.append({"email": student_email, "sent": send_email(student_email, subject, html)})
+            display_name = f"{first} {last}".strip() or None
+            _ensure_auth_account(student_email, display_name=display_name, role="student")
+            sent = _send_signin_link_email(student_email, display_name=display_name, class_name=class_name)
+            results.append({"email": student_email, "sent": sent})
         return jsonify({"message": "Notifications processed.", "results": results}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to notify students: {e}"}), 500
