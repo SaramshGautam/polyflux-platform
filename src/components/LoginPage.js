@@ -181,15 +181,21 @@ const LoginPage = () => {
 
     setSignupLoading(true);
     try {
+      // We still read any existing Firestore record for this email (e.g.
+      // from a teacher adding it to a classroom roster) so we can keep
+      // its role/created-at below instead of overwriting them -- but we
+      // no longer use the record's mere existence to block signup. A
+      // Firestore `users/{email}` doc can exist with no real Firebase
+      // Auth login behind it (several admin/roster tools can create one
+      // that way), and treating that as "this person already has an
+      // account" is exactly what wrongly locked people out of signing up.
+      // createUserWithEmailAndPassword below is the only thing that can
+      // say that authoritatively -- it throws auth/email-already-in-use
+      // when a real login already exists, which the catch block already
+      // handles with the same message this used to show up front.
       const existingDoc = await getDoc(doc(db, "users", normalizedEmail));
-      if (existingDoc.exists()) {
-        showToast(
-          "danger",
-          "An account with this email already exists. Please sign in."
-        );
-        setView("login");
-        return;
-      }
+      const priorData = existingDoc.exists() ? existingDoc.data() : null;
+      const finalRole = priorData?.role || "student";
 
       const result = await createUserWithEmailAndPassword(
         auth,
@@ -198,21 +204,28 @@ const LoginPage = () => {
       );
       await updateProfile(result.user, { displayName: trimmedName });
 
-      await setDoc(doc(db, "users", normalizedEmail), {
-        name: trimmedName,
-        email: normalizedEmail,
-        lsuID: trimmedLsuId,
-        role: "student",
-        createdAt: serverTimestamp(),
-      });
+      await setDoc(
+        doc(db, "users", normalizedEmail),
+        {
+          name: trimmedName,
+          email: normalizedEmail,
+          lsuID: trimmedLsuId,
+          role: finalRole,
+          createdAt: priorData?.createdAt || serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-      localStorage.setItem("role", "student");
+      localStorage.setItem("role", finalRole);
       localStorage.setItem("userEmail", normalizedEmail);
       localStorage.setItem("userDisplayName", trimmedName);
       localStorage.setItem("LSUID", trimmedLsuId);
 
       showToast("success", `Welcome, ${trimmedName}!`);
-      setTimeout(() => navigate("/students-home"), 600);
+      setTimeout(
+        () => navigate(ROLE_ROUTES[finalRole] || "/students-home"),
+        600
+      );
     } catch (error) {
       console.error("Sign-up failed:", error);
       const msgs = {
